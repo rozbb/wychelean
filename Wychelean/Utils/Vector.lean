@@ -6,12 +6,13 @@ universe u
 
 namespace Vector
 
-/-- Split a vector of length `n * m` into `n` consecutive chunks of length `m`. -/
-def toChunks {α : Type u} (n m : Nat) (v : Vector α (n * m)) : Vector (Vector α m) n :=
-  Vector.ofFn fun (i : Fin n) => Vector.ofFn fun (j : Fin m) =>
+/-- Split a vector into `n / m` consecutive chunks of length `m`, dropping any remainder. -/
+def toChunks {α : Type u} {n : Nat} (m : Nat) (v : Vector α n) : Vector (Vector α m) (n / m) :=
+  Vector.ofFn fun (i : Fin (n / m)) => Vector.ofFn fun (j : Fin m) =>
     v[i.val * m + j.val]'(by
       calc i.val * m + j.val < i.val * m + m := Nat.add_lt_add_left j.isLt _
         _ = (i.val + 1) * m := (Nat.succ_mul _ _).symm
-        _ ≤ n * m := Nat.mul_le_mul_right m i.isLt)
+        _ ≤ n / m * m := Nat.mul_le_mul_right m i.isLt
+        _ ≤ n := Nat.div_mul_le_self n m)
 
 end Vector

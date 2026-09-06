@@ -4,6 +4,7 @@ import Wychelean.Utils.Vector
 /-!
 # SHA-256
 Specification of SHA-256 as defined in FIPS 180-4.
+https://doi.org/10.6028/NIST.FIPS.180-4
 -/
 
 namespace Wychelean.Hashes.SHA256
@@ -21,10 +22,7 @@ abbrev lengthSize : Nat := 8
 /-- Size of the digest in bytes. -/
 abbrev digestSize : Nat := 32
 
-/-- Round constants:
-First 32 bits of the fractional parts of the cube roots of
-the first 64 primes (FIPS 180-4, section 4.2.2).
--/
+/-- Round constants: (FIPS 180-4, section 4.2.2). -/
 def K : Vector UInt32 numRounds := #v[
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
   0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -58,11 +56,7 @@ instance : Add State where
 def State.toBytes (st : State) : Vector UInt8 digestSize :=
   #v[st.a, st.b, st.c, st.d, st.e, st.f, st.g, st.h].flatMap UInt32.toBytesBE
 
-/--
-Initial state value:
-First 32 bits of the fractional parts of the square
-roots of the first 8 primes (FIPS 180-4, section 5.3.3).
--/
+/-- Initial state value: (FIPS 180-4, section 5.3.3). -/
 def H0 : State :=
   { a := 0x6a09e667, b := 0xbb67ae85, c := 0x3c6ef372, d := 0xa54ff53a,
     e := 0x510e527f, f := 0x9b05688c, g := 0x1f83d9ab, h := 0x5be0cd19 }
@@ -109,30 +103,23 @@ def compress (st : State) (block : Vector UInt32 blockWords) : State :=
 
 /-- Parse a block into big-endian words (FIPS 180-4, section 5.2.1). -/
 def bytesToBlock (bytes : Vector UInt8 blockSize) : Vector UInt32 blockWords :=
-  (bytes.toChunks blockWords wordSize).map UInt32.ofBytesBE
+  (bytes.toChunks wordSize).map UInt32.ofBytesBE
 
-/--
-Number of blocks in the padded message:
-the message, one `0x80` byte and the encoded length, rounded up to whole blocks.
--/
-def numBlocks (len : Nat) : Nat := (len + 1 + lengthSize + (blockSize - 1)) / blockSize
+/-- Number of `0x00` bytes appended by padding: the least count that fills the final block. -/
+def numZeros (len : Nat) : Nat := (blockSize - (len + 1 + lengthSize) % blockSize) % blockSize
 
-/--
-Pad a message and split it into blocks (FIPS 180-4, section 5.1.1):
-append the byte `0x80`, then `0x00` bytes up to the last `lengthSize` bytes of the final block,
-which hold the message length in bits, big-endian.
--/
-def pad {len : Nat} (msg : Vector UInt8 len) :
-    Vector (Vector UInt32 blockWords) (numBlocks len) :=
-  let zeros := numBlocks len * blockSize - (len + 1 + lengthSize)
-  let bitLength := (len * 8).toUInt64.toBytesBE
-  let padded : Vector UInt8 (numBlocks len * blockSize) :=
-    (msg ++ #v[(0x80 : UInt8)] ++ Vector.replicate zeros (0 : UInt8) ++ bitLength).cast (by
-      simp only [zeros, numBlocks, blockSize, lengthSize]; omega)
-  (padded.toChunks (numBlocks len) blockSize).map bytesToBlock
+/-- Pad a message (FIPS 180-4, section 5.1.1) -/
+def padded {len : Nat} (msg : Vector UInt8 len) : Vector UInt8 (len + 1 + numZeros len + lengthSize) :=
+  let zeros : Vector UInt8 (numZeros len) := Vector.replicate _ 0
+  let bitLength : Vector UInt8 lengthSize := (len * 8).toUInt64.toBytesBE
+  msg.push 0x80 ++ zeros ++ bitLength
+
+/-- Parse a padded message into blocks of big-endian words (FIPS 180-4, section 5.2.1). -/
+def parse {n : Nat} (msg : Vector UInt8 n) : Vector (Vector UInt32 blockWords) (n / blockSize) :=
+  (msg.toChunks blockSize).map bytesToBlock
 
 /-- SHA-256 of a byte string: the message digest. -/
 def sha256 {len : Nat} (msg : Vector UInt8 len) : Vector UInt8 digestSize :=
-  ((pad msg).foldl compress H0).toBytes
+  ((parse (padded msg)).foldl compress H0).toBytes
 
 end Wychelean.Hashes.SHA256

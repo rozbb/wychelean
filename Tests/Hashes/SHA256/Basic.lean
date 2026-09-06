@@ -31,17 +31,18 @@ Padding boundary:
 55 bytes is the last input that still fits in one block,
 56 bytes is the first input that requires a second block.
 -/
-example : numBlocks 0 = 1 := by decide
-example : numBlocks 55 = 1 := by decide
-example : numBlocks 56 = 2 := by decide
-example : numBlocks 64 = 2 := by decide
-example : numBlocks 119 = 2 := by decide
-example : numBlocks 120 = 3 := by decide
+private def blocks (len : Nat) : Nat := (parse (padded (Vector.replicate len (0 : UInt8)))).size
+example : blocks 0 = 1 := by native_decide
+example : blocks 55 = 1 := by native_decide
+example : blocks 56 = 2 := by native_decide
+example : blocks 64 = 2 := by native_decide
+example : blocks 119 = 2 := by native_decide
+example : blocks 120 = 3 := by native_decide
 
--- The padding block for the empty message is 0x80 followed by 63 `0x00` bytes,
--- which packs into a block starting with 0x80000000 and ending with 0.
-example : (pad #v[])[0].toList = [0x80000000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] := by
-  native_decide
+-- The padded empty message is 0x80 followed by 63 `0x00` bytes,
+-- which parses into a block starting with 0x80000000 and ending with 0.
+example : (padded #v[]).toList = 0x80 :: List.replicate 63 0 := by native_decide
+example : (parse (padded #v[]))[0].toList = 0x80000000 :: List.replicate 15 0 := by native_decide
 
 -- Ch(e, f, g) selects f where e = 1 and g where e = 0.
 example : Ch 0xffffffff 0x12345678 0xdeadbeef = 0x12345678 := by native_decide
