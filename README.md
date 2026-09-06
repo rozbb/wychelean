@@ -14,3 +14,12 @@ We aim to produce a trustworthy base from which reliable software can be built. 
 # Testing
 
 To run known-answer tests, just run `lake test`
+
+# License
+
+Licensed under either of
+
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+* MIT license ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
