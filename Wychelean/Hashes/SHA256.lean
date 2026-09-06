@@ -8,11 +8,24 @@ Specification of SHA-256 as defined in FIPS 180-4.
 
 namespace Wychelean.Hashes.SHA256
 
+/-- Size of a word in bytes. -/
+abbrev wordSize : Nat := 4
+/-- Size of a message block in bytes. -/
+abbrev blockSize : Nat := 64
+/-- Number of words in a message block. -/
+abbrev blockWords : Nat := blockSize / wordSize
+/-- Number of rounds, and of words in the message schedule. -/
+abbrev numRounds : Nat := 64
+/-- Size in bytes of the message length appended by padding. -/
+abbrev lengthSize : Nat := 8
+/-- Size of the digest in bytes. -/
+abbrev digestSize : Nat := 32
+
 /-- Round constants:
 First 32 bits of the fractional parts of the cube roots of
 the first 64 primes (FIPS 180-4, section 4.2.2).
 -/
-def K : Vector UInt32 64 := #v[
+def K : Vector UInt32 numRounds := #v[
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
   0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
@@ -37,10 +50,12 @@ structure State where
 
 /-- Word-wise addition. -/
 instance : Add State where
-  add s t := ⟨s.a + t.a, s.b + t.b, s.c + t.c, s.d + t.d, s.e + t.e, s.f + t.f, s.g + t.g, s.h + t.h⟩
+  add s t :=
+    ⟨s.a + t.a, s.b + t.b, s.c + t.c, s.d + t.d,
+     s.e + t.e, s.f + t.f, s.g + t.g, s.h + t.h⟩
 
-/-- The state as 32 bytes: the words `a` to `h` in order, each big-endian. -/
-def State.toBytes (s : State) : Vector UInt8 32 :=
+/-- The state as bytes: the words `a` to `h` in order, each big-endian. -/
+def State.toBytes (s : State) : Vector UInt8 digestSize :=
   #v[s.a, s.b, s.c, s.d, s.e, s.f, s.g, s.h].flatMap UInt32.toBytesBE
 
 /--
@@ -53,16 +68,16 @@ def H0 : State :=
     e := 0x510e527f, f := 0x9b05688c, g := 0x1f83d9ab, h := 0x5be0cd19 }
 
 /-- `σ₀(x) = ROTR⁷(x) ⊕ ROTR¹⁸(x) ⊕ SHR³(x)` -/
-def lowerSigma0 (x : UInt32) : UInt32 := x.rotateRight 7 ^^^ x.rotateRight 18 ^^^ (x >>> 3)
+def lowerSigma0 (x : UInt32) : UInt32 := x ⋙ 7 ^^^ x ⋙ 18 ^^^ x >>> 3
 
 /-- `σ₁(x) = ROTR¹⁷(x) ⊕ ROTR¹⁹(x) ⊕ SHR¹⁰(x)` -/
-def lowerSigma1 (x : UInt32) : UInt32 := x.rotateRight 17 ^^^ x.rotateRight 19 ^^^ (x >>> 10)
+def lowerSigma1 (x : UInt32) : UInt32 := x ⋙ 17 ^^^ x ⋙ 19 ^^^ x >>> 10
 
 /-- `Σ₀(x) = ROTR²(x) ⊕ ROTR¹³(x) ⊕ ROTR²²(x)` -/
-def upperSigma0 (x : UInt32) : UInt32 := x.rotateRight 2 ^^^ x.rotateRight 13 ^^^ x.rotateRight 22
+def upperSigma0 (x : UInt32) : UInt32 := x ⋙ 2 ^^^ x ⋙ 13 ^^^ x ⋙ 22
 
 /-- `Σ₁(x) = ROTR⁶(x) ⊕ ROTR¹¹(x) ⊕ ROTR²⁵(x)` -/
-def upperSigma1 (x : UInt32) : UInt32 := x.rotateRight 6 ^^^ x.rotateRight 11 ^^^ x.rotateRight 25
+def upperSigma1 (x : UInt32) : UInt32 := x ⋙ 6 ^^^ x ⋙ 11 ^^^ x ⋙ 25
 
 /-- `Ch(e, f, g) = (e ∧ f) ⊕ (¬e ∧ g)` -/
 def Ch (e f g : UInt32) : UInt32 := (e &&& f) ^^^ (~~~e &&& g)
@@ -76,52 +91,55 @@ def round (s : State) (k w : UInt32) : State :=
   let t2 := upperSigma0 s.a + Maj s.a s.b s.c
   { a := t1 + t2, b := s.a, c := s.b, d := s.c, e := s.d + t1, f := s.e, g := s.f, h := s.g }
 
-/-- Expand a 16-word block into the 64-word message schedule. -/
-def messageSchedule (block : Vector UInt32 16) : Vector UInt32 64 :=
-  let init : Vector UInt32 64 := Vector.ofFn fun (i : Fin 64) =>
-    if h : i.val < 16 then block[i.val] else 0
-  Fin.foldl 48 (fun w (i : Fin 48) =>
-    let j := i.val + 16
-    let wj := lowerSigma1 w[j - 2] + w[j - 7] + lowerSigma0 w[j - 15] + w[j - 16]
-    have hj : j < 64 := by omega
-    w.set j wj) init
+/-- The message schedule `W₀, …, W₆₃` of a block (FIPS 180-4, section 6.2.2, step 1). -/
+def messageSchedule (block : Vector UInt32 blockWords) : Vector UInt32 numRounds :=
+  Fin.foldl numRounds (init := Vector.replicate numRounds 0) fun w t =>
+    if h : t.val < blockWords then
+      w.set t block[t.val]
+    else
+      w.set t (lowerSigma1 w[t.val - 2] + w[t.val - 7]
+        + lowerSigma0 w[t.val - 15] + w[t.val - 16])
 
-/-- Apply the 64 rounds to `state` using the message schedule `w`. -/
-def rounds (state : State) (w : Vector UInt32 64) : State :=
-  Fin.foldl 64 (fun s i => round s K[i] w[i]) state
+/-- Apply all rounds to `state` using the message schedule `w`. -/
+def rounds (state : State) (w : Vector UInt32 numRounds) : State :=
+  Fin.foldl numRounds (fun s i => round s K[i] w[i]) state
 
-/-- Process one 512-bit block, given as 16 big-endian 32-bit words. -/
-def compress (state : State) (block : Vector UInt32 16) : State :=
+/-- Process one block, given as big-endian words (FIPS 180-4, section 6.2.2). -/
+def compress (state : State) (block : Vector UInt32 blockWords) : State :=
   state + rounds state (messageSchedule block)
 
-/-- Pack 64 bytes into a block of 16 big-endian 32-bit words. -/
-def bytesToBlock (bytes : Vector UInt8 64) : Vector UInt32 16 :=
-  Vector.ofFn fun (i : Fin 16) =>
-    UInt32.ofBytesBE bytes[4 * i.val] bytes[4 * i.val + 1]
-      bytes[4 * i.val + 2] bytes[4 * i.val + 3]
+/-- Parse a block into big-endian words (FIPS 180-4, section 5.2.1). -/
+def bytesToBlock (bytes : Vector UInt8 blockSize) : Vector UInt32 blockWords :=
+  (bytes.toChunks blockWords wordSize).map UInt32.ofBytesBE
 
-/-- Pad a message and split it into blocks (FIPS 180-4, section 5.1.1):
-append the byte `0x80`, then zero bytes until the length is 56 modulo 64,
-then the original length in bits as a big-endian 64-bit integer. -/
+/--
+Number of blocks in the padded message:
+the message, one `0x80` byte and the encoded length, rounded up to whole blocks.
+-/
+def numBlocks (len : Nat) : Nat := (len + 1 + lengthSize + (blockSize - 1)) / blockSize
+
+/--
+Pad a message and split it into blocks (FIPS 180-4, section 5.1.1):
+append the byte `0x80`, then `0x00` bytes up to the last `lengthSize` bytes of the final block,
+which hold the message length in bits, big-endian.
+-/
 def pad {len : Nat} (msg : Vector UInt8 len) :
-    Vector (Vector UInt32 16) ((len + (55 + 64 - len % 64) % 64 + 9) / 64) :=
-  let bitLen := len * 8
-  let zeros := (55 + 64 - len % 64) % 64
-  let numBlocks := (len + zeros + 9) / 64
-  let totalLen := numBlocks * 64
-  let padded : Vector UInt8 totalLen := Vector.ofFn fun (i : Fin totalLen) =>
+    Vector (Vector UInt32 blockWords) (numBlocks len) :=
+  let total := numBlocks len * blockSize
+  let bitLength : Vector UInt8 lengthSize := (len * 8).toUInt64.toBytesBE
+  let padded : Vector UInt8 total := Vector.ofFn fun (i : Fin total) =>
     if h : i.val < len then
       msg[i.val]
     else if i.val = len then
       0x80
-    else if i.val < totalLen - 8 then
+    else if h : i.val < total - lengthSize then
       0
     else
-      (bitLen >>> (8 * (totalLen - 1 - i.val))).toUInt8
-  (padded.toChunks 64).map bytesToBlock
+      bitLength[i.val - (total - lengthSize)]
+  (padded.toChunks (numBlocks len) blockSize).map bytesToBlock
 
-/-- SHA-256 of a byte string: the 32-byte message digest. -/
-def sha256 {len : Nat} (msg : Vector UInt8 len) : Vector UInt8 32 :=
+/-- SHA-256 of a byte string: the message digest. -/
+def sha256 {len : Nat} (msg : Vector UInt8 len) : Vector UInt8 digestSize :=
   ((pad msg).foldl compress H0).toBytes
 
 end Wychelean.Hashes.SHA256
