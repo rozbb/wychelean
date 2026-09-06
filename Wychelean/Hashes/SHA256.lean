@@ -3,17 +3,15 @@ import Wychelean.Utils.Vector
 
 /-!
 # SHA-256
-
 Specification of SHA-256 as defined in FIPS 180-4.
-
-The message is a vector of bytes (`UInt8`). The digest is a vector of eight
-32-bit words (`UInt32`), most significant word first.
 -/
 
 namespace Wychelean.Hashes.SHA256
 
-/-- Round constants: first 32 bits of the fractional parts of the cube roots of
-the first 64 primes (FIPS 180-4, section 4.2.2). -/
+/-- Round constants:
+First 32 bits of the fractional parts of the cube roots of
+the first 64 primes (FIPS 180-4, section 4.2.2).
+-/
 def K : Vector UInt32 64 := #v[
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
   0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -33,8 +31,11 @@ def K : Vector UInt32 64 := #v[
   0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 ]
 
-/-- Initial hash value: first 32 bits of the fractional parts of the square
-roots of the first 8 primes (FIPS 180-4, section 5.3.3). -/
+/--
+Initial state value:
+First 32 bits of the fractional parts of the square
+roots of the first 8 primes (FIPS 180-4, section 5.3.3).
+-/
 def H0 : Vector UInt32 8 := #v[
   0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
   0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
