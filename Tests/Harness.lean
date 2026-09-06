@@ -1,8 +1,9 @@
 /-!
 Minimal known-answer test harness.
 
-A `Test` is a named check that either passed (`failure = none`) or carries a
-message describing the mismatch. Suites are plain lists of tests.
+A `Test` is a named check that either passed (`failure = none`)
+or carries a message describing the mismatch.
+Suites are plain lists of tests.
 -/
 
 namespace Tests
@@ -10,6 +11,11 @@ namespace Tests
 structure Test where
   name : String
   failure : Option String
+
+/-- A hash known-answer vector: message and digest, hex encoded. -/
+structure HashVector where
+  msg : String
+  digest : String
 
 /-- Check that `actual` equals `expected`. -/
 def expectEq {α : Type} [BEq α] [Repr α] (name : String) (actual expected : α) : Test :=

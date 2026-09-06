@@ -4,8 +4,8 @@ import Tests.Hashes.SHA256.NistLongMsg
 import Tests.Hashes.SHA256.NistMonte
 
 /-!
-NIST CAVP SHA-256 byte-oriented tests: ShortMsg, LongMsg and the Monte Carlo
-chain (SHAVS, section 6.4).
+NIST CAVP SHA-256 byte-oriented tests:
+ShortMsg, LongMsg and the Monte Carlo chain (SHAVS, section 6.4).
 -/
 
 namespace Tests.Hashes.SHA256.Nist
@@ -13,12 +13,15 @@ namespace Tests.Hashes.SHA256.Nist
 open Wychelean
 open Wychelean.Hashes.SHA256
 
-private def msgTests (label : String) (vectors : Array (String × String)) : List Test :=
-  vectors.toList.map fun (msg, md) =>
-    expectEq s!"{label} {msg.length / 2} bytes" (sha256Hex (Hex.decode msg).get!) md
+private def msgTests (label : String) (vectors : Array HashVector) : List Test :=
+  vectors.toList.map fun v =>
+    expectEq s!"{label} {v.msg.length / 2} bytes"
+      (sha256Hex (Hex.decode v.msg).get!) v.digest
 
-/-- One Monte Carlo checkpoint: 1000 iterations of `MDᵢ = SHA-256(MDᵢ₋₃ ‖ MDᵢ₋₂ ‖ MDᵢ₋₁)`,
-seeded with three copies of `seed`. -/
+/--
+One Monte Carlo checkpoint:
+1000 iterations of `MDᵢ = SHA-256(MDᵢ₋₃ ‖ MDᵢ₋₂ ‖ MDᵢ₋₁)`, seeded with three copies of `seed`.
+-/
 private def checkpoint (seed : Array UInt8) : Array UInt8 := Id.run do
   let mut m0 := seed
   let mut m1 := seed

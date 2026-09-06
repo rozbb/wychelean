@@ -29,13 +29,15 @@ def digestTests : List Test := [
     "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
   -- FIPS 180-4 multi-block test: 112-byte message spans three padded blocks.
   expectEq "FIPS 180-4 multi-block (112 bytes)"
-    (sha256Hex ("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmn" ++
-      "hijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu").toUTF8.data)
+    (sha256Hex "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu".toUTF8.data)
     "cf5b16a778af8380036ce59e7b0492370b249b11e8f07a51afac45037afee9d1"
 ]
 
-/-- Padding boundary: 55 bytes is the last input that still fits in one 512-bit
-block; 56 bytes is the first input that requires a second block. -/
+/--
+Padding boundary:
+55 bytes is the last input that still fits in one block,
+56 bytes is the first input that requires a second block.
+-/
 def padTests : List Test := [
   expectEq "pad 0 bytes -> 1 block" (pad #v[]).size 1,
   expectEq "pad 55 bytes -> 1 block" (pad (Vector.replicate 55 0)).size 1,
@@ -43,7 +45,7 @@ def padTests : List Test := [
   expectEq "pad 64 bytes -> 2 blocks" (pad (Vector.replicate 64 0)).size 2,
   expectEq "pad 119 bytes -> 2 blocks" (pad (Vector.replicate 119 0)).size 2,
   expectEq "pad 120 bytes -> 3 blocks" (pad (Vector.replicate 120 0)).size 3,
-  -- The padding block for the empty message is 0x80 followed by 63 zero bytes,
+  -- The padding block for the empty message is 0x80 followed by 63 `0x00` bytes,
   -- which packs into a block starting with 0x80000000 and ending with 0.
   expectEq "pad empty message block" (pad #v[])[0].toList
     [0x80000000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
