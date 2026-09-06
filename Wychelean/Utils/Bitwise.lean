@@ -2,13 +2,13 @@
 Bitwise helpers on fixed-width integers not provided by core Lean.
 -/
 
-/-- Rotate right by `n` bits. The amount is taken modulo 32. -/
-def UInt32.rotateRight (x : UInt32) (n : Nat) : UInt32 := ⟨x.toBitVec.rotateRight n⟩
-
 namespace Wychelean
 
-/-- `x ⋙ n` rotates `x` right by `n` bits, at the precedence of `>>>`. -/
-scoped infixl:75 " ⋙ " => UInt32.rotateRight
+/-- `rotr n x` rotates `x` right by `n` bits, `ROTRⁿ(x)` in FIPS 180-4. The amount is taken modulo 32. -/
+def rotr (n : Nat) (x : UInt32) : UInt32 := ⟨x.toBitVec.rotateRight n⟩
+
+/-- `rotl n x` rotates `x` left by `n` bits, `ROTLⁿ(x)` in FIPS 180-4. The amount is taken modulo 32. -/
+def rotl (n : Nat) (x : UInt32) : UInt32 := ⟨x.toBitVec.rotateLeft n⟩
 
 end Wychelean
 

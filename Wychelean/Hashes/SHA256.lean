@@ -50,13 +50,13 @@ structure State where
 
 /-- Word-wise addition. -/
 instance : Add State where
-  add s t :=
-    ⟨s.a + t.a, s.b + t.b, s.c + t.c, s.d + t.d,
-     s.e + t.e, s.f + t.f, s.g + t.g, s.h + t.h⟩
+  add st st' :=
+    ⟨st.a + st'.a, st.b + st'.b, st.c + st'.c, st.d + st'.d,
+     st.e + st'.e, st.f + st'.f, st.g + st'.g, st.h + st'.h⟩
 
 /-- The state as bytes: the words `a` to `h` in order, each big-endian. -/
-def State.toBytes (s : State) : Vector UInt8 digestSize :=
-  #v[s.a, s.b, s.c, s.d, s.e, s.f, s.g, s.h].flatMap UInt32.toBytesBE
+def State.toBytes (st : State) : Vector UInt8 digestSize :=
+  #v[st.a, st.b, st.c, st.d, st.e, st.f, st.g, st.h].flatMap UInt32.toBytesBE
 
 /--
 Initial state value:
@@ -68,16 +68,16 @@ def H0 : State :=
     e := 0x510e527f, f := 0x9b05688c, g := 0x1f83d9ab, h := 0x5be0cd19 }
 
 /-- `σ₀(x) = ROTR⁷(x) ⊕ ROTR¹⁸(x) ⊕ SHR³(x)` -/
-def lowerSigma0 (x : UInt32) : UInt32 := x ⋙ 7 ^^^ x ⋙ 18 ^^^ x >>> 3
+def lowerSigma0 (x : UInt32) : UInt32 := (rotr 7 x) ^^^ (rotr 18 x) ^^^ (x >>> 3)
 
 /-- `σ₁(x) = ROTR¹⁷(x) ⊕ ROTR¹⁹(x) ⊕ SHR¹⁰(x)` -/
-def lowerSigma1 (x : UInt32) : UInt32 := x ⋙ 17 ^^^ x ⋙ 19 ^^^ x >>> 10
+def lowerSigma1 (x : UInt32) : UInt32 := (rotr 17 x) ^^^ (rotr 19 x) ^^^ (x >>> 10)
 
 /-- `Σ₀(x) = ROTR²(x) ⊕ ROTR¹³(x) ⊕ ROTR²²(x)` -/
-def upperSigma0 (x : UInt32) : UInt32 := x ⋙ 2 ^^^ x ⋙ 13 ^^^ x ⋙ 22
+def upperSigma0 (x : UInt32) : UInt32 := (rotr 2 x) ^^^ (rotr 13 x) ^^^ (rotr 22 x)
 
 /-- `Σ₁(x) = ROTR⁶(x) ⊕ ROTR¹¹(x) ⊕ ROTR²⁵(x)` -/
-def upperSigma1 (x : UInt32) : UInt32 := x ⋙ 6 ^^^ x ⋙ 11 ^^^ x ⋙ 25
+def upperSigma1 (x : UInt32) : UInt32 := (rotr 6 x) ^^^ (rotr 11 x) ^^^ (rotr 25 x)
 
 /-- `Ch(e, f, g) = (e ∧ f) ⊕ (¬e ∧ g)` -/
 def Ch (e f g : UInt32) : UInt32 := (e &&& f) ^^^ (~~~e &&& g)
@@ -86,27 +86,26 @@ def Ch (e f g : UInt32) : UInt32 := (e &&& f) ^^^ (~~~e &&& g)
 def Maj (a b c : UInt32) : UInt32 := (a &&& b) ^^^ (a &&& c) ^^^ (b &&& c)
 
 /-- One round of the compression function with round constant `k` and schedule word `w`. -/
-def round (s : State) (k w : UInt32) : State :=
-  let t1 := s.h + upperSigma1 s.e + Ch s.e s.f s.g + k + w
-  let t2 := upperSigma0 s.a + Maj s.a s.b s.c
-  { a := t1 + t2, b := s.a, c := s.b, d := s.c, e := s.d + t1, f := s.e, g := s.f, h := s.g }
+def round (st : State) (k w : UInt32) : State :=
+  let t1 := st.h + upperSigma1 st.e + Ch st.e st.f st.g + k + w
+  let t2 := upperSigma0 st.a + Maj st.a st.b st.c
+  { a := t1 + t2, b := st.a, c := st.b, d := st.c,
+    e := st.d + t1, f := st.e, g := st.f, h := st.g }
 
 /-- The message schedule `W₀, …, W₆₃` of a block (FIPS 180-4, section 6.2.2, step 1). -/
 def messageSchedule (block : Vector UInt32 blockWords) : Vector UInt32 numRounds :=
-  Fin.foldl numRounds (init := Vector.replicate numRounds 0) fun w t =>
-    if h : t.val < blockWords then
-      w.set t block[t.val]
-    else
-      w.set t (lowerSigma1 w[t.val - 2] + w[t.val - 7]
-        + lowerSigma0 w[t.val - 15] + w[t.val - 16])
+  Nat.fold numRounds (init := Vector.replicate numRounds 0) fun t _ w =>
+    w.set t <|
+      if h : t < blockWords then block[t]
+      else lowerSigma1 w[t - 2] + w[t - 7] + lowerSigma0 w[t - 15] + w[t - 16]
 
 /-- Apply all rounds to `state` using the message schedule `w`. -/
-def rounds (state : State) (w : Vector UInt32 numRounds) : State :=
-  Fin.foldl numRounds (fun s i => round s K[i] w[i]) state
+def rounds (st : State) (w : Vector UInt32 numRounds) : State :=
+  Fin.foldl numRounds (fun st i => round st K[i] w[i]) st
 
 /-- Process one block, given as big-endian words (FIPS 180-4, section 6.2.2). -/
-def compress (state : State) (block : Vector UInt32 blockWords) : State :=
-  state + rounds state (messageSchedule block)
+def compress (st : State) (block : Vector UInt32 blockWords) : State :=
+  st + rounds st (messageSchedule block)
 
 /-- Parse a block into big-endian words (FIPS 180-4, section 5.2.1). -/
 def bytesToBlock (bytes : Vector UInt8 blockSize) : Vector UInt32 blockWords :=
@@ -125,17 +124,11 @@ which hold the message length in bits, big-endian.
 -/
 def pad {len : Nat} (msg : Vector UInt8 len) :
     Vector (Vector UInt32 blockWords) (numBlocks len) :=
-  let total := numBlocks len * blockSize
-  let bitLength : Vector UInt8 lengthSize := (len * 8).toUInt64.toBytesBE
-  let padded : Vector UInt8 total := Vector.ofFn fun (i : Fin total) =>
-    if h : i.val < len then
-      msg[i.val]
-    else if i.val = len then
-      0x80
-    else if h : i.val < total - lengthSize then
-      0
-    else
-      bitLength[i.val - (total - lengthSize)]
+  let zeros := numBlocks len * blockSize - (len + 1 + lengthSize)
+  let bitLength := (len * 8).toUInt64.toBytesBE
+  let padded : Vector UInt8 (numBlocks len * blockSize) :=
+    (msg ++ #v[(0x80 : UInt8)] ++ Vector.replicate zeros (0 : UInt8) ++ bitLength).cast (by
+      simp only [zeros, numBlocks, blockSize, lengthSize]; omega)
   (padded.toChunks (numBlocks len) blockSize).map bytesToBlock
 
 /-- SHA-256 of a byte string: the message digest. -/
