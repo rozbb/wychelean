@@ -10,3 +10,7 @@ Every specification in this repo:
 2. A human has inspected the specification
 
 We aim to produce a trustworthy base from which reliable software can be built. Use of an LLM is permitted, but the human author is ultimately held responsible for its output.
+
+# Testing
+
+To run known-answer tests, just run `lake test`

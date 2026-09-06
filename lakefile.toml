@@ -1,10 +1,11 @@
 name = "Wychelean"
 version = "0.1.0"
 defaultTargets = ["wychelean"]
+testDriver = "knownAnswerTests"
 
 [[lean_lib]]
 name = "Wychelean"
 
 [[lean_exe]]
-name = "wychelean"
-root = "Main"
+name = "knownAnswerTests"
+root = "KnownAnswerTests.Main"
