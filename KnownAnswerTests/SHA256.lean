@@ -5,18 +5,18 @@ namespace KnownAnswerTests.SHA256
 
 open Wychelean.Hashes.SHA256
 
-/-- UTF-8 bytes of a string, as `Nat`s. -/
-def ascii (s : String) : Array Nat := s.toUTF8.data.map UInt8.toNat
+/-- UTF-8 bytes of a string. -/
+def ascii (s : String) : Array UInt8 := s.toUTF8.data
 
 /-- Lowercase hex encoding of a 32-bit word, zero-padded to 8 digits. -/
-def hexWord (w : Nat) : String :=
-  let s := String.ofList (Nat.toDigits 16 w)
+def hexWord (w : UInt32) : String :=
+  let s := String.ofList (Nat.toDigits 16 w.toNat)
   "".pushn '0' (8 - s.length) ++ s
 
 /-- Lowercase hex encoding of a digest. -/
-def hexDigest (d : Vector Nat 8) : String := String.join (d.toList.map hexWord)
+def hexDigest (d : Vector UInt32 8) : String := String.join (d.toList.map hexWord)
 
-def sha256Hex {n : Nat} (msg : Vector Nat n) : String := hexDigest (sha256 msg)
+def sha256Hex {n : Nat} (msg : Vector UInt8 n) : String := hexDigest (sha256 msg)
 
 def digestTests : List Test := [
   expectEq "empty" (sha256Hex #v[])
@@ -59,10 +59,6 @@ def padTests : List Test := [
 ]
 
 def helperTests : List Test := [
-  -- not32 flips all 32 bits.
-  expectEq "not32 0" (not32 0) 0xffffffff,
-  expectEq "not32 0xffffffff" (not32 0xffffffff) 0,
-  expectEq "not32 0xaaaaaaaa" (not32 0xaaaaaaaa) 0x55555555,
   -- Ch(e, f, g) selects f where e = 1 and g where e = 0.
   expectEq "Ch all ones" (Ch 0xffffffff 0x12345678 0xdeadbeef) 0x12345678,
   expectEq "Ch all zeros" (Ch 0 0x12345678 0xdeadbeef) 0xdeadbeef,
