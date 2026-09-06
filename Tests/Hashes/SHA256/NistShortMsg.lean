@@ -1,4 +1,4 @@
-import Tests.Harness
+import Tests.HashVector
 
 /-
 NIST CAVP SHA-256 byte-oriented test vectors: SHA256ShortMsg.rsp from

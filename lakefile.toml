@@ -1,15 +1,12 @@
 name = "Wychelean"
 version = "0.1.0"
 defaultTargets = ["Wychelean"]
-testDriver = "tests"
+testDriver = "Tests"
 
 [[lean_lib]]
 name = "Wychelean"
+precompileModules = true
 
 [[lean_lib]]
 name = "Tests"
 globs = ["Tests.+"]
-
-[[lean_exe]]
-name = "tests"
-root = "Tests.Main"
