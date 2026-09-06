@@ -6,7 +6,11 @@ namespace Tests.Hashes.SHA256
 open Wychelean
 open Wychelean.Hashes.SHA256
 
-def sha256Hex (msg : Array UInt8) : String := Hex.encode (sha256 msg.toVector).toArray
+/-- `sha256` on a byte array. Panics on messages of `2 ^ 64` bits or more. -/
+def sha256Bytes (msg : Array UInt8) : Array UInt8 :=
+  if h : 8 * msg.size < 2 ^ 64 then (sha256 msg.toVector h).toArray else panic! "message too long"
+
+def sha256Hex (msg : Array UInt8) : String := Hex.encode (sha256Bytes msg)
 
 example : sha256Hex #[] =
     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" := by native_decide
@@ -31,18 +35,19 @@ Padding boundary:
 55 bytes is the last input that still fits in one block,
 56 bytes is the first input that requires a second block.
 -/
-private def blocks (len : Nat) : Nat := (parse (padded (Vector.replicate len (0 : UInt8)))).size
-example : blocks 0 = 1 := by native_decide
-example : blocks 55 = 1 := by native_decide
-example : blocks 56 = 2 := by native_decide
-example : blocks 64 = 2 := by native_decide
-example : blocks 119 = 2 := by native_decide
-example : blocks 120 = 3 := by native_decide
+private def paddedSize (len : Nat) : Nat := (padded (Vector.replicate len (0 : UInt8))).size
+example : paddedSize 0 = 64 := by native_decide
+example : paddedSize 55 = 64 := by native_decide
+example : paddedSize 56 = 128 := by native_decide
+example : paddedSize 64 = 128 := by native_decide
+example : paddedSize 119 = 128 := by native_decide
+example : paddedSize 120 = 192 := by native_decide
 
 -- The padded empty message is 0x80 followed by 63 `0x00` bytes,
 -- which parses into a block starting with 0x80000000 and ending with 0.
 example : (padded #v[]).toList = 0x80 :: List.replicate 63 0 := by native_decide
-example : (parse (padded #v[]))[0].toList = 0x80000000 :: List.replicate 15 0 := by native_decide
+example : (parse (padded #v[]) (padded_aligned 0))[0].toList = 0x80000000 :: List.replicate 15 0 := by
+  native_decide
 
 -- Ch(e, f, g) selects f where e = 1 and g where e = 0.
 example : Ch 0xffffffff 0x12345678 0xdeadbeef = 0x12345678 := by native_decide

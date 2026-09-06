@@ -20,7 +20,7 @@ def checkpoint (seed : Array UInt8) : Array UInt8 := Id.run do
   let mut m1 := seed
   let mut m2 := seed
   for _ in [0:1000] do
-    let md := (sha256 (m0 ++ m1 ++ m2).toVector).toArray
+    let md := sha256Bytes (m0 ++ m1 ++ m2)
     m0 := m1
     m1 := m2
     m2 := md

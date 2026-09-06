@@ -46,7 +46,7 @@ def K : Vector UInt32 numRounds := #v[
 structure State where
   (a b c d e f g h : UInt32)
 
-/-- Word-wise addition. -/
+/-- Word-wise addition modulo `2 ^ 32`. -/
 instance : Add State where
   add st st' :=
     ⟨st.a + st'.a, st.b + st'.b, st.c + st'.c, st.d + st'.d,
@@ -103,7 +103,7 @@ def compress (st : State) (block : Vector UInt32 blockWords) : State :=
 
 /-- Parse a block into big-endian words (FIPS 180-4, section 5.2.1). -/
 def bytesToBlock (bytes : Vector UInt8 blockSize) : Vector UInt32 blockWords :=
-  (bytes.toChunks wordSize).map UInt32.ofBytesBE
+  (bytes.toChunks wordSize (by decide)).map UInt32.ofBytesBE
 
 /-- Number of `0x00` bytes appended by padding: the least count that fills the final block. -/
 def numZeros (len : Nat) : Nat := (blockSize - (len + 1 + lengthSize) % blockSize) % blockSize
@@ -114,12 +114,17 @@ def padded {len : Nat} (msg : Vector UInt8 len) : Vector UInt8 (len + 1 + numZer
   let bitLength : Vector UInt8 lengthSize := (len * 8).toUInt64.toBytesBE
   msg.push 0x80 ++ zeros ++ bitLength
 
-/-- Parse a padded message into blocks of big-endian words (FIPS 180-4, section 5.2.1). -/
-def parse {n : Nat} (msg : Vector UInt8 n) : Vector (Vector UInt32 blockWords) (n / blockSize) :=
-  (msg.toChunks blockSize).map bytesToBlock
+/-- The padded length is a multiple of the block size. -/
+theorem padded_aligned (len : Nat) : (len + 1 + numZeros len + lengthSize) % blockSize = 0 := by
+  simp only [numZeros, blockSize, lengthSize]; omega
 
-/-- SHA-256 of a byte string: the message digest. -/
-def sha256 {len : Nat} (msg : Vector UInt8 len) : Vector UInt8 digestSize :=
-  ((parse (padded msg)).foldl compress H0).toBytes
+/-- Parse a padded message into blocks of big-endian words (FIPS 180-4, section 5.2.1). -/
+def parse {n : Nat} (msg : Vector UInt8 n) (h : n % blockSize = 0) :
+    Vector (Vector UInt32 blockWords) (n / blockSize) :=
+  (msg.toChunks blockSize h).map bytesToBlock
+
+/-- SHA-256 of a message of fewer than `2 ^ 64` bits (FIPS 180-4, section 1). -/
+def sha256 {len : Nat} (msg : Vector UInt8 len) (_ : 8 * len < 2 ^ 64) : Vector UInt8 digestSize :=
+  ((parse (padded msg) (padded_aligned len)).foldl compress H0).toBytes
 
 end Wychelean.Hashes.SHA256
