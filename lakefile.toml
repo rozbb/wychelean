@@ -1,6 +1,6 @@
 name = "Wychelean"
 version = "0.1.0"
-defaultTargets = ["wychelean"]
+defaultTargets = ["Wychelean"]
 testDriver = "knownAnswerTests"
 
 [[lean_lib]]
