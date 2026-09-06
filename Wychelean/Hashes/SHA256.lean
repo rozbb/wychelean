@@ -31,15 +31,26 @@ def K : Vector UInt32 64 := #v[
   0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 ]
 
+/-- The eight 32-bit working variables `a` to `h` (FIPS 180-4, section 6.2). -/
+structure State where
+  (a b c d e f g h : UInt32)
+
+/-- Word-wise addition of two states. -/
+def State.add (s t : State) : State :=
+  { a := s.a + t.a, b := s.b + t.b, c := s.c + t.c, d := s.d + t.d,
+    e := s.e + t.e, f := s.f + t.f, g := s.g + t.g, h := s.h + t.h }
+
+/-- The state as eight words, `a` first. -/
+def State.toVector (s : State) : Vector UInt32 8 := #v[s.a, s.b, s.c, s.d, s.e, s.f, s.g, s.h]
+
 /--
 Initial state value:
 First 32 bits of the fractional parts of the square
 roots of the first 8 primes (FIPS 180-4, section 5.3.3).
 -/
-def H0 : Vector UInt32 8 := #v[
-  0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-  0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-]
+def H0 : State :=
+  { a := 0x6a09e667, b := 0xbb67ae85, c := 0x3c6ef372, d := 0xa54ff53a,
+    e := 0x510e527f, f := 0x9b05688c, g := 0x1f83d9ab, h := 0x5be0cd19 }
 
 /-- `σ₀(x) = ROTR⁷(x) ⊕ ROTR¹⁸(x) ⊕ SHR³(x)` -/
 def lowerSigma0 (x : UInt32) : UInt32 := x.rotateRight 7 ^^^ x.rotateRight 18 ^^^ (x >>> 3)
@@ -59,14 +70,11 @@ def Ch (e f g : UInt32) : UInt32 := (e &&& f) ^^^ (~~~e &&& g)
 /-- `Maj(a, b, c) = (a ∧ b) ⊕ (a ∧ c) ⊕ (b ∧ c)` -/
 def Maj (a b c : UInt32) : UInt32 := (a &&& b) ^^^ (a &&& c) ^^^ (b &&& c)
 
-/-- One round of the compression function on the working variables
-`state = [a, b, c, d, e, f, g, h]` with round constant `k` and schedule word `w`. -/
-def sha256Round (state : Vector UInt32 8) (k w : UInt32) : Vector UInt32 8 :=
-  let a := state[0]; let b := state[1]; let c := state[2]; let d := state[3]
-  let e := state[4]; let f := state[5]; let g := state[6]; let h := state[7]
-  let t1 := h + upperSigma1 e + Ch e f g + k + w
-  let t2 := upperSigma0 a + Maj a b c
-  #v[t1 + t2, a, b, c, d + t1, e, f, g]
+/-- One round of the compression function with round constant `k` and schedule word `w`. -/
+def sha256Round (s : State) (k w : UInt32) : State :=
+  let t1 := s.h + upperSigma1 s.e + Ch s.e s.f s.g + k + w
+  let t2 := upperSigma0 s.a + Maj s.a s.b s.c
+  { a := t1 + t2, b := s.a, c := s.b, d := s.c, e := s.d + t1, f := s.e, g := s.f, h := s.g }
 
 /-- Expand a 16-word block into the 64-word message schedule. -/
 def messageSchedule (block : Vector UInt32 16) : Vector UInt32 64 :=
@@ -79,14 +87,12 @@ def messageSchedule (block : Vector UInt32 16) : Vector UInt32 64 :=
     w.set j wj) init
 
 /-- Apply the 64 rounds to `state` using the message schedule `w`. -/
-def sha256Compress (state : Vector UInt32 8) (w : Vector UInt32 64) : Vector UInt32 8 :=
+def sha256Compress (state : State) (w : Vector UInt32 64) : State :=
   Fin.foldl 64 (fun s i => sha256Round s K[i] w[i]) state
 
 /-- Process one 512-bit block, given as 16 big-endian 32-bit words. -/
-def compressBlock (state : Vector UInt32 8) (block : Vector UInt32 16) : Vector UInt32 8 :=
-  let w := messageSchedule block
-  let state' := sha256Compress state w
-  Vector.ofFn fun (i : Fin 8) => state[i] + state'[i]
+def compressBlock (state : State) (block : Vector UInt32 16) : State :=
+  state.add (sha256Compress state (messageSchedule block))
 
 /-- Pack four bytes into a 32-bit word, big-endian. -/
 def bytesToWord32BE (b0 b1 b2 b3 : UInt8) : UInt32 :=
@@ -120,6 +126,6 @@ def pad {len : Nat} (msg : Vector UInt8 len) :
 
 /-- SHA-256 of a byte string, as eight 32-bit words (most significant first). -/
 def sha256 {len : Nat} (msg : Vector UInt8 len) : Vector UInt32 8 :=
-  (pad msg).foldl compressBlock H0
+  ((pad msg).foldl compressBlock H0).toVector
 
 end Wychelean.Hashes.SHA256
