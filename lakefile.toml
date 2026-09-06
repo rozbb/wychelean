@@ -1,0 +1,10 @@
+name = "Wychelean"
+version = "0.1.0"
+defaultTargets = ["wychelean"]
+
+[[lean_lib]]
+name = "Wychelean"
+
+[[lean_exe]]
+name = "wychelean"
+root = "Main"
