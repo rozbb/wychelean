@@ -13,8 +13,11 @@ abbrev BaseField := ZMod p
 abbrev ScalarField := ZMod basepointOrder
 
 -- BaseField is a field because p is a prime
+-- ScalarField is a field because basepointOrder is a prime
 instance fact_prime_p: Fact (Nat.Prime p) := ⟨prime_two_pow_255_sub_19⟩
+instance fact_prime_basepointOrder: Fact (Nat.Prime basepointOrder) := ⟨prime_basepointOrder⟩
 example: Field BaseField := inferInstance
+example: Field ScalarField := inferInstance
 
 -- Curve25519: Y² = x³ + 486662X² + X over BaseField
 -- Mathlib Weierstrass equation: Y² + a₁XY + a₃Y = X³ + a₂X² + a₄X + a₆
