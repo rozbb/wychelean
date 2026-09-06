@@ -35,13 +35,13 @@ def K : Vector UInt32 64 := #v[
 structure State where
   (a b c d e f g h : UInt32)
 
-/-- Word-wise addition of two states. -/
-def State.add (s t : State) : State :=
-  { a := s.a + t.a, b := s.b + t.b, c := s.c + t.c, d := s.d + t.d,
-    e := s.e + t.e, f := s.f + t.f, g := s.g + t.g, h := s.h + t.h }
+/-- Word-wise addition. -/
+instance : Add State where
+  add s t := ⟨s.a + t.a, s.b + t.b, s.c + t.c, s.d + t.d, s.e + t.e, s.f + t.f, s.g + t.g, s.h + t.h⟩
 
-/-- The state as eight words, `a` first. -/
-def State.toVector (s : State) : Vector UInt32 8 := #v[s.a, s.b, s.c, s.d, s.e, s.f, s.g, s.h]
+/-- The state as 32 bytes: the words `a` to `h` in order, each big-endian. -/
+def State.toBytes (s : State) : Vector UInt8 32 :=
+  #v[s.a, s.b, s.c, s.d, s.e, s.f, s.g, s.h].flatMap UInt32.toBytesBE
 
 /--
 Initial state value:
@@ -71,7 +71,7 @@ def Ch (e f g : UInt32) : UInt32 := (e &&& f) ^^^ (~~~e &&& g)
 def Maj (a b c : UInt32) : UInt32 := (a &&& b) ^^^ (a &&& c) ^^^ (b &&& c)
 
 /-- One round of the compression function with round constant `k` and schedule word `w`. -/
-def sha256Round (s : State) (k w : UInt32) : State :=
+def round (s : State) (k w : UInt32) : State :=
   let t1 := s.h + upperSigma1 s.e + Ch s.e s.f s.g + k + w
   let t2 := upperSigma0 s.a + Maj s.a s.b s.c
   { a := t1 + t2, b := s.a, c := s.b, d := s.c, e := s.d + t1, f := s.e, g := s.f, h := s.g }
@@ -87,21 +87,17 @@ def messageSchedule (block : Vector UInt32 16) : Vector UInt32 64 :=
     w.set j wj) init
 
 /-- Apply the 64 rounds to `state` using the message schedule `w`. -/
-def sha256Compress (state : State) (w : Vector UInt32 64) : State :=
-  Fin.foldl 64 (fun s i => sha256Round s K[i] w[i]) state
+def rounds (state : State) (w : Vector UInt32 64) : State :=
+  Fin.foldl 64 (fun s i => round s K[i] w[i]) state
 
 /-- Process one 512-bit block, given as 16 big-endian 32-bit words. -/
-def compressBlock (state : State) (block : Vector UInt32 16) : State :=
-  state.add (sha256Compress state (messageSchedule block))
-
-/-- Pack four bytes into a 32-bit word, big-endian. -/
-def bytesToWord32BE (b0 b1 b2 b3 : UInt8) : UInt32 :=
-  b0.toUInt32 <<< 24 ||| b1.toUInt32 <<< 16 ||| b2.toUInt32 <<< 8 ||| b3.toUInt32
+def compress (state : State) (block : Vector UInt32 16) : State :=
+  state + rounds state (messageSchedule block)
 
 /-- Pack 64 bytes into a block of 16 big-endian 32-bit words. -/
 def bytesToBlock (bytes : Vector UInt8 64) : Vector UInt32 16 :=
   Vector.ofFn fun (i : Fin 16) =>
-    bytesToWord32BE bytes[4 * i.val] bytes[4 * i.val + 1]
+    UInt32.ofBytesBE bytes[4 * i.val] bytes[4 * i.val + 1]
       bytes[4 * i.val + 2] bytes[4 * i.val + 3]
 
 /-- Pad a message and split it into blocks (FIPS 180-4, section 5.1.1):
@@ -124,8 +120,8 @@ def pad {len : Nat} (msg : Vector UInt8 len) :
       (bitLen >>> (8 * (totalLen - 1 - i.val))).toUInt8
   (padded.toChunks 64).map bytesToBlock
 
-/-- SHA-256 of a byte string, as eight 32-bit words (most significant first). -/
-def sha256 {len : Nat} (msg : Vector UInt8 len) : Vector UInt32 8 :=
-  ((pad msg).foldl compressBlock H0).toVector
+/-- SHA-256 of a byte string: the 32-byte message digest. -/
+def sha256 {len : Nat} (msg : Vector UInt8 len) : Vector UInt8 32 :=
+  ((pad msg).foldl compress H0).toBytes
 
 end Wychelean.Hashes.SHA256
