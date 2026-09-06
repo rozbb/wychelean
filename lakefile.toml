@@ -1,15 +1,15 @@
 name = "Wychelean"
 version = "0.1.0"
 defaultTargets = ["Wychelean"]
-testDriver = "knownAnswerTests"
+testDriver = "tests"
 
 [[lean_lib]]
 name = "Wychelean"
 
 [[lean_lib]]
-name = "KnownAnswerTests"
-globs = ["KnownAnswerTests.+"]
+name = "Tests"
+globs = ["Tests.+"]
 
 [[lean_exe]]
-name = "knownAnswerTests"
-root = "KnownAnswerTests.Main"
+name = "tests"
+root = "Tests.Main"

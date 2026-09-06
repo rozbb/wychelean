@@ -5,7 +5,7 @@ A `Test` is a named check that either passed (`failure = none`) or carries a
 message describing the mismatch. Suites are plain lists of tests.
 -/
 
-namespace KnownAnswerTests
+namespace Tests
 
 structure Test where
   name : String
@@ -28,4 +28,4 @@ def runSuite (suite : String) (tests : List Test) : IO Nat := do
   IO.println s!"{suite}: {tests.length - failed}/{tests.length} passed"
   pure failed
 
-end KnownAnswerTests
+end Tests

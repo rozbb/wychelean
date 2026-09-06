@@ -1,7 +1,7 @@
 import Wychelean.Hashes.SHA256
-import KnownAnswerTests.Harness
+import Tests.Harness
 
-namespace KnownAnswerTests.SHA256
+namespace Tests.Hashes.SHA256
 
 open Wychelean.Hashes.SHA256
 
@@ -94,4 +94,4 @@ def helperTests : List Test := [
 
 def tests : List Test := digestTests ++ padTests ++ helperTests
 
-end KnownAnswerTests.SHA256
+end Tests.Hashes.SHA256
