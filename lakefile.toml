@@ -3,6 +3,10 @@ version = "0.1.0"
 defaultTargets = ["Wychelean"]
 testDriver = "knownAnswerTests"
 
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
 [[lean_lib]]
 name = "Wychelean"
 
