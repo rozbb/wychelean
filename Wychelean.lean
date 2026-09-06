@@ -1,1 +1,1 @@
-import Wychelean.Hashes.Basic
+import Wychelean.Hashes.SHA256

@@ -6,6 +6,10 @@ testDriver = "knownAnswerTests"
 [[lean_lib]]
 name = "Wychelean"
 
+[[lean_lib]]
+name = "KnownAnswerTests"
+globs = ["KnownAnswerTests.+"]
+
 [[lean_exe]]
 name = "knownAnswerTests"
 root = "KnownAnswerTests.Main"
