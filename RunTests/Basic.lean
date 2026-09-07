@@ -1,14 +1,14 @@
 /-!
-# Known-answer test harness
+# Test harness
 
-A small harness for the known-answer tests that live next to each specification, e.g.
-`Wychelean.Curves.Curve25519.Tests`. `KnownAnswerTests.Main` collects every suite and runs it.
+A small harness for the tests that live next to each specification, e.g.
+`Wychelean.DH.X25519.Tests`. `RunTests.Main` collects every suite and runs it.
 
 Byte strings are written as the hex the source documents print, so a reader can check a test
 vector against its specification by eye rather than by transcribing bytes.
 -/
 
-namespace KnownAnswerTests
+namespace RunTests
 
 /-! ## Hex -/
 
@@ -48,13 +48,13 @@ scoped instance: ToString (Vector UInt8 n) := ⟨toHex⟩
 
 /-! ## Tests -/
 
-/-- A single known-answer test. -/
+/-- A single test. -/
 structure Test where
   name: String
   /-- `none` if the answer matched, otherwise a description of the mismatch. -/
   failure: Option String
 
-/-- A named group of known-answer tests, usually the vectors of one specification. -/
+/-- A named group of tests, usually the vectors of one specification. -/
 structure Suite where
   name: String
   tests: List Test
@@ -83,10 +83,10 @@ def runSuites (suites: List Suite): IO UInt32 := do
     failed := failed + (← s.run)
   let total := (suites.map (·.tests.length)).sum
   if failed == 0 then
-    IO.println s!"all {total} known answer tests passed"
+    IO.println s!"all {total} tests passed"
     return 0
   else
-    IO.println s!"{failed} of {total} known answer tests failed"
+    IO.println s!"{failed} of {total} tests failed"
     return 1
 
-end KnownAnswerTests
+end RunTests

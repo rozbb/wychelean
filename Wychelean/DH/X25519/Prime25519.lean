@@ -3,7 +3,7 @@ import Mathlib.Tactic.NormNum.Prime
 import Mathlib.Data.ZMod.Basic
 
 /-!
-# Primality of 2^255 - 19 and of the Curve25519 basepoint order
+# Proves the primality of the Curve25519 modulus and basepoint order
 
 Pratt certificates for the Curve25519 base field prime and for the order of its basepoint,
 both checked entirely by the kernel.
@@ -18,6 +18,8 @@ The one obstacle is that `ZMod`'s `Monoid.npow` is `npowRecAuto`, i.e. *unary* r
 `pow_eq_binRec` rewrites to Mathlib's repeated-squaring `npowBinRec`, which the kernel reduces
 in ~256 steps of GMP-accelerated `Fin` arithmetic.
 -/
+
+namespace X25519
 
 set_option maxRecDepth 4000
 
@@ -341,3 +343,5 @@ theorem prime_basepointOrder: Nat.Prime (2 ^ 252 + 0x14def9dea2f79cd65812631a5cf
     norm_num
   rw [h]
   exact prime_7237005577332262213973186563042994240857116359379907606001950938285454250989
+
+end X25519
