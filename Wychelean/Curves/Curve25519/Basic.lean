@@ -7,9 +7,14 @@ open WeierstrassCurve
 
 /-!
 # Curve25519
-This modulus contains an implementation of scalar multiplication in Curve25519. Key top-level definitions are
-* `scalarMul`
+This modulus contains an implementation of scalar multiplication in Curve25519. Key top-level
+definitions are
+* `_scalarMul`, scalar multiplication, taking the nonresidue `d` to twist by as a parameter
+* `scalarMul`, which is `_scalarMul` with `d = 2`
 * `basepointMul`
+
+The choice of `d` is immaterial: `Wychelean.Curves.Curve25519.TwistIndependence` proves that any
+two nonresidues give the same output.
 -/
 
 /-!
@@ -45,11 +50,14 @@ def Curve: WeierstrassCurve BaseField := {
     a₆ := 0
 }
 
+-- The curve is nonsingular, i.e. its discriminant is nonzero
+theorem curve_Δ_ne_zero: Curve.Δ ≠ 0 := by
+  simp only [Curve, Δ, b₂, b₄, b₆, b₈]
+  decide
+
 -- Prove the curve is indeed an elliptic curve (i.e., nonsingular)
 instance: Curve.IsElliptic where
-  isUnit := isUnit_iff_ne_zero.mpr <| by
-    simp only [Curve, Δ, b₂, b₄, b₆, b₈]
-    decide
+  isUnit := isUnit_iff_ne_zero.mpr curve_Δ_ne_zero
 
 -- Base point coordinates from
 --   https://www.rfc-editor.org/rfc/rfc7748.html#section-4.1
@@ -68,19 +76,24 @@ theorem basePoint_nonsingular: Curve.toAffine.Nonsingular BasePointU BasePointV 
 def BasePoint: Curve.toAffine.Point :=
   Affine.Point.some BasePointU BasePointV basePoint_nonsingular
 
--- The parameter the curve is twisted by. It actually doesn't matter which d we use as long as it's
--- a nonresidue mod p
-def d: BaseField := 2
+-- The twisting parameter is any nonresidue d mod p. Everything below takes it as a parameter;
+-- `scalarMul` instantiates it at 2, and `Curve25519.TwistIndependence` shows the choice does not
+-- matter.
 
--- d is a nonresidue mod p, so d·Y² = X³ + 486662X² + X is indeed a quadratic twist of Curve
+-- 2 is a nonresidue mod p. It is what `scalarMul` twists by, and it is also the fixed nonresidue
+-- out of which `sqrtCandidate` builds a square root of -1, independently of the twist parameter.
 set_option maxRecDepth 4000 in
-theorem d_not_square: ¬ IsSquare d := by
+theorem two_not_square: ¬ IsSquare (2: BaseField) := by
   rw [ZMod.euler_criterion p (by decide), pow_eq_binRec]
   decide
 
+-- A nonresidue is in particular nonzero, since 0 = 0² is a square
+theorem ne_zero_of_not_square {d: BaseField} (hd: ¬ IsSquare d): d ≠ 0 :=
+  fun h0 => hd (h0 ▸ IsSquare.zero)
+
 -- The quadratic twist d·Y² = X³ + 486662X² + X, put back into Weierstrass form by the invertible
 -- map (X, Y) ↦ (X/d, Y/d²), which gives Y² = X³ + (d·486662)X² + d²X.
-def Twist: WeierstrassCurve BaseField := {
+def Twist (d: BaseField): WeierstrassCurve BaseField := {
     a₁ := 0,
     a₂ := d * 486662,
     a₃ := 0,
@@ -88,14 +101,20 @@ def Twist: WeierstrassCurve BaseField := {
     a₆ := 0
 }
 
--- The twist is elliptic too: its discriminant works out to d⁶ times that of `Curve`, so it is
--- nonzero for the same reason, and in a field that is the same as being a unit.
-instance: Twist.IsElliptic where
-  isUnit := isUnit_iff_ne_zero.mpr <| by
-    simp only [Twist, Δ, b₂, b₄, b₆, b₈, d]
-    decide
+-- The twist's discriminant works out to d⁶ times that of `Curve`
+theorem twist_Δ (d: BaseField): (Twist d).Δ = d ^ 6 * Curve.Δ := by
+  simp only [Twist, Curve, Δ, b₂, b₄, b₆, b₈]
+  ring
 
-example: AddCommGroup Twist.toAffine.Point := inferInstance
+theorem twist_Δ_ne_zero {d: BaseField} (hd: d ≠ 0): (Twist d).Δ ≠ 0 :=
+  twist_Δ d ▸ mul_ne_zero (pow_ne_zero 6 hd) curve_Δ_ne_zero
+
+-- So for any nonzero d — in particular for any nonresidue — the twist is elliptic too, and in a
+-- field a nonzero discriminant is the same as a unit one
+theorem twist_isElliptic {d: BaseField} (hd: d ≠ 0): (Twist d).IsElliptic :=
+  ⟨isUnit_iff_ne_zero.mpr (twist_Δ_ne_zero hd)⟩
+
+example (d: BaseField): AddCommGroup (Twist d).toAffine.Point := inferInstance
 
 /-! ## Scalar decoding -/
 
@@ -133,7 +152,7 @@ def encodeUCoordinate (u: BaseField): Vector UInt8 32 :=
 
 -- Right-hand sides of the two curve equations, as decidable arithmetic in BaseField
 def curveRhs (u: BaseField): BaseField := u ^ 3 + 486662 * u ^ 2 + u
-def twistRhs (x: BaseField): BaseField := x ^ 3 + d * 486662 * x ^ 2 + d ^ 2 * x
+def twistRhs (d x: BaseField): BaseField := x ^ 3 + d * 486662 * x ^ 2 + d ^ 2 * x
 
 -- Shows that (u, y) is a nonsingular point when they satisfy the curve equation
 theorem mem_curve {u y: BaseField} (h: y ^ 2 = curveRhs u):
@@ -144,9 +163,9 @@ theorem mem_curve {u y: BaseField} (h: y ^ 2 = curveRhs u):
     linear_combination h
 
 -- Shows that (x, y) is a nonsingular point when they satisfy the twist equation
-theorem mem_twist {x y: BaseField} (h: y ^ 2 = twistRhs x):
-    Twist.toAffine.Nonsingular x y :=
-  Affine.equation_iff_nonsingular.mp <| by
+theorem mem_twist {d x y: BaseField} (hd: d ≠ 0) (h: y ^ 2 = twistRhs d x):
+    (Twist d).toAffine.Nonsingular x y :=
+  (Affine.equation_iff_nonsingular_of_Δ_ne_zero (twist_Δ_ne_zero hd)).mp <| by
     rw [Affine.equation_iff']
     simp only [Twist, twistRhs] at *
     linear_combination h
@@ -164,12 +183,12 @@ def mkCurvePoint (u: BaseField): Option Curve.toAffine.Point :=
   else none
 
 -- Construct the twist point with the given u, if it exists
-def mkTwistPoint (u: BaseField): Option Twist.toAffine.Point :=
+def mkTwistPoint (d: BaseField) (hd: d ≠ 0) (u: BaseField): Option (Twist d).toAffine.Point :=
   -- Do the invertible map X ↦ dX so we can operate over the Weierstrass form of the twist
   let x := d * u
-  let y := sqrtCandidate (twistRhs x)
-  if h: y ^ 2 = twistRhs x then
-    some (Affine.Point.some x y (mem_twist h))
+  let y := sqrtCandidate (twistRhs d x)
+  if h: y ^ 2 = twistRhs d x then
+    some (Affine.Point.some x y (mem_twist hd h))
   else none
 
 -- a^(p/2) is ±1 for nonzero a, since its square is a^(p-1) = 1
@@ -191,7 +210,7 @@ theorem euler_neg_one {a: BaseField} (ha: a ≠ 0) (h: ¬ IsSquare a):
 -- 2^((p-1)/4) is a square root of -1, since 2 is a nonresidue
 theorem sqrtNegOne_sq: ((2 : BaseField) ^ ((p - 1) / 4)) ^ 2 = -1 := by
   rw [← pow_mul, show (p - 1) / 4 * 2 = p / 2 by decide]
-  exact euler_neg_one (by decide) d_not_square
+  exact euler_neg_one (by decide) two_not_square
 
 -- The p ≡ 5 mod 8 square root formula really does produce a square root, on squares
 theorem sqrtCandidate_sq {a: BaseField} (h: IsSquare a): sqrtCandidate a ^ 2 = a := by
@@ -218,32 +237,32 @@ theorem sqrtCandidate_sq {a: BaseField} (h: IsSquare a): sqrtCandidate a ^ 2 = a
     · rw [mul_pow, hr2, h1, sqrtNegOne_sq]; ring
 
 -- The twist's right-hand side at d*u is d³ times the curve's at u
-theorem twistRhs_eq (u: BaseField): twistRhs (d * u) = d ^ 3 * curveRhs u := by
+theorem twistRhs_eq (d u: BaseField): twistRhs d (d * u) = d ^ 3 * curveRhs u := by
   simp only [twistRhs, curveRhs]; ring
 
 -- If u misses the curve then curveRhs u is a nonresidue, and so is d³, so their product is a square
-theorem isSquare_twistRhs {u: BaseField} (h: ¬ IsSquare (curveRhs u)):
-    IsSquare (twistRhs (d * u)) := by
-  have hd: (d : BaseField) ≠ 0 := by decide
+theorem isSquare_twistRhs {d u: BaseField} (hd: ¬ IsSquare d) (h: ¬ IsSquare (curveRhs u)):
+    IsSquare (twistRhs d (d * u)) := by
+  have hd0: d ≠ 0 := ne_zero_of_not_square hd
   have hf: curveRhs u ≠ 0 := fun h0 => h (h0 ▸ ⟨0, by ring⟩)
-  have hne: twistRhs (d * u) ≠ 0 := by
-    rw [twistRhs_eq]; exact mul_ne_zero (pow_ne_zero 3 hd) hf
+  have hne: twistRhs d (d * u) ≠ 0 := by
+    rw [twistRhs_eq]; exact mul_ne_zero (pow_ne_zero 3 hd0) hf
   rw [ZMod.euler_criterion p hne, twistRhs_eq, mul_pow, ← pow_mul, mul_comm 3 (p / 2), pow_mul,
-    euler_neg_one hd d_not_square, euler_neg_one hf h]
+    euler_neg_one hd0 hd, euler_neg_one hf h]
   ring
 
 theorem mkCurvePoint_isSome {u: BaseField} (h: IsSquare (curveRhs u)):
     (mkCurvePoint u).isSome := by
   simp only [mkCurvePoint, sqrtCandidate_sq h, dite_true, Option.isSome_some]
 
-theorem mkTwistPoint_isSome {u: BaseField} (h: IsSquare (twistRhs (d * u))):
-    (mkTwistPoint u).isSome := by
+theorem mkTwistPoint_isSome {d u: BaseField} (hd: d ≠ 0) (h: IsSquare (twistRhs d (d * u))):
+    (mkTwistPoint d hd u).isSome := by
   simp only [mkTwistPoint, sqrtCandidate_sq h, dite_true, Option.isSome_some]
 
--- Every u-coordinate lies on the curve or on the twist, so `scalarMul` needs no fallback
-theorem mkTwistPoint_isSome_of_not_curve {u: BaseField} (h: ¬ (mkCurvePoint u).isSome):
-    (mkTwistPoint u).isSome :=
-  mkTwistPoint_isSome (isSquare_twistRhs (fun hs => h (mkCurvePoint_isSome hs)))
+-- Every u-coordinate lies on the curve or on the twist, so `_scalarMul` needs no fallback
+theorem mkTwistPoint_isSome_of_not_curve {d u: BaseField} (hd: ¬ IsSquare d)
+    (h: ¬ (mkCurvePoint u).isSome): (mkTwistPoint d (ne_zero_of_not_square hd) u).isSome :=
+  mkTwistPoint_isSome _ (isSquare_twistRhs hd (fun hs => h (mkCurvePoint_isSome hs)))
 
 -- The point at infinity is given u-coordinate 0 in
 --   https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1
@@ -254,20 +273,31 @@ def uCoord {W: WeierstrassCurve BaseField} (P: W.toAffine.Point): BaseField :=
 
 -- Multiplies a point, given by a 32-byte little-endian representation of its u-coordinate, by a
 -- scalar, given by a 32-byte little-endian representation of the integer. If the point is on the
--- curve, then multiplication is done on the curve. If it's on the twist, then multiplication is
--- done on the twist. The output is the 32-byte little-endian representation of the resulting
--- u-coordinate. Note that, per the specification, scalars are _clamped_, meaning some bits are
--- set/cleared before parsing as an integer.
-def scalarMul (point scalar: Vector UInt8 32): Vector UInt8 32 :=
+-- curve, then multiplication is done on the curve. If it's on the twist by the nonresidue `d`,
+-- then multiplication is done on that twist. The output is the 32-byte little-endian
+-- representation of the resulting u-coordinate. Note that, per the specification, scalars are
+-- _clamped_, meaning some bits are set/cleared before parsing as an integer.
+def _scalarMul (d: BaseField) (hd: ¬ IsSquare d) (point scalar: Vector UInt8 32):
+    Vector UInt8 32 :=
   let u: BaseField := decodeUCoordinate point
   let n := decodeScalar scalar
   let outU := if h: (mkCurvePoint u).isSome then
     uCoord (n • (mkCurvePoint u).get h)
   else
     -- Undo the invertible map X ↦ dX to get the twist coordinate of the non-Weierstrass form
-    uCoord (n • (mkTwistPoint u).get (mkTwistPoint_isSome_of_not_curve h)) / d
+    uCoord (n • (mkTwistPoint d (ne_zero_of_not_square hd) u).get
+      (mkTwistPoint_isSome_of_not_curve hd h)) / d
 
   encodeUCoordinate outU
+
+-- Which nonresidue `d` is handed to `_scalarMul` makes no difference to its output: that is
+-- Theorem 2.1 of Bernstein's Curve25519 paper (proved in its Appendix A), and it is proved
+-- here as `_scalarMul_indep_d` in `Wychelean.Curves.Curve25519.TwistIndependence`.
+
+-- `_scalarMul` with the twisting parameter fixed to 2. By `_scalarMul_indep_d` any other
+-- nonresidue gives the same function.
+def scalarMul (point scalar: Vector UInt8 32): Vector UInt8 32 :=
+  _scalarMul 2 two_not_square point scalar
 
 -- Multiplies the Curve25519 basepoint by a scalar, given by a 32-byte little-endian
 -- representation of the integer Note that, per the specification, scalars are _clamped_,
