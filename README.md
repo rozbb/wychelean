@@ -15,6 +15,13 @@ We aim to produce a trustworthy base from which reliable software can be built. 
 
 To run known-answer tests, just run `lake test`
 
+Each specification's known-answer tests live next to it, e.g. the Curve25519 vectors are in
+`Wychelean/Curves/Curve25519/Tests.lean`. They are written against the hex strings the source
+documents print, so a test vector can be checked against its specification by eye. The harness
+they use is `KnownAnswerTests/Basic.lean`, and `KnownAnswerTests/Main.lean` lists every suite to
+run; adding a new one means importing its module there. Test modules are built by `lake test`
+only, not by `lake build`.
+
 # License
 
 Licensed under either of

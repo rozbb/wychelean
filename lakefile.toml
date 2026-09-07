@@ -10,6 +10,13 @@ scope = "leanprover-community"
 [[lean_lib]]
 name = "Wychelean"
 
+# The known-answer test harness. The suites it runs live next to the specifications they test
+# (e.g. `Wychelean/Curves/Curve25519/Tests.lean`) and are pulled in by `KnownAnswerTests.Main`,
+# so they are built by `lake test` but not by `lake build`.
+[[lean_lib]]
+name = "KnownAnswerTests"
+roots = ["KnownAnswerTests.Basic"]
+
 [[lean_exe]]
 name = "knownAnswerTests"
 root = "KnownAnswerTests.Main"
