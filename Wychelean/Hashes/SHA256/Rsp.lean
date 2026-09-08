@@ -17,10 +17,6 @@ private def countKey : String := "COUNT"
 private def seedKey : String := "Seed"
 private def sectionHeader : String := s!"L = {digestSize}"
 
-/-- SHA256 on a byte array; test messages must fit the FIPS length bound. -/
-def sha256Bytes (msg : Array UInt8) : Array UInt8 :=
-  if h : 8 * msg.size < 2 ^ 64 then (sha256 msg.toVector h).toArray else panic! "message too long"
-
 abbrev Digest := Vector UInt8 digestSize
 
 structure HashVector where
@@ -38,20 +34,19 @@ private def message : Parser (Array UInt8) := do
       fail s!"{messageKey} has {bytes.size * 8} bits, but {lengthKey} is {bits}"
     return bytes
 
+private def parseDigest : Parser Digest := field digestKey (readHexVec digestSize)
+
 private def hashVector : Parser HashVector := do
-  return ⟨← message, ← field digestKey (readHexVec digestSize)⟩
+  return ⟨← message, ← parseDigest⟩
 
 def parseKat : Parser (List HashVector) := responseFile do
   header sectionHeader
   return (← many1 hashVector).toList
 
-private def monteDigest : Parser Digest :=
-  field countKey readNat *> field digestKey (readHexVec digestSize)
-
 def parseMonte : Parser (Digest × List Digest) := responseFile do
   header sectionHeader
   let seed ← field seedKey (readHexVec digestSize)
-  let checkpoints ← many1 monteDigest
+  let checkpoints ← many1 (field countKey readNat *> parseDigest)
   return (seed, checkpoints.toList)
 
 /-- One SHAVS checkpoint: 1000 hashes of the previous three digests, initially all `seed`. -/

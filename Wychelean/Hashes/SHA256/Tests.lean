@@ -9,7 +9,8 @@ namespace Wychelean.Hashes.SHA256.Tests
 open RunTests
 open Wychelean.Hashes.SHA256.Rsp
 
-private def sha256Hex (msg : Array UInt8) : String := Hex.encode (sha256Bytes msg)
+private def sha256Hex (msg : Array UInt8) (h : 8 * msg.size < 2 ^ 64) : String :=
+  Hex.encode (sha256 msg.toVector h).toArray
 
 /-- SHA256 examples from FIPS 180-2, Appendix B. -/
 def basic : Suite where
@@ -18,13 +19,13 @@ def basic : Suite where
     -- FIPS 180-2, Appendix B.1–B.3: https://doi.org/10.6028/NIST.FIPS.180-2
     check "FIPS abc"
       "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-      (sha256Hex "abc".toUTF8.data),
+      (sha256Hex "abc".toUTF8.data (by decide)),
     check "FIPS 56-byte message"
       "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
-      (sha256Hex "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".toUTF8.data),
+      (sha256Hex "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".toUTF8.data (by decide)),
     check "FIPS million-a message"
       "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0"
-      (sha256Hex (Array.replicate 1000000 (0x61 : UInt8)))
+      (sha256Hex (Array.replicate 1000000 (0x61 : UInt8)) (by simp))
   ]
 
 /-! ## NIST response files -/
@@ -35,8 +36,12 @@ private def knownAnswers (file : String) (count : Nat) : Suite where
     let vectors ← loadRsp file parseKat
     unless vectors.length == count do
       throw (IO.userError s!"{file}: expected {count} vectors, found {vectors.length}")
-    return vectors.zipIdx.map fun (v, i) =>
-      check s!"vector {i}, Len = {v.msg.size * 8}" (Hex.encode v.digest.toArray) (sha256Hex v.msg)
+    vectors.zipIdx.mapM fun (v, i) => do
+      if h : 8 * v.msg.size < 2 ^ 64 then
+        return check s!"vector {i}, Len = {v.msg.size * 8}"
+          (Hex.encode v.digest.toArray) (sha256Hex v.msg h)
+      else
+        throw (IO.userError s!"{file}: vector {i} exceeds the SHA256 length bound")
 
 private def monteCarlo : Suite where
   name := "SHA256 SHA256Monte.rsp"
