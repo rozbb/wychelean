@@ -9,17 +9,17 @@ https://doi.org/10.6028/NIST.FIPS.180-4
 
 namespace Wychelean.Hashes.SHA256
 
-/-- Size of a word in bytes. -/
+/-- Size of a word in bytes (FIPS 180-4, section 3.2). -/
 abbrev wordSize : Nat := 4
-/-- Size of a message block in bytes. -/
+/-- Size of a message block in bytes (FIPS 180-4, section 5.2.1). -/
 abbrev blockSize : Nat := 64
 /-- Number of words in a message block. -/
 abbrev blockWords : Nat := blockSize / wordSize
-/-- Number of rounds, and of words in the message schedule. -/
+/-- Number of rounds (FIPS 180-4, section 6.2.2, step 3). -/
 abbrev numRounds : Nat := 64
-/-- Size in bytes of the message length appended by padding. -/
+/-- Size in bytes of the message length appended by padding (FIPS 180-4, section 5.1.1). -/
 abbrev lengthSize : Nat := 8
-/-- Size of the digest in bytes. -/
+/-- Size of the digest in bytes (FIPS 180-4, section 6.2). -/
 abbrev digestSize : Nat := 32
 
 /-- Round constants: (FIPS 180-4, section 4.2.2). -/
@@ -79,7 +79,8 @@ def Ch (x y z : UInt32) : UInt32 := (x &&& y) ^^^ (~~~x &&& z)
 /-- `Maj(x, y, z) = (x ∧ y) ⊕ (x ∧ z) ⊕ (y ∧ z)` -/
 def Maj (x y z : UInt32) : UInt32 := (x &&& y) ^^^ (x &&& z) ^^^ (y &&& z)
 
-/-- One round of the compression function with round constant `k` and schedule word `w`. -/
+/-- One round of the compression function with round constant `k` and schedule word `w`
+(FIPS 180-4, section 6.2.2, step 3). -/
 def round (st : State) (k w : UInt32) : State :=
   let t1 := st.h + upperSigma1 st.e + Ch st.e st.f st.g + k + w
   let t2 := upperSigma0 st.a + Maj st.a st.b st.c

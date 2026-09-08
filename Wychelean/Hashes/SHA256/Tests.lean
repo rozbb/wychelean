@@ -16,7 +16,7 @@ private def sha256Hex (msg : Array UInt8) (h : 8 * msg.size < 2 ^ 64) : String :
 def basic : Suite where
   name := "SHA256 FIPS examples"
   tests := pure [
-    -- FIPS 180-2, Appendix B.1–B.3: https://doi.org/10.6028/NIST.FIPS.180-2
+    -- FIPS 180-2, Appendix B.1–B.3: https://csrc.nist.gov/files/pubs/fips/180-2/final/docs/fips180-2.pdf
     check "FIPS abc"
       "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
       (sha256Hex "abc".toUTF8.data (by decide)),
