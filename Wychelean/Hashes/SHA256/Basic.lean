@@ -73,11 +73,11 @@ def upperSigma0 (x : UInt32) : UInt32 := (rotr 2 x) ^^^ (rotr 13 x) ^^^ (rotr 22
 /-- `Σ₁(x) = ROTR⁶(x) ⊕ ROTR¹¹(x) ⊕ ROTR²⁵(x)` -/
 def upperSigma1 (x : UInt32) : UInt32 := (rotr 6 x) ^^^ (rotr 11 x) ^^^ (rotr 25 x)
 
-/-- `Ch(e, f, g) = (e ∧ f) ⊕ (¬e ∧ g)` -/
-def Ch (e f g : UInt32) : UInt32 := (e &&& f) ^^^ (~~~e &&& g)
+/-- `Ch(x, y, z) = (x ∧ y) ⊕ (¬x ∧ z)` -/
+def Ch (x y z : UInt32) : UInt32 := (x &&& y) ^^^ (~~~x &&& z)
 
-/-- `Maj(a, b, c) = (a ∧ b) ⊕ (a ∧ c) ⊕ (b ∧ c)` -/
-def Maj (a b c : UInt32) : UInt32 := (a &&& b) ^^^ (a &&& c) ^^^ (b &&& c)
+/-- `Maj(x, y, z) = (x ∧ y) ⊕ (x ∧ z) ⊕ (y ∧ z)` -/
+def Maj (x y z : UInt32) : UInt32 := (x &&& y) ^^^ (x &&& z) ^^^ (y &&& z)
 
 /-- One round of the compression function with round constant `k` and schedule word `w`. -/
 def round (st : State) (k w : UInt32) : State :=
@@ -88,14 +88,14 @@ def round (st : State) (k w : UInt32) : State :=
 
 /-- The message schedule `W₀, …, W₆₃` of a block (FIPS 180-4, section 6.2.2, step 1). -/
 def messageSchedule (block : Vector UInt32 blockWords) : Vector UInt32 numRounds :=
-  Nat.fold numRounds (init := Vector.replicate numRounds 0) fun t _ w =>
-    w.set t <|
+  Nat.fold numRounds (init := Vector.replicate numRounds 0) fun t _ W =>
+    W.set t <|
       if h : t < blockWords then block[t]
-      else lowerSigma1 w[t - 2] + w[t - 7] + lowerSigma0 w[t - 15] + w[t - 16]
+      else lowerSigma1 W[t - 2] + W[t - 7] + lowerSigma0 W[t - 15] + W[t - 16]
 
-/-- Apply all rounds to `state` using the message schedule `w`. -/
-def rounds (st : State) (w : Vector UInt32 numRounds) : State :=
-  Fin.foldl numRounds (fun st i => round st K[i] w[i]) st
+/-- Apply all rounds to `state` using the message schedule `W`. -/
+def rounds (st : State) (W : Vector UInt32 numRounds) : State :=
+  Fin.foldl numRounds (fun st t => round st K[t] W[t]) st
 
 /-- Process one block, given as big-endian words (FIPS 180-4, section 6.2.2). -/
 def compress (st : State) (block : Vector UInt32 blockWords) : State :=
