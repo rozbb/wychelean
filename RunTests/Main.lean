@@ -1,5 +1,7 @@
 import RunTests.Basic
 import Wychelean.DH.X25519.Tests
+import Wychelean.Hashes.SHA256.Tests
+import Wychelean.Utils.Tests
 
 /-!
 # Test driver
@@ -10,10 +12,18 @@ one means importing its module and listing it here.
 
 namespace RunTests
 
+open Wychelean
+
 def suites: List Suite :=
-  X25519.Tests.suites
+  [ Utils.Tests.suites,
+    X25519.Tests.suites,
+    Hashes.SHA256.Tests.suites ].flatten
 
 end RunTests
 
-def main: IO UInt32 :=
-  RunTests.runSuites RunTests.suites
+def main: IO UInt32 := do
+  try
+    RunTests.runSuites RunTests.suites
+  catch e =>
+    IO.eprintln s!"test setup failed: {e}"
+    return 1

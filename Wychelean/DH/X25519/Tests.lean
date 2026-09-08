@@ -91,7 +91,7 @@ private def products: List (String × String × String × String) := [
 /-- Every vector above, checked against the codec and against X25519. -/
 def suite: Suite where
   name := "X25519 (RFC 7748 known-answer tests)"
-  tests := Id.run do
+  tests := do
     let mut tests: Array Test := #[]
 
     for (name, hex, value) in scalars do
