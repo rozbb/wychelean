@@ -168,7 +168,7 @@ private def checkpoint (seed : Array UInt8) : Array UInt8 := Id.run do
     m2 := md
   return m2
 
-private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA256"
+private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA256/Vectors"
 
 private def loadRsp {α : Type} (name : String) (parse : String → Except String α) : IO α := do
   let path := fixtureDir / name
