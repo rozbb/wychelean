@@ -1,0 +1,82 @@
+import Wychelean.Hashes.SHA3.UpstreamTests
+import Wychelean.Hashes.SHA3.Rsp
+import Wychelean.Utils.Hex
+import RunTests.Basic
+
+namespace Wychelean.Hashes.SHA3.Tests
+open RunTests Rsp
+
+/-- Adapter shared by all NIST tests; expected results always come from checked-in fixtures. -/
+def evaluate (shake : Bool) (variant : Nat) (m : Vector Bool n) (d : Nat) : Array UInt8 := Id.run do
+  let bits := if shake then
+    if variant == 128 then (Spec.SHA3.SHAKE128 m d).toArray else (Spec.SHA3.SHAKE256 m d).toArray
+  else match variant with
+    | 224 => (Spec.SHA3.SHA3_224 m).toArray
+    | 256 => (Spec.SHA3.SHA3_256 m).toArray
+    | 384 => (Spec.SHA3.SHA3_384 m).toArray
+    | _ => (Spec.SHA3.SHA3_512 m).toArray
+  return (Array.range ((bits.size + 7) / 8)).map fun i =>
+    (List.range 8).foldl (fun b j => b ||| ((if bits[i * 8 + j]?.getD false then (1 : UInt8) else 0) <<< j.toUInt8)) 0
+
+private def byteBits (a : Array UInt8) : Vector Bool (8 * a.size) :=
+  Spec.bytesToBits (a.toVector.map UInt8.toBitVec)
+
+private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA3/Fixtures"
+
+private def knownAnswers (dir file : String) (shake : Bool) (variant count : Nat)
+    (variableOutput := false) (byteOriented := true) : Suite where
+  name := s!"{dir}/{file}"
+  tests := do
+    let vectors ← RunTests.Parser.parseFile
+      (if variableOutput then parseVariable byteOriented else parseKat shake variant) (fixtureDir / dir / file)
+    unless vectors.length == count do
+      throw (IO.userError s!"{file}: expected {count} cases, got {vectors.length}")
+    return vectors.zipIdx.map fun (v, i) =>
+      check s!"{i}, Len={v.msg.length}, Outputlen={v.output.length}"
+        (Hex.encode v.output.bytes) (Hex.encode (evaluate shake variant v.msg.bits v.output.length))
+
+/-- SHA3VS §§6.2.3 and 6.3.3: 100 checkpoints of 1000 iterations each. -/
+private def monte (dir file : String) (shake : Bool) (variant : Nat) : Suite where
+  name := s!"{dir}/{file}"
+  tests := do
+    let data ← RunTests.Parser.parseFile (parseMonte shake variant) (fixtureDir / dir / file)
+    let mut output := data.initial
+    let mut nextLen := data.maxBytes
+    let mut usedLen := nextLen
+    let mut tests := #[]
+    for (expected, i) in data.outputs.zipIdx do
+      for _ in [0:1000] do
+        let msg := if shake then (Array.range 16).map (fun j => output[j]?.getD 0) else output
+        usedLen := if shake then nextLen else variant / 8
+        output := evaluate shake variant (byteBits msg) (8 * usedLen)
+        if shake then
+          -- SHA3VS §6.3.3: rightmost 16 bits, interpreted as a big-endian integer.
+          let tail := output[output.size - 2]!.toNat * 256 + output[output.size - 1]!.toNat
+          nextLen := data.minBytes + tail % (data.maxBytes - data.minBytes + 1)
+      tests := tests.push (check s!"COUNT={i} length" expected.length (8 * usedLen))
+      tests := tests.push (check s!"COUNT={i}" (Hex.encode expected.bytes) (Hex.encode output))
+    return tests.toList
+
+/-- All four NIST archives, unchanged; provenance and counts are in Fixtures/README.md. -/
+def suites : List Suite := Id.run do
+  let mut result := []
+  for (byteOriented, shaCounts, shakeCounts, variableCounts) in
+      [(true, [145,137,105,73], [337,273], [1126,1246]),
+       (false, [1153,1089,833,577], [2689,2177], [937,995])] do
+    let orientation := if byteOriented then "byte" else "bit"
+    let dir := s!"sha-3{orientation}testvectors"
+    for (variant, count) in [224,256,384,512].zip shaCounts do
+      let stem := s!"SHA3_{variant}"
+      result := result ++ [knownAnswers dir (stem ++ "ShortMsg.rsp") false variant count,
+        knownAnswers dir (stem ++ "LongMsg.rsp") false variant 100,
+        monte dir (stem ++ "Monte.rsp") false variant]
+    let dir := s!"shake{orientation}testvectors"
+    for ((variant, count), varCount) in ([128,256].zip shakeCounts).zip variableCounts do
+      let stem := s!"SHAKE{variant}"
+      result := result ++ [knownAnswers dir (stem ++ "ShortMsg.rsp") true variant count,
+        knownAnswers dir (stem ++ "LongMsg.rsp") true variant 100,
+        knownAnswers dir (stem ++ "VariableOut.rsp") true variant varCount true byteOriented,
+        monte dir (stem ++ "Monte.rsp") true variant]
+  return result
+
+end Wychelean.Hashes.SHA3.Tests

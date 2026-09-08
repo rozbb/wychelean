@@ -28,6 +28,18 @@ def header (expected : String) : Parser Unit := token do
   let normalize := fun (s : String) => s.toList.filter (fun c => !c.isWhitespace)
   unless normalize value == normalize expected do fail s!"expected [{expected}]"
 
+/-- Parse a named natural-number section header. -/
+def natHeader (key : String) : Parser Nat := token do
+  skipChar '['
+  skipString key
+  skipHSpace
+  skipChar '='
+  skipHSpace
+  let n ← readNat
+  skipHSpace
+  skipChar ']'
+  return n
+
 /-- Parse a named field using the supplied value combinator. -/
 def field (key : String) (value : Parser α) : Parser α := token do
   skipString key
