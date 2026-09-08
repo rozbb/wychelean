@@ -1,3 +1,5 @@
+import RunTests.Parser.Basic
+
 /-!
 # Test harness
 
@@ -12,36 +14,13 @@ namespace RunTests
 
 /-! ## Hex -/
 
-/-- The value of a hexadecimal digit, or `none` if `c` is not one. -/
-def hexDigit? (c: Char): Option UInt8 :=
-  if '0' ≤ c ∧ c ≤ '9' then some (UInt8.ofNat (c.toNat - '0'.toNat))
-  else if 'a' ≤ c ∧ c ≤ 'f' then some (UInt8.ofNat (c.toNat - 'a'.toNat + 10))
-  else if 'A' ≤ c ∧ c ≤ 'F' then some (UInt8.ofNat (c.toNat - 'A'.toNat + 10))
-  else none
-
-/-- Decode a hex string into bytes. Test vectors are literals copied out of a specification, so a
-malformed one is a mistake in the test rather than a condition to recover from, and panics. -/
-def hexBytes (s: String): List UInt8 :=
-  go s.toList
-where
-  go: List Char → List UInt8
-  | [] => []
-  | [_] => panic! s!"hex string has an odd number of digits: {s}"
-  | hi :: lo :: rest =>
-    match hexDigit? hi, hexDigit? lo with
-    | some h, some l => (h * 16 + l) :: go rest
-    | _, _ => panic! s!"hex string contains a non-hex digit: {s}"
-
-/-- Decode a hex string into a fixed-size byte vector, panicking if it is the wrong length. -/
-def hexVector (s: String): Vector UInt8 n :=
-  let bytes := (hexBytes s).toArray
-  if h: bytes.size = n then ⟨bytes, h⟩
-  else panic! s!"expected {n} bytes of hex, got {bytes.size}: {s}"
+/-- Decode a complete, unprefixed lowercase hex string of exactly `n` bytes. -/
+def fromHex (s: String): Except String (Vector UInt8 n) :=
+  (Parser.parse (Parser.readHexVec n) s).mapError fun error => s!"invalid hex string {s}: {error}"
 
 /-- Render bytes as lowercase hex, the way specifications print test vectors. -/
 def toHex (v: Vector UInt8 n): String :=
-  let digits := "0123456789abcdef".toList.toArray
-  v.toList.foldl (fun acc b => (acc.push digits[b.toNat >>> 4]!).push digits[b.toNat &&& 15]!) ""
+  v.foldl (fun acc b => acc ++ b.toBitVec.toHex) ""
 
 /-- Report byte vectors as hex, so a failure can be read against its specification. -/
 scoped instance: ToString (Vector UInt8 n) := ⟨toHex⟩

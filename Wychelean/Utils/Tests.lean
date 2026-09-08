@@ -1,5 +1,4 @@
 import Wychelean.Utils.Bitwise
-import Wychelean.Utils.Hex
 import Wychelean.Utils.Vector
 import RunTests.Basic
 
@@ -8,8 +7,6 @@ import RunTests.Basic
 namespace Wychelean.Utils.Tests
 
 open RunTests
-
-private instance : ToString (Option (Array UInt8)) := ⟨reprStr⟩
 
 private def v6 : Vector Nat 6 := #v[1, 2, 3, 4, 5, 6]
 
@@ -41,20 +38,6 @@ def bitwise : Suite where
     check "(0x1c8 : UInt64).toBytesBE" (#v[0, 0, 0, 0, 0, 0, 1, 0xc8]) ((0x1c8 : UInt64).toBytesBE)
   ]
 
-def hex : Suite where
-  name := "Hex utilities"
-  tests := pure [
-    check "Hex.encode #[]" ("") (Hex.encode #[]),
-    check "Hex.encode #[0x00, 0x0a, 0xff]" ("000aff") (Hex.encode #[0x00, 0x0a, 0xff]),
-    check "Hex.encode #[0xde, 0xad, 0xbe, 0xef]" ("deadbeef") (Hex.encode #[0xde, 0xad, 0xbe, 0xef]),
-    check "Hex.decode \"\"" (some #[]) (Hex.decode ""),
-    check "Hex.decode \"deadbeef\"" (some #[0xde, 0xad, 0xbe, 0xef]) (Hex.decode "deadbeef"),
-    check "Hex.decode \"DEADBEEF\"" (some #[0xde, 0xad, 0xbe, 0xef]) (Hex.decode "DEADBEEF"),
-    check "Hex.decode \"abc\"" (none) (Hex.decode "abc"),
-    check "Hex.decode \"zz\"" (none) (Hex.decode "zz"),
-    check "Hex.decode (Hex.encode #[1, 2, 3, 250])" (some #[1, 2, 3, 250]) (Hex.decode (Hex.encode #[1, 2, 3, 250]))
-  ]
-
 def vector : Suite where
   name := "Vector utilities"
   tests := pure [
@@ -64,6 +47,6 @@ def vector : Suite where
     check "chunks ((#v[] : Vector Nat 0).toChunks 4 (by decide))" ([]) (chunks ((#v[] : Vector Nat 0).toChunks 4 (by decide)))
   ]
 
-def suites : List Suite := [bitwise, hex, vector]
+def suites : List Suite := [bitwise, vector]
 
 end Wychelean.Utils.Tests
