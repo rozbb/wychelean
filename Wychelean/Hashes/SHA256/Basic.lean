@@ -103,7 +103,7 @@ def compress (st : State) (block : Vector UInt32 blockWords) : State :=
 
 /-- Parse a block into big-endian words (FIPS 180-4, section 5.2.1). -/
 def bytesToBlock (bytes : Vector UInt8 blockSize) : Vector UInt32 blockWords :=
-  (bytes.toChunks wordSize (by decide)).map UInt32.ofBytesBE
+  (bytes.toChunks wordSize (by decide)).map UInt32.fromBytesBE
 
 /-- Number of `0x00` bytes appended by padding: the least count that fills the final block. -/
 def numZeros (len : Nat) : Nat := (blockSize - (len + 1 + lengthSize) % blockSize) % blockSize

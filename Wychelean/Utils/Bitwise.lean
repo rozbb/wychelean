@@ -13,7 +13,7 @@ def rotl (n : Nat) (x : UInt32) : UInt32 := ⟨x.toBitVec.rotateLeft n⟩
 end Wychelean
 
 /-- Pack four bytes into a word, big-endian. -/
-def UInt32.ofBytesBE (b : Vector UInt8 4) : UInt32 :=
+def UInt32.fromBytesBE (b : Vector UInt8 4) : UInt32 :=
   b[0].toUInt32 <<< 24 ||| b[1].toUInt32 <<< 16 ||| b[2].toUInt32 <<< 8 ||| b[3].toUInt32
 
 /-- The four bytes of a word, big-endian. -/
