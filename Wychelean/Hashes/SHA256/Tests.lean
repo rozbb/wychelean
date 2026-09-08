@@ -36,7 +36,7 @@ private def knownAnswers (file : String) (count : Nat) : Suite where
     unless vectors.length == count do
       throw (IO.userError s!"{file}: expected {count} vectors, found {vectors.length}")
     return vectors.zipIdx.map fun (v, i) =>
-      check s!"vector {i}, Len = {v.msg.size * 8}" (Hex.encode v.digest) (sha256Hex v.msg)
+      check s!"vector {i}, Len = {v.msg.size * 8}" (Hex.encode v.digest.toArray) (sha256Hex v.msg)
 
 private def monteCarlo : Suite where
   name := "SHA256 SHA256Monte.rsp"
@@ -49,7 +49,7 @@ private def monteCarlo : Suite where
     let mut tests := #[]
     for (digest, i) in expected.zipIdx do
       seed := checkpoint seed
-      tests := tests.push (check s!"COUNT = {i}" (Hex.encode digest) (Hex.encode seed))
+      tests := tests.push (check s!"COUNT = {i}" (Hex.encode digest.toArray) (Hex.encode seed.toArray))
     return tests.toList
 
 /-- All SHA256 suites, including all 100 Monte Carlo checkpoints (100,000 hashes). -/

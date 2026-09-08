@@ -1,5 +1,4 @@
 import RunTests.Basic
-import RunTests.Rsp.Tests
 import Wychelean.DH.X25519.Tests
 import Wychelean.Hashes.SHA256.Tests
 import Wychelean.Utils.Tests
@@ -16,8 +15,7 @@ namespace RunTests
 open Wychelean
 
 def suites: List Suite :=
-  [ Rsp.Tests.suites,
-    Utils.Tests.suites,
+  [ Utils.Tests.suites,
     X25519.Tests.suites,
     Hashes.SHA256.Tests.suites ].flatten
 

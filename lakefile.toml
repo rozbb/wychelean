@@ -15,7 +15,7 @@ name = "Wychelean"
 # `lake test` but not by `lake build`.
 [[lean_lib]]
 name = "RunTests"
-roots = ["RunTests.Basic", "RunTests.Rsp"]
+roots = ["RunTests.Basic", "RunTests.Parser.Basic", "RunTests.Parser.Rsp"]
 
 [[lean_exe]]
 name = "runTests"
