@@ -26,7 +26,7 @@ Every primitive contains its own tests in `Tests.lean`. Suites are registered in
 The ordinary `lake build` target does not import the test suites.
 
 SHA256 reads the checked-in `SHA256ShortMsg.rsp`, `SHA256LongMsg.rsp`, and
-`SHA256Monte.rsp` files in `Wychelean/Hashes/SHA256/Vectors/`. These are unmodified files from
+`SHA256Monte.rsp` files in `Wychelean/Hashes/SHA256/Fixtures/`. These are unmodified files from
 the [NIST CAVP byte-oriented SHA vectors](https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/shabytetestvectors.zip).
 All 65 short-message vectors, 64 long-message vectors, and 100 Monte Carlo checkpoints
 (100,000 hashes) run by default. No network access is needed to load the fixtures.

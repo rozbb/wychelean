@@ -1,3 +1,5 @@
+import Wychelean.Utils.Hex
+
 /-! Generic parser for NIST CAVP response files. -/
 
 namespace RunTests.Rsp
@@ -45,5 +47,45 @@ def parse (text : String) : Except String (List Entry) := do
       | _ => throw s!"line {i + 1}: expected a key = value field or bracketed header"
   if !fields.isEmpty then entries := entries.push (.record fields.toList)
   return entries.toList
+
+/-- Collect fields from exactly one nonempty section, ignoring whitespace in its header. -/
+def parseSingleSection (text expectedHeader : String) : Except String (List Field) := do
+  match ← parse text with
+  | .header value line :: entries =>
+    let normalize := fun (s : String) => s.toList.filter (fun c => !c.isWhitespace)
+    unless normalize value == normalize expectedHeader do
+      throw s!"line {line}: expected [{expectedHeader}]"
+    let mut fields := #[]
+    for entry in entries do
+      match entry with
+      | .record record => fields := fields ++ record.toArray
+      | .header _ line => throw s!"line {line}: unexpected additional section"
+    if fields.isEmpty then throw "missing response-file fields"
+    return fields.toList
+  | _ => throw s!"expected a response file starting with [{expectedHeader}]"
+
+def Field.readValue (f : Field) (key : String) : Except String String := do
+  unless f.key == key do throw s!"line {f.line}: expected {key}, found {f.key}"
+  match f.value with
+  | some value => return value
+  | none => throw s!"line {f.line}: {key} requires a value"
+
+def Field.readNat (f : Field) (key : String) : Except String Nat := do
+  let value ← f.readValue key
+  match value.toNat? with
+  | some n => return n
+  | none => throw s!"line {f.line}: {key} must be a natural number"
+
+def Field.readHex (f : Field) (key : String) : Except String (Array UInt8) := do
+  let value ← f.readValue key
+  match Wychelean.Hex.decode value with
+  | some bytes => return bytes
+  | none => throw s!"line {f.line}: malformed hexadecimal {key}"
+
+def Field.readHexSized (f : Field) (key : String) (size : Nat) : Except String (Array UInt8) := do
+  let bytes ← f.readHex key
+  unless bytes.size == size do
+    throw s!"line {f.line}: {key} must contain {size} bytes"
+  return bytes
 
 end RunTests.Rsp

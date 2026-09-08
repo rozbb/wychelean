@@ -3,9 +3,9 @@ import RunTests.Rsp
 
 namespace RunTests.Rsp.Tests
 
-private instance : ToString (Except String (List Entry)) := ⟨reprStr⟩
+private instance [Repr α] : ToString (Except String α) := ⟨reprStr⟩
 
-private instance : BEq (Except String (List Entry)) where
+private instance [BEq α] : BEq (Except String α) where
   beq
     | .ok a, .ok b => a == b
     | .error a, .error b => a == b
@@ -39,7 +39,37 @@ def suite : Suite where
     check "reject empty key" true (rejects " = 123"),
     check "reject malformed line" true (rejects "COUNT 1"),
     check "error identifies source line"
-      (.error "line 3: empty field name") (parse "# comment\n\n = 123")
+      (.error "line 3: empty field name") (parse "# comment\n\n = 123"),
+    check "collect a section with a caller-supplied header"
+      (.ok [⟨"COUNT", some "0", 2⟩, ⟨"KEY", some "abcd", 4⟩])
+      (parseSingleSection "[KEYLEN=16]\nCOUNT = 0\n\nKEY = abcd" "KEYLEN = 16"),
+    check "reject an additional section with its source line"
+      (.error "line 3: unexpected additional section")
+      (parseSingleSection "[ENCRYPT]\nCOUNT = 0\n[DECRYPT]" "ENCRYPT"),
+    check "reject missing section header"
+      (.error "expected a response file starting with [ENCRYPT]")
+      (parseSingleSection "COUNT = 0" "ENCRYPT"),
+    check "reject empty section" (.error "missing response-file fields")
+      (parseSingleSection "[ENCRYPT]" "ENCRYPT"),
+    check "reject wrong section header" (.error "line 1: expected [ENCRYPT]")
+      (parseSingleSection "[DECRYPT]\nCOUNT = 0" "ENCRYPT"),
+    check "read a natural-number field" (.ok 12)
+      ((Field.mk "COUNT" (some "12") 4).readNat "COUNT"),
+    check "reject nonnumeric field" (.error "line 4: COUNT must be a natural number")
+      ((Field.mk "COUNT" (some "x") 4).readNat "COUNT"),
+    check "reject a mismatched field name"
+      (.error "line 4: expected COUNT, found KEY")
+      ((Field.mk "KEY" (some "12") 4).readNat "COUNT"),
+    check "reject a flag where a value is required"
+      (.error "line 4: COUNT requires a value")
+      ((Field.mk "COUNT" none 4).readNat "COUNT"),
+    check "read hex with a caller-supplied byte count" (.ok #[0xab, 0xcd])
+      ((Field.mk "KEY" (some "AbCd") 4).readHexSized "KEY" 2),
+    check "reject malformed hex field" (.error "line 4: malformed hexadecimal KEY")
+      ((Field.mk "KEY" (some "zz") 4).readHex "KEY"),
+    check "reject a mismatched byte count"
+      (.error "line 4: KEY must contain 2 bytes")
+      ((Field.mk "KEY" (some "ab") 4).readHexSized "KEY" 2)
   ]
 
 def suites : List Suite := [suite]
