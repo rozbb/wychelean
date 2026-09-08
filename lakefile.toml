@@ -1,7 +1,11 @@
 name = "Wychelean"
 version = "0.1.0"
 defaultTargets = ["Wychelean"]
-testDriver = "Tests"
+testDriver = "runTests"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
 
 [[lean_lib]]
 name = "Wychelean"
@@ -10,3 +14,14 @@ precompileModules = true
 [[lean_lib]]
 name = "Tests"
 globs = ["Tests.+"]
+
+# The known-answer test harness. The suites it runs live next to the specifications they test (e.g.
+# `Wychelean/DH/X25519/Tests.lean`) and are pulled in by `RunTests.Main`, so they are built by
+# `lake test` but not by `lake build`.
+[[lean_lib]]
+name = "RunTests"
+roots = ["RunTests.Basic"]
+
+[[lean_exe]]
+name = "runTests"
+root = "RunTests.Main"
