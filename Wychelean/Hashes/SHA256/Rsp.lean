@@ -25,7 +25,7 @@ structure HashVector where
   deriving BEq, Repr
 
 private def message : Parser (Array UInt8) := do
-  let bits ← field lengthKey readNat
+  let bits ← field lengthKey digits
   field messageKey do
     let bytes ← readHex
     -- NIST represents the empty message as Len = 0, Msg = 00.
@@ -46,7 +46,7 @@ def parseKat : Parser (List HashVector) := responseFile do
 def parseMonte : Parser (Digest × List Digest) := responseFile do
   header sectionHeader
   let seed ← field seedKey (readHexVec digestSize)
-  let checkpoints ← many1 (field countKey readNat *> parseDigest)
+  let checkpoints ← many1 (field countKey digits *> parseDigest)
   return (seed, checkpoints.toList)
 
 /-- One SHAVS checkpoint: 1000 hashes of the previous three digests, initially all `seed`. -/

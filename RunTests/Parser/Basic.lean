@@ -10,8 +10,6 @@ open Std.Internal.Parsec Std.Internal.Parsec.String
 def skipHSpace : Parser Unit :=
   many (satisfy fun c => c != '\n' && c.isWhitespace) *> pure ()
 
-def readNat : Parser Nat := digits
-
 private def hexNibble : Parser UInt8 := do
   let c ← hexDigit
   if c.isUpper then fail "expected lowercase hex digit"

@@ -13,11 +13,11 @@ def basic : Suite where
   name := "SHA256 FIPS examples"
   tests := do
     -- FIPS 180-2, Appendix B.1–B.3: https://csrc.nist.gov/files/pubs/fips/180-2/final/docs/fips180-2.pdf
-    let abc ← IO.ofExcept (hexVector
+    let abc ← IO.ofExcept (fromHex
       "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
-    let multiBlock ← IO.ofExcept (hexVector
+    let multiBlock ← IO.ofExcept (fromHex
       "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1")
-    let millionA ← IO.ofExcept (hexVector
+    let millionA ← IO.ofExcept (fromHex
       "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0")
     return [
       check "FIPS abc" abc (sha256 "abc".toUTF8.data.toVector (by decide)),

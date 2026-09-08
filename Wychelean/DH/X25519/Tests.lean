@@ -19,6 +19,7 @@ This module is built by `lake test`, not by `lake build`; it is deliberately not
 namespace X25519.Tests
 
 open RunTests
+open Std.Internal.Parsec.String (digits)
 
 /-! ## Vectors -/
 
@@ -95,23 +96,23 @@ def suite: Suite where
     let mut tests: Array Test := #[]
 
     for (name, hex, value) in scalars do
-      let scalar ← IO.ofExcept (hexVector hex)
-      let expected ← IO.ofExcept (Parser.parse Parser.readNat value)
+      let scalar ← IO.ofExcept (fromHex hex)
+      let expected ← IO.ofExcept (Parser.parse digits value)
       tests := tests.push <|
         check s!"{name}: scalar clamps and decodes to the given number"
           expected (decodeScalar scalar)
 
     for (name, hex, value) in uCoordinates do
-      let u ← IO.ofExcept (hexVector hex)
-      let expected ← IO.ofExcept (Parser.parse Parser.readNat value)
+      let u ← IO.ofExcept (fromHex hex)
+      let expected ← IO.ofExcept (Parser.parse digits value)
       tests := tests.push <|
         check s!"{name}: u-coordinate decodes to the given number"
           expected (decodeUCoordinate u)
 
     for (name, scalar, u, out) in products do
-      let scalar ← IO.ofExcept (hexVector scalar)
-      let point ← IO.ofExcept (hexVector u)
-      let expected ← IO.ofExcept (hexVector out)
+      let scalar ← IO.ofExcept (fromHex scalar)
+      let point ← IO.ofExcept (fromHex u)
+      let expected ← IO.ofExcept (fromHex out)
       tests := tests.push <|
         check s!"{name}: X25519(scalar, u) is the given output u-coordinate"
           expected (x25519 scalar point)

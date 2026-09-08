@@ -6,7 +6,7 @@ import RunTests.Parser.Rsp
 namespace RunTests.Tests
 
 open RunTests.Parser
-open Std.Internal.Parsec.String (skipChar)
+open Std.Internal.Parsec.String (digits skipChar)
 
 private instance : ToString (Option (Array UInt8)) := ⟨reprStr⟩
 
@@ -25,13 +25,13 @@ def hex : Suite where
       check "decode leading zeros" (some #[0x00, 0x0a, 0xff])
         (parse readHex "000aff").toOption,
       check "decode exact-size vector" (some #[0x00, 0x0a])
-        ((hexVector (n := 2) "000a").toOption.map (·.toArray)),
+        ((fromHex (n := 2) "000a").toOption.map (·.toArray)),
       check "decode zero-size vector" (some #[])
-        ((hexVector (n := 0) "").toOption.map (·.toArray)),
-      check "reject short vector" true (hexVector (n := 2) "00").toOption.isNone,
-      check "reject long vector" true (hexVector (n := 1) "000a").toOption.isNone,
-      check "reject nonempty zero-size vector" true (hexVector (n := 0) "00").toOption.isNone,
-      check "hexVector requires complete input" true (hexVector (n := 1) "00zz").toOption.isNone,
+        ((fromHex (n := 0) "").toOption.map (·.toArray)),
+      check "reject short vector" true (fromHex (n := 2) "00").toOption.isNone,
+      check "reject long vector" true (fromHex (n := 1) "000a").toOption.isNone,
+      check "reject nonempty zero-size vector" true (fromHex (n := 0) "00").toOption.isNone,
+      check "fromHex requires complete input" true (fromHex (n := 1) "00zz").toOption.isNone,
       check "two hex digits per byte" 512 encoded.length,
       check "round-trip every byte value" (some allBytes.toArray) (parse readHex encoded).toOption,
       check "hex token leaves its delimiter" (some #[0x00, 0xaf])
@@ -41,7 +41,7 @@ def hex : Suite where
         "0x00", "0X00", "00 01", " 00", "00 ", "00\n01", "00\t01"] do
       tests := tests ++ [check s!"reject hex {repr invalid}" true (parse readHex invalid).toOption.isNone]
     let recoverable ← try
-      let _ ← IO.ofExcept (hexVector (n := 1) "GG")
+      let _ ← IO.ofExcept (fromHex (n := 1) "GG")
       pure false
     catch _ => pure true
     return tests ++ [check "invalid hex becomes a recoverable IO error" true recoverable]
@@ -62,10 +62,10 @@ def parsing : Suite where
         (match parse rsp "[L = 2]\nMsg = 00Af\n" with
          | .error error => error.startsWith "line 2:"
          | .ok _ => false),
-      check "parse decimal expected value" true ((parse readNat "12345").toOption == some 12345)
+      check "parse decimal expected value" true ((parse digits "12345").toOption == some 12345)
     ]
     for invalid in ["", "12x", "-1", " 12", "12 ", "0x12", "１２"] do
-      tests := tests ++ [check s!"reject decimal {repr invalid}" true (parse readNat invalid).toOption.isNone]
+      tests := tests ++ [check s!"reject decimal {repr invalid}" true (parse digits invalid).toOption.isNone]
     return tests
 
 def suites : List Suite := [hex, parsing]
