@@ -24,9 +24,9 @@ that are reused by the code-verification proofs in `Properties/SHA3/`.
   concatenation of whole r-bit rate blocks `Trunc r (f^[j] S)`.
 -/
 
-namespace Spec.SHA3
+namespace Wychelean.Hashes.SHA3
 
-open scoped Spec.Notations
+open scoped Wychelean.Notations
 
 scoped macro_rules
 | `(tactic| get_elem_tactic) => `(tactic| grind)
@@ -68,15 +68,20 @@ They hold by elementary index arithmetic:
 /-- Round-trip: `stringToState ∘ stateToString = id`. -/
 theorem stringToState_stateToString (A : State) :
     stringToState (stateToString A) = A := by
-  simp only [stringToState, stateToString]
-  ext x hx y hy z hz
-  simp only [Vector.getElem_ofFn]
-  simp only [show w = 64 from rfl] at hz ⊢
+  apply Vector.ext
+  intro x hx
+  apply Vector.ext
+  intro y hy
+  apply BitVec.eq_of_getLsbD_eq
+  intro z hz
+  change z < 64 at hz
+  simp only [stringToState, Vector.getElem_ofFn, BitVec.getLsbD_ofBitsLE _ _ hz,
+    stateToString]
   have h1 : (64 * (5 * y + x) + z) / 64 = 5 * y + x := by omega
   have h2 : (64 * (5 * y + x) + z) % 64 = z := by omega
   have h3 : (5 * y + x) % 5 = x := by omega
   have h4 : (5 * y + x) / 5 = y := by omega
-  simp only [h1, h2, h3, h4]
+  simp only [w, h1, h2, h3, h4]
 
 /-- Round-trip: `stateToString ∘ stringToState = id`. -/
 theorem stateToString_stringToState (S : Vector Bool b) :
@@ -84,9 +89,11 @@ theorem stateToString_stringToState (S : Vector Bool b) :
   simp only [stateToString, stringToState]
   ext i hi
   simp only [Vector.getElem_ofFn]
+  rw [BitVec.getLsbD_ofBitsLE _ _ (Nat.mod_lt _ (by decide))]
+  simp only [Vector.getElem_ofFn]
   simp only [show w = 64 from rfl, show b = 1600 from rfl] at hi ⊢
   have h1 : 64 * (5 * (i / 64 / 5) + i / 64 % 5) + i % 64 = i := by omega
   simp only [h1]
 
 
-end Spec.SHA3
+end Wychelean.Hashes.SHA3

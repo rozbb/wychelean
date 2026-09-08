@@ -1,13 +1,8 @@
-import Mathlib.Data.List.Defs
-import Mathlib.Tactic.GCongr
+import Wychelean.Utils.Bytes
+import Wychelean.Utils.Vector
 
-/-!
-Compatibility excerpt from Microsoft SymCrypt, Spec/Defs.lean at
-c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be. See LICENSE.SymCrypt.
-Only the definitions needed by SHA3 are retained; Byte replaces Aeneas's identical alias.
--/
-abbrev Byte := BitVec 8
-namespace Spec
+/-! Boolean-string operations used by bit-oriented specifications. -/
+namespace Wychelean
 /-- Rotate a vector at the index level: output[i] = input[(i + n - k) % n].
     Used by FIPS 202 (SHA-3) where index 0 is the least significant bit.
     For big-endian contexts (index 0 = MSB), use `Bits.rotlBE`. -/
@@ -28,22 +23,35 @@ scoped instance : HAnd (Vector Bool n) (Vector Bool n) (Vector Bool n) :=
 scoped instance : Complement (Vector Bool n) := ⟨Vector.map (!·)⟩
 end Notations
 open Notations
-abbrev 𝔹 := Vector Byte
 def Bits.zeroExtend (v : Vector Bool n) (m : Nat) : Vector Bool m :=
   Vector.ofFn fun (i : Fin m) => if h : i.val < n then v[i.val] else false
 
 def Bits.ofNatLE {n : Nat} (val : Nat) : Vector Bool n :=
   Vector.ofFn fun (i : Fin n) => (val >>> i.val) % 2 != 0
 
-def bitsToBytes {ℓ : Nat} (b : Vector Bool (8 * ℓ)) : 𝔹 ℓ :=
-  Vector.ofFn fun ⟨i, _⟩ =>
-    Fin.foldl 8 (fun (acc : Byte) (j : Fin 8) =>
-      acc + b[8 * i + j.val].toNat * (2 ^ j.val)) 0
-
-def bytesToBits {ℓ : Nat} (B : 𝔹 ℓ) : Vector Bool (8 * ℓ) :=
-  Vector.ofFn fun ⟨i, _⟩ => B[i / 8].toNat.testBit (i % 8)
-
 def slice {n : ℕ} (v : Vector α n) (off len : ℕ) (h : off + len ≤ n := by grind) : Vector α len :=
   Vector.ofFn fun i => v[off + i]
 
-end Spec
+end Wychelean
+
+/-- The bit-vector rotation agrees with the index-level rotation of Boolean vectors. -/
+theorem BitVec.ofBitsLE_rotateLeft (v : Vector Bool n) (k : Nat) :
+    BitVec.ofBitsLE (v.rotateLeft k) = (BitVec.ofBitsLE v).rotateLeft k := by
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  have hn : n ≠ 0 := by omega
+  have hk : k % n < n := Nat.mod_lt _ (by omega)
+  rw [BitVec.getLsbD_ofBitsLE _ _ hi, BitVec.getLsbD_rotateLeft]
+  simp only [Vector.rotateLeft, hn, ↓reduceDIte, Vector.getElem_ofFn]
+  split
+  · rename_i h
+    rw [BitVec.getLsbD_ofBitsLE _ _ (by omega)]
+    congr 1
+    rw [Nat.mod_eq_of_lt (by omega)]
+    omega
+  · rename_i h
+    rw [BitVec.getLsbD_ofBitsLE _ _ (by omega)]
+    simp only [hi, decide_true, Bool.true_and]
+    congr 1
+    rw [show i + n - k % n = (i - k % n) + n by omega, Nat.add_mod_right,
+      Nat.mod_eq_of_lt (by omega)]

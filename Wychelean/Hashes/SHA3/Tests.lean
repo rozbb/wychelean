@@ -9,17 +9,17 @@ open RunTests Rsp
 /-- Adapter shared by all NIST tests; expected results always come from checked-in fixtures. -/
 def evaluate (shake : Bool) (variant : Nat) (m : Vector Bool n) (d : Nat) : Array UInt8 := Id.run do
   let bits := if shake then
-    if variant == 128 then (Spec.SHA3.SHAKE128 m d).toArray else (Spec.SHA3.SHAKE256 m d).toArray
+    if variant == 128 then (SHAKE128 m d).toArray else (SHAKE256 m d).toArray
   else match variant with
-    | 224 => (Spec.SHA3.SHA3_224 m).toArray
-    | 256 => (Spec.SHA3.SHA3_256 m).toArray
-    | 384 => (Spec.SHA3.SHA3_384 m).toArray
-    | _ => (Spec.SHA3.SHA3_512 m).toArray
+    | 224 => (SHA3_224 m).toArray
+    | 256 => (SHA3_256 m).toArray
+    | 384 => (SHA3_384 m).toArray
+    | _ => (SHA3_512 m).toArray
   return (Array.range ((bits.size + 7) / 8)).map fun i =>
     (List.range 8).foldl (fun b j => b ||| ((if bits[i * 8 + j]?.getD false then (1 : UInt8) else 0) <<< j.toUInt8)) 0
 
 private def byteBits (a : Array UInt8) : Vector Bool (8 * a.size) :=
-  Spec.bytesToBits (a.toVector.map UInt8.toBitVec)
+  bytesToBits a.toVector
 
 private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA3/Fixtures"
 

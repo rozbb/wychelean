@@ -1,54 +1,18 @@
-import Wychelean.Hashes.SHA3.Defs
+import Wychelean.Utils.Bits
 
 /-!
-# SHA-3 (Permutation-Based Hash and Extendable-Output Functions) specification
-
-Imported from Microsoft SymCrypt (MIT; see LICENSE.SymCrypt):
+# SHA3 and SHAKE
+FIPS 202: https://doi.org/10.6028/NIST.FIPS.202
+All section and algorithm numbers below refer to FIPS 202.
+Adapted from Microsoft SymCrypt (MIT; see LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/SHA3/Spec.lean
-
-Based on: FIPS 202: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
-
-All algorithm, section, and equation references are to FIPS 202.
-
-## Scope
-
-KECCAK-p[1600,24] and the six SHA-3 functions (§3–§6), specialized to b = 1600.
-Not formalized: other KECCAK-p widths (Table 1), h2b/b2h (§B.1).
-
-## Mechanization notes
-
-- Lanes are `Vector Bool 64` (§3.1.1). The state array A[x][y] is
-  `Vector (Vector Lane 5) 5`.
-- Bit strings are `Vector Bool n` with dependent lengths, using LSB-first indexing
-  (index 0 = least significant bit), matching FIPS 202 lane-bit ordering.
-- The sponge (§4) uses `Vector Bool b` for state and `‖` (concatenation)
-  for block operations, avoiding per-bit loops in absorb and squeeze.
-- FIPS concatenation `X || Y` places X at lower bit indices; `Vector.append`
-  (notation `‖`) already places its first argument at lower indices, so
-  `Pᵢ ‖ 0^c` reads exactly as in Algorithm 8, Step 6.
-- The `·` in χ (§3.2.4) is `&&&`; `⊕ 1` is `~~~` (complement).
-- `pad10*1` builds the pad as `#v[1] ‖ 0^j ‖ #v[1]`, directly transcribing
-  "1 || 0^j || 1" from FIPS §5.1.
-- `Fin` subtraction wraps correctly for modular expressions like `C[x−1]`.
-- Indexing with `Fin 5` arithmetic (e.g., `x + 1`, `x - 1`, `2*x + 3*y`)
-  implicitly computes modulo 5, matching the standard's `(x+1) mod 5` etc.
-- FIPS loop bounds are inclusive ("for t from 0 to 23"); Lean `for t in [0:24]`
-  uses exclusive upper bounds, so the range is `[0, 24)` = `{0, 1, ..., 23}`.
-- `rc` (Algorithm 5) uses `Vector Bool 8`/`Vector Bool 9` with `‖` for step (a)
-  "0 || R" and `slice` for step (f) "Trunc₈(R)".
-- `SPONGE` takes pre-padded input `P` rather than `(N, pad)` separately;
-  padding is performed by `KECCAK` (§5.2), which appends `N ‖ pad10*1(r, len(N))`
-  before calling `SPONGE`. This keeps `SPONGE` generic (faithful to §4).
-- Numeric literals use `Bits.ofNatLE` (via a scoped `OfNat` override) so that
-  e.g. `(1 : Vector Bool 8)` has bit 0 = true, matching the FIPS LSB-first convention.
-
-Properties, examples, and test vectors are in auxiliary files.
+Lanes use native BitVec; external bit strings retain the standard's indexing.
 -/
 
-namespace Spec.SHA3
+namespace Wychelean.Hashes.SHA3
 
-open Spec (𝔹 slice bytesToBits bitsToBytes)
-open scoped Spec.Notations
+open Wychelean (slice bytesToBits bitsToBytes)
+open scoped Wychelean.Notations
 
 -- Override the default BE OfNat instance: SHA-3 is entirely LSB-first.
 scoped instance : OfNat (Vector Bool n) k := ⟨Bits.ofNatLE k⟩
@@ -71,7 +35,7 @@ def Trunc (s : Nat) (X : Vector Bool n) (h : s ≤ n := by grind) :=
 
 /-! ## State (§3.1) -/
 
-abbrev Lane := Vector Bool w
+abbrev Lane := BitVec w
 abbrev State := Vector (Vector Lane 5) 5
 
 /-! ### String ↔ State conversions (§3.1.2–3.1.3)
@@ -79,8 +43,8 @@ abbrev State := Vector (Vector Lane 5) 5
 Lane(x,y) occupies bits [w(5y+x) .. w(5y+x)+w-1] of the b-bit string. -/
 
 def stringToState (S : Vector Bool b) : State :=
-  Vector.ofFn fun x => Vector.ofFn fun y => Vector.ofFn fun z =>
-    S[w * (5 * y.val + x.val) + z.val]
+  Vector.ofFn fun x => Vector.ofFn fun y => BitVec.ofBitsLE (Vector.ofFn fun (z : Fin w) =>
+    S[w * (5 * y.val + x.val) + z.val])
 
 def stateToString (A : State) : Vector Bool b :=
   Vector.ofFn fun (i : Fin b) =>
@@ -88,7 +52,7 @@ def stateToString (A : State) : Vector Bool b :=
     let x := lane % 5
     let y := lane / 5
     let z := i.val % w
-    A[x][y][z]
+    A[x][y].getLsbD z
 
 
 /-! ## Step Mappings (§3.2) -/
@@ -96,9 +60,9 @@ def stateToString (A : State) : Vector Bool b :=
 /-! ### Algorithm 1: θ(A) (§3.2.1) -/
 
 def θ (A : State) : State :=
-  let C := Vector.ofFn fun (x : Fin 5) => A[x][0] ⊕ A[x][1] ⊕ A[x][2] ⊕ A[x][3] ⊕ A[x][4]
-  let D := Vector.ofFn fun (x : Fin 5) => C[x - 1] ⊕ C[x + 1].rotateLeft 1
-  Vector.ofFn fun x => Vector.ofFn fun y => A[x][y] ⊕ D[x]
+  let C := Vector.ofFn fun (x : Fin 5) => A[x][0] ^^^ A[x][1] ^^^ A[x][2] ^^^ A[x][3] ^^^ A[x][4]
+  let D := Vector.ofFn fun (x : Fin 5) => C[x - 1] ^^^ C[x + 1].rotateLeft 1
+  Vector.ofFn fun x => Vector.ofFn fun y => A[x][y] ^^^ D[x]
 
 /-! ### Algorithm 2: ρ(A) (§3.2.2) — rotate each lane by its computed offset
 
@@ -129,17 +93,17 @@ def π (A : State) : State :=
 
 /-! ### Algorithm 4: χ(A) (§3.2.4)
 
-The standard writes `A′[x,y,z] = A[x,y,z] ⊕ ((A[(x+1) mod 5, y, z] ⊕ 1) · A[(x+2) mod 5, y, z])`
+The standard writes `A′[x,y,z] = A[x,y,z] ^^^ ((A[(x+1) mod 5, y, z] ^^^ 1) · A[(x+2) mod 5, y, z])`
 where `⊕ 1` is bitwise complement and `·` is AND.
 We write `~~~A[x+1][y] &&& A[x+2][y]` (complement + AND). -/
 
 def χ (A : State) : State :=
   Vector.ofFn fun x => Vector.ofFn fun y =>
-    A[x][y] ⊕ (~~~A[x + 1][y] &&& A[x + 2][y])
+    A[x][y] ^^^ (~~~A[x + 1][y] &&& A[x + 2][y])
 
 /-! ### Algorithm 5: rc(t) (§3.2.5) -/
 
-def rc (t : Nat) : Bool := Id.run do
+def rc.algorithm (t : Nat) : Bool := Id.run do
   -- 1. If t mod 255 = 0, return 1.
   if t % 255 = 0 then return true
   -- 2. Let R = 10000000.
@@ -154,12 +118,20 @@ def rc (t : Nat) : Bool := Id.run do
     R := Trunc 8 R'
   pure R[0]
 
+/-- Algorithm 5 depends only on t mod 255; cache its complete period. -/
+def rc.table : Vector Bool 255 := Vector.ofFn fun t => rc.algorithm t
+
+def rc (t : Nat) : Bool := rc.table[t % 255]
+
+theorem rc_eq_algorithm (t : Nat) : rc t = rc.algorithm t := by
+  simp only [rc, rc.table, Vector.getElem_ofFn, rc.algorithm, Nat.mod_mod]
+
 /-! ### Algorithm 6: ι(A, iᵣ) (§3.2.5) -/
 
 /-- Round constant RC for round iᵣ (Algorithm 6, Steps 2–3).
     "For j from 0 to ℓ, let RC[2^j − 1] = rc(j + 7iᵣ)." -/
 def ι.RC (iᵣ : Nat) : Lane := Id.run do
-  let mut RC : Lane := 0
+  let mut RC : Vector Bool w := 0
   for hj : j in [0 : ℓ + 1] do
     have : 2 ^ j - 1 < w := by
       have hj_lt := hj.upper
@@ -167,13 +139,13 @@ def ι.RC (iᵣ : Nat) : Lane := Id.run do
       have : 2 ^ j ≤ 2 ^ 6 := Nat.pow_le_pow_right (by omega) (by omega)
       omega
     RC := RC.set (2 ^ j - 1) (rc (j + 7 * iᵣ))
-  pure RC
+  pure (BitVec.ofBitsLE RC)
 
 def ι (A : State) (iᵣ : Nat) : State :=
   let RC := ι.RC iᵣ
   Vector.ofFn fun x => Vector.ofFn fun y =>
     if x = 0 ∧ y = 0
-    then A[x][y] ⊕ RC
+    then A[x][y] ^^^ RC
     else A[x][y]
 
 
@@ -333,19 +305,19 @@ def SHAKE256 {n} (M : Vector Bool n) (d : Nat) : Vector Bool d := KECCAK 512 (M 
 
 /-! ## Byte-Level Interface
 
-Convert between `𝔹 n` (byte vectors) and `Vector Bool (8*n)`.
-Uses `bytesToBits`/`bitsToBytes` from `Spec.Defs` — the SHA-3
+Convert between `Vector UInt8 n` (byte vectors) and `Vector Bool (8*n)`.
+Uses `bytesToBits`/`bitsToBytes` from `Wychelean.Utils.Bytes` — the SHA-3
 LSB-first bit ordering within bytes (§B.1) matches FIPS 203 Algorithms 3–4. -/
 
-def sha3_224 {n} (msg : 𝔹 n) : 𝔹 28 := bitsToBytes (SHA3_224 (bytesToBits msg))
-def sha3_256 {n} (msg : 𝔹 n) : 𝔹 32 := bitsToBytes (SHA3_256 (bytesToBits msg))
-def sha3_384 {n} (msg : 𝔹 n) : 𝔹 48 := bitsToBytes (SHA3_384 (bytesToBits msg))
-def sha3_512 {n} (msg : 𝔹 n) : 𝔹 64 := bitsToBytes (SHA3_512 (bytesToBits msg))
+def sha3_224 {n} (msg : Vector UInt8 n) : Vector UInt8 28 := bitsToBytes (SHA3_224 (bytesToBits msg))
+def sha3_256 {n} (msg : Vector UInt8 n) : Vector UInt8 32 := bitsToBytes (SHA3_256 (bytesToBits msg))
+def sha3_384 {n} (msg : Vector UInt8 n) : Vector UInt8 48 := bitsToBytes (SHA3_384 (bytesToBits msg))
+def sha3_512 {n} (msg : Vector UInt8 n) : Vector UInt8 64 := bitsToBytes (SHA3_512 (bytesToBits msg))
 
-def shake128 {n} (msg : 𝔹 n) length : 𝔹 length  :=
+def shake128 {n} (msg : Vector UInt8 n) length : Vector UInt8 length  :=
   bitsToBytes (SHAKE128 (bytesToBits msg) (8 * length))
 
-def shake256 {n} (msg : 𝔹 n) length : 𝔹 length :=
+def shake256 {n} (msg : Vector UInt8 n) length : Vector UInt8 length :=
   bitsToBytes (SHAKE256 (bytesToBits msg) (8 * length))
 
-end Spec.SHA3
+end Wychelean.Hashes.SHA3
