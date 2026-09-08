@@ -13,9 +13,11 @@ def skipHSpace : Parser Unit :=
 def readNat : Parser Nat := digits
 
 private def hexNibble : Parser UInt8 := do
-  let c := (← hexDigit).toLower
+  let c ← hexDigit
+  if c.isUpper then fail "expected lowercase hex digit"
   return UInt8.ofNat (if c ≤ '9' then c.toNat - '0'.toNat else c.toNat - 'a'.toNat + 10)
 
+/-- Parse pairs of lowercase hex digits, without a prefix. -/
 def readHex : Parser (Array UInt8) := many do
   let hi ← hexNibble
   let lo ← hexNibble

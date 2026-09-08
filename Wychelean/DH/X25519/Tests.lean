@@ -95,28 +95,34 @@ def suite: Suite where
     let mut tests: Array Test := #[]
 
     for (name, hex, value) in scalars do
+      let scalar ← IO.ofExcept (hexVector hex)
+      let expected ← IO.ofExcept (Parser.parse Parser.readNat value)
       tests := tests.push <|
         check s!"{name}: scalar clamps and decodes to the given number"
-          value.toNat! (decodeScalar (hexVector hex))
+          expected (decodeScalar scalar)
 
     for (name, hex, value) in uCoordinates do
+      let u ← IO.ofExcept (hexVector hex)
+      let expected ← IO.ofExcept (Parser.parse Parser.readNat value)
       tests := tests.push <|
         check s!"{name}: u-coordinate decodes to the given number"
-          value.toNat! (decodeUCoordinate (hexVector hex))
+          expected (decodeUCoordinate u)
 
     for (name, scalar, u, out) in products do
+      let scalar ← IO.ofExcept (hexVector scalar)
+      let point ← IO.ofExcept (hexVector u)
+      let expected ← IO.ofExcept (hexVector out)
       tests := tests.push <|
         check s!"{name}: X25519(scalar, u) is the given output u-coordinate"
-          (hexVector out: Vector UInt8 32) (x25519 (hexVector scalar) (hexVector u))
+          expected (x25519 scalar point)
       -- Where the input is the basepoint, the same vector pins down `basepointMul`
       if u == nine then
         tests := tests.push <|
           check s!"{name}: basepointMul(scalar) agrees with X25519(scalar, 9)"
-            (hexVector out: Vector UInt8 32) (basepointMul (hexVector scalar))
+            expected (basepointMul scalar)
       tests := tests.push <|
         check s!"{name}: encodeUCoordinate ⚬ decodeUCoordinate = id on the output of X25519"
-          (hexVector out: Vector UInt8 32)
-          (encodeUCoordinate (decodeUCoordinate (hexVector out)))
+          expected (encodeUCoordinate (decodeUCoordinate expected))
 
     return tests.toList
 
