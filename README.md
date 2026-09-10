@@ -25,13 +25,16 @@ Every primitive contains its own tests in `Tests.lean`. Suites are registered in
 `RunTests/Main.lean`; each suite loads its fixtures and evaluates its checks when it runs.
 The ordinary `lake build` target does not import the test suites.
 
-SHA256 reads the checked-in `SHA256ShortMsg.rsp`, `SHA256LongMsg.rsp`, and
-`SHA256Monte.rsp` files in `Wychelean/Hashes/SHA256/Fixtures/`. These are unmodified files from
-the [NIST CAVP byte-oriented SHA vectors](https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/shabytetestvectors.zip).
-All 65 short-message vectors, 64 long-message vectors, and 100 Monte Carlo checkpoints
-(100,000 hashes) run by default. No network access is needed to load the fixtures.
+SHA256 and SHA512 read the checked-in NIST CAVP `.rsp` files under
+`Wychelean/Hashes/SHA256/Fixtures/` and `Wychelean/Hashes/SHA512/Fixtures/`, split into
+`shabytetestvectors/` and `shabittestvectors/` after the archives they come from; each `Fixtures/README.md`
+records the archive URLs and hashes. The byte-oriented short- and long-message vectors, the
+bit-oriented short-message vectors (513 for SHA256, 1025 for SHA512, exercising `sha256_bits` and
+`sha512_bits`), and the byte-oriented Monte Carlo checkpoints (100,000 hashes each) run by default.
+`lake test -- --full` adds the bit-oriented Monte Carlo files, which repeat the procedure from a
+different seed. No network access is needed to load the fixtures.
 
-`RunTests/Rsp.lean` provides the reusable response-file parser. It preserves headers,
+`RunTests/Parser/Rsp.lean` provides the reusable response-file parser. It preserves headers,
 records, fields, bare flags, and line numbers; each algorithm validates its own schema.
 Missing or malformed fixtures, unexpected vector counts, and digest mismatches fail the run.
 
