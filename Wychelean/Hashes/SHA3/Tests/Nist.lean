@@ -41,6 +41,7 @@ private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA3/Fixtures"
 private def knownAnswers (dir file : String) (variant : Variant)
     (byteOriented := true) : Suite where
   name := s!"{dir}/{file}"
+  verbose := false
   tests := do
     let vectors ← RunTests.Parser.parseFile
       (parseKat variant.digestBits) (fixtureDir / dir / file)
