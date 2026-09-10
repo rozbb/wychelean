@@ -4,7 +4,7 @@ import RunTests.Parser.Rsp
 /-! NIST SHA3VS response files, including non-byte-aligned messages.
 https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/sha3/sha3vs.pdf
 -/
-namespace Wychelean.Hashes.SHA3.Rsp
+namespace Wychelean.Hashes.SHA3.Tests.Rsp
 open Std.Internal.Parsec Std.Internal.Parsec.String
 open RunTests.Parser RunTests.Parser.Rsp
 
@@ -43,20 +43,4 @@ def parseKat (d : Nat) : Parser (List Kat) := responseFile do
     let o ← field "MD" (encoded d)
     return ⟨m, o⟩).toList
 
-structure Monte where
-  initial : Array UInt8
-  outputs : List BitString
-
-def parseMonte (d : Nat) : Parser Monte := responseFile do
-  header s!"L = {d}"
-  let seed ← field "Seed" (encoded d)
-  let cases ← many1 do
-    let count ← field "COUNT" readNat
-    let output ← field "MD" (encoded d)
-    return (count, output)
-  for (entry, i) in cases.toList.zipIdx do
-    unless entry.1 == i do fail "nonsequential COUNT"
-  unless cases.size == 100 do fail "expected 100 Monte Carlo checkpoints"
-  return ⟨seed.bytes, cases.toList.map Prod.snd⟩
-
-end Wychelean.Hashes.SHA3.Rsp
+end Wychelean.Hashes.SHA3.Tests.Rsp
