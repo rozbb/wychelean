@@ -51,4 +51,33 @@ def field (key : String) (value : Parser α) : Parser α := token do
 /-- Match a standalone response-file flag. -/
 def flag (name : String) : Parser Unit := token (skipString name)
 
+/-- `length` bits packed into whole bytes; the unused bits of the last byte are zero. -/
+structure BitString where
+  length : Nat
+  bytes : Array UInt8
+  fits : length ≤ 8 * bytes.size
+
+/-- FIPS 202 Appendix B.1 order: bits within each byte are least significant first. -/
+def BitString.bits (s : BitString) : Vector Bool s.length :=
+  Vector.ofFn fun i => s.bytes[i.val / 8]'(by have := s.fits; omega)
+    |>.toNat.testBit (i.val % 8)
+
+/-- Decode `n` bits of hex. NIST writes the empty string as `00`. With `msbFirst` the bits fill
+each byte from its most significant end (SHAVS; FIPS 180-4 §3.1) and the unused bits are the low
+bits of the last byte; otherwise from the least significant end (SHA3VS; FIPS 202 B.1). -/
+def encoded (n : Nat) (msbFirst := false) : Parser BitString := do
+  let bytes ← readHex
+  let bytes := if n == 0 && bytes == #[0] then #[] else bytes
+  unless bytes.size == (n + 7) / 8 do fail s!"expected {(n + 7) / 8} bytes, got {bytes.size}"
+  if n % 8 != 0 then
+    let unused := if msbFirst then bytes.back!.toNat % (1 <<< (8 - n % 8))
+                  else bytes.back!.toNat >>> (n % 8)
+    unless unused == 0 do fail "nonzero unused bits"
+  if h : n ≤ 8 * bytes.size then return ⟨n, bytes, h⟩
+  else fail "encoded bit string is too short"
+
+/-- The `Len = n` / `Msg = …` pair that heads every CAVP known-answer vector. -/
+def message (msbFirst := false) : Parser BitString := do
+  field "Msg" (encoded (← field "Len" digits) msbFirst)
+
 end RunTests.Parser.Rsp

@@ -24,29 +24,42 @@ def basic : Suite where
       check "FIPS 56-byte message" multiBlock
         (sha256 "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".toUTF8.data.toVector (by decide)),
       check "FIPS million-a message" millionA
-        (sha256 (Array.replicate 1000000 (0x61 : UInt8)).toVector (by simp))
+        (sha256 (Vector.replicate 1000000 (0x61 : UInt8)) (by decide))
     ]
 
 /-! ## NIST response files -/
 
-private def knownAnswers (file : String) (count : Nat) : Suite where
-  name := s!"SHA256 {file}"
+private def byteDir : String := "shabytetestvectors"
+private def bitDir : String := "shabittestvectors"
+
+/-- Evaluate a vector through the byte interface. -/
+private def evaluateBytes (file : String) (v : HashVector) : IO Digest := do
+  unless v.msg.length % 8 == 0 do
+    throw (IO.userError s!"{file}: byte-oriented vector has a partial byte")
+  if h : 8 * v.msg.bytes.size < 2 ^ 64 then return sha256 v.msg.bytes.toVector h
+  else throw (IO.userError s!"{file}: vector exceeds the SHA256 length bound")
+
+/-- Evaluate a vector through the bit interface. -/
+private def evaluateBits (file : String) (v : HashVector) : IO Digest := do
+  if h : v.msg.length < 2 ^ 64 then
+    return (sha256_bits (BitVec.ofBytesBEPrefix v.msg.length v.msg.bytes.toVector) h).toBytesBE
+  else throw (IO.userError s!"{file}: vector exceeds the SHA256 length bound")
+
+private def knownAnswers (dir file : String) (count : Nat) (byteOriented := true) : Suite where
+  name := s!"SHA256 {dir}/{file}"
   tests := do
-    let vectors ← loadRsp file parseKat
+    let vectors ← loadRsp dir file parseKat
     unless vectors.length == count do
       throw (IO.userError s!"{file}: expected {count} vectors, found {vectors.length}")
     vectors.zipIdx.mapM fun (v, i) => do
-      if h : 8 * v.msg.size < 2 ^ 64 then
-        return check s!"vector {i}, Len = {v.msg.size * 8}"
-          v.digest (sha256 v.msg.toVector h)
-      else
-        throw (IO.userError s!"{file}: vector {i} exceeds the SHA256 length bound")
+      let actual ← if byteOriented then evaluateBytes file v else evaluateBits file v
+      return check s!"vector {i}, Len = {v.msg.length}" v.digest actual
 
-private def monteCarlo : Suite where
-  name := "SHA256 SHA256Monte.rsp"
+private def monteCarlo (dir : String) : Suite where
+  name := s!"SHA256 {dir}/SHA256Monte.rsp"
   tests := do
     let file := "SHA256Monte.rsp"
-    let (initial, expected) ← loadRsp file parseMonte
+    let (initial, expected) ← loadRsp dir file parseMonte
     unless expected.length == 100 do
       throw (IO.userError s!"{file}: expected 100 checkpoints, found {expected.length}")
     let mut seed := initial
@@ -56,8 +69,36 @@ private def monteCarlo : Suite where
       tests := tests.push (check s!"COUNT = {i}" digest seed)
     return tests.toList
 
-/-- All SHA256 suites, including all 100 Monte Carlo checkpoints (100,000 hashes). -/
-def suites : List Suite := [basic,
-  knownAnswers "SHA256ShortMsg.rsp" 65, knownAnswers "SHA256LongMsg.rsp" 64, monteCarlo]
+/-! ## Response-file validation -/
+
+private def katText (len : Nat) (msg : String) : String :=
+  s!"[L = 32]\n\nLen = {len}\nMsg = {msg}\nMD = {"".pushn '0' 64}\n"
+
+private def monteText (counts : List Nat) : String :=
+  let seed := s!"Seed = {"".pushn '0' 64}\n\n"
+  let record := fun (c : Nat) => s!"COUNT = {c}\nMD = {"".pushn '0' 64}\n\n"
+  s!"[L = 32]\n\n{seed}{String.join (counts.map record)}"
+
+private def parserChecks : Suite where
+  name := "SHA256 response-file validation"
+  tests := pure [
+    check "Len = 2, Msg = 40 gives 2 bits" (some 2)
+      ((Parser.parse parseKat (katText 2 "40")).toOption.bind (·.head?) |>.map (·.msg.length)),
+    check "Len = 2, Msg = 41 is rejected" false (Parser.parse parseKat (katText 2 "41")).toBool,
+    check "Len = 9, Msg = 43 is rejected" false (Parser.parse parseKat (katText 9 "43")).toBool,
+    check "COUNT in order is accepted" true (Parser.parse parseMonte (monteText [0, 1, 2])).toBool,
+    check "COUNT out of order is rejected" false (Parser.parse parseMonte (monteText [0, 2, 1])).toBool
+  ]
+
+/-- All SHA256 suites. The byte-oriented Monte Carlo suite (100,000 hashes) always runs;
+`full` adds the bit-oriented one, which repeats it from a different seed. -/
+def suites (full := false) : List Suite :=
+  let default := [basic,
+    knownAnswers byteDir "SHA256ShortMsg.rsp" 65,
+    knownAnswers byteDir "SHA256LongMsg.rsp" 64,
+    knownAnswers bitDir "SHA256ShortMsg.rsp" 513 (byteOriented := false),
+    monteCarlo byteDir,
+    parserChecks]
+  if full then default ++ [monteCarlo bitDir] else default
 
 end Wychelean.Hashes.SHA256.Tests
