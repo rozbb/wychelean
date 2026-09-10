@@ -74,6 +74,57 @@ def toBytesLE (v : BitVec (8 * n)) : ByteVec n :=
   have hmod : (8 * i + j) % 8 = j := by omega
   simp [hdiv, hmod]
 
+/-- Split into `n / m` consecutive chunks of `m` bits; chunk zero is the most significant. -/
+def toChunksBE (m : Nat) (v : BitVec n) (_ : n % m = 0) : Vector (BitVec m) (n / m) :=
+  Vector.ofFn fun (i : Fin (n / m)) => v.extractLsb' (n - (i.val + 1) * m) m
+
+@[simp] theorem getLsbD_toChunksBE (m : Nat) (v : BitVec n) (h : n % m = 0)
+    (i : Nat) (hi : i < n / m) (j : Nat) :
+    ((v.toChunksBE m h)[i]).getLsbD j = (decide (j < m) && v.getLsbD (n - (i + 1) * m + j)) := by
+  simp [toChunksBE, getLsbD_extractLsb']
+
+/-- `ofBytesLE` by halving: quasilinear big-integer work instead of a quadratic bit-by-bit fold,
+and bounded recursion depth. Used at run time through `ofBytesLE_eq_ofBytesLEFast`. -/
+def ofBytesLEFast {n : Nat} (v : ByteVec n) : BitVec (8 * n) :=
+  if h1 : n ≤ 1 then
+    if h0 : n = 0 then (0#0).cast (by omega)
+    else (v[0]'(by omega)).toBitVec.cast (by omega)
+  else
+    let k := n / 2
+    let hi : ByteVec (n - k) := v.drop k
+    let lo : ByteVec k := (v.take k).cast (by omega)
+    (ofBytesLEFast hi ++ ofBytesLEFast lo).cast (by omega)
+termination_by n
+decreasing_by all_goals omega
+
+theorem ofBytesLEFast_eq {n : Nat} (v : ByteVec n) : ofBytesLEFast v = ofBytesLE v := by
+  induction n using Nat.strongRecOn with
+  | _ n ih =>
+    apply eq_of_getLsbD_eq; intro i hi
+    unfold ofBytesLEFast
+    by_cases h1 : n ≤ 1
+    · by_cases h0 : n = 0
+      · omega
+      · have hn : n = 1 := by omega
+        subst hn
+        rw [getLsbD_ofBytesLE _ _ hi]
+        have e1 : i / 8 = 0 := by omega
+        have e2 : i % 8 = i := by omega
+        simp only [h1, h0, ↓reduceDIte, getLsbD_cast, e1, e2]
+    · simp only [h1, ↓reduceDIte, getLsbD_cast, getLsbD_append]
+      rw [ih (n / 2) (by omega), ih (n - n / 2) (by omega), getLsbD_ofBytesLE _ _ hi]
+      split
+      · rw [getLsbD_ofBytesLE _ _ (by omega)]
+        simp only [Vector.getElem_cast, Vector.getElem_take]
+      · rw [getLsbD_ofBytesLE _ _ (by omega)]
+        simp only [Vector.getElem_drop]
+        have e1 : n / 2 + (i - 8 * (n / 2)) / 8 = i / 8 := by omega
+        have e2 : (i - 8 * (n / 2)) % 8 = i % 8 := by omega
+        simp only [e1, e2]
+
+@[csimp] theorem ofBytesLE_eq_ofBytesLEFast : @ofBytesLE = @ofBytesLEFast := by
+  funext n v; exact (ofBytesLEFast_eq v).symm
+
 /-- Byte zero is most significant, as in FIPS 180-4 §3.1. -/
 def ofBytesBE (v : ByteVec n) : BitVec (8 * n) := ofBytesLE v.reverse
 /-- Whole-byte big-endian decoding, inverse to ofBytesBE. -/
@@ -88,6 +139,11 @@ theorem getLsbD_ofBytesBE (v : ByteVec n) (i : Nat) (hi : i < 8 * n) :
     (ofBytesBE v).getLsbD i = (v[n - 1 - i / 8]'(by omega)).toBitVec.getLsbD (i % 8) := by
   rw [ofBytesBE, getLsbD_ofBytesLE _ _ hi]
   simp [Vector.getElem_reverse]
+
+/-- The first `n` bits of a byte string, read most significant bit first (FIPS 180-4 §3.1); the
+unused low bits of the last byte are dropped. This is how SHAVS packs bit-oriented messages. -/
+def ofBytesBEPrefix (n : Nat) (v : ByteVec len) : BitVec n :=
+  (ofBytesBE v).extractLsb' (8 * len - n) n
 
 /-- Encoding commutes with XOR, pointwise on the Boolean representation. -/
 theorem ofBitsLE_xor (a b : Vector Bit n) :
