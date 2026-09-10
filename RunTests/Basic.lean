@@ -44,17 +44,16 @@ def check [BEq α] [ToString α] (name: String) (expected actual: α): Test :=
   { name,
     failure := if actual == expected then none else some s!"expected {expected}, got {actual}" }
 
-/-- Run a suite, printing a line per test, and return the total and failure counts. -/
+/-- Run a suite, printing its failures and a summary line, and return the total and failure counts. -/
 def Suite.run (suite: Suite): IO (Nat × Nat) := do
-  IO.println s!"── {suite.name}"
   let tests ← suite.tests
   let mut failed := 0
   for t in tests do
-    match t.failure with
-    | none => IO.println s!"  ok   {t.name}"
-    | some msg =>
+    if let some msg := t.failure then
       failed := failed + 1
-      IO.println s!"  FAIL {t.name}: {msg}"
+      IO.println s!"  FAIL {suite.name}: {t.name}: {msg}"
+  let status := if failed == 0 then "ok  " else "FAIL"
+  IO.println s!"{status} {suite.name} ({tests.length - failed}/{tests.length})"
   return (tests.length, failed)
 
 /-- Run every suite and return the exit code the test driver should exit with. -/

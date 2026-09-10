@@ -90,15 +90,13 @@ private def parserChecks : Suite where
     check "COUNT out of order is rejected" false (Parser.parse parseMonte (monteText [0, 2, 1])).toBool
   ]
 
-/-- All SHA256 suites. The byte-oriented Monte Carlo suite (100,000 hashes) always runs;
-`full` adds the bit-oriented one, which repeats it from a different seed. -/
+/-- All SHA256 suites. `full` adds the Monte Carlo suites (100,000 hashes each). -/
 def suites (full := false) : List Suite :=
   let default := [basic,
     knownAnswers byteDir "SHA256ShortMsg.rsp" 65,
     knownAnswers byteDir "SHA256LongMsg.rsp" 64,
     knownAnswers bitDir "SHA256ShortMsg.rsp" 513 (byteOriented := false),
-    monteCarlo byteDir,
     parserChecks]
-  if full then default ++ [monteCarlo bitDir] else default
+  if full then default ++ [monteCarlo byteDir, monteCarlo bitDir] else default
 
 end Wychelean.Hashes.SHA256.Tests
