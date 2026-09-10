@@ -1,5 +1,4 @@
 import Wychelean.Hashes.SHA3.Tests.Rsp
-import Wychelean.Utils.Hex
 import RunTests.Basic
 
 namespace Wychelean.Hashes.SHA3.Tests
@@ -52,7 +51,7 @@ private def knownAnswers (dir file : String) (variant : Variant)
         pure (evaluateBytes variant v.msg.bytes)
       else pure (evaluateBits variant v.msg.bits)
       return check s!"{i}, Len={v.msg.length}, Outputlen={v.output.length}"
-        (Hex.encode v.output.bytes) (Hex.encode actual)
+        (toHex v.output.bytes.toVector) (toHex actual.toVector)
 
 /-- All short-message fixtures; `full` also includes the long-message fixtures. -/
 def suites (full := false) : List Suite :=

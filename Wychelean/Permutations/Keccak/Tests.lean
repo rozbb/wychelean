@@ -16,7 +16,7 @@ open RunTests RunTests.Parser
 open Std.Internal.Parsec Std.Internal.Parsec.String
 
 private def readState (width : Width) (wordBytes : Nat) (text : String) : IO (BitVec (b width)) := do
-  let words ← IO.ofExcept (parse (many1 (readHexVec wordBytes <* ws)) text)
+  let words ← IO.ofExcept (parse (many1 (readHexVec wordBytes <* ws)) text.toLower)
   let bytes := (words.map fun word => word.toArray.reverse).flatten
   unless bytes.size * 8 == b width do
     throw (IO.userError s!"expected a {b width}-bit state, got {bytes.size} bytes")

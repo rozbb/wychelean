@@ -33,7 +33,7 @@ structure Kat where
   output : BitString
 
 private def message : Parser BitString := do
-  let n ← field "Len" readNat
+  let n ← field "Len" digits
   field "Msg" (encoded n)
 
 def parseKat (d : Nat) : Parser (List Kat) := responseFile do

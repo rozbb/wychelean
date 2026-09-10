@@ -35,7 +35,7 @@ def natHeader (key : String) : Parser Nat := token do
   skipHSpace
   skipChar '='
   skipHSpace
-  let n ← readNat
+  let n ← digits
   skipHSpace
   skipChar ']'
   return n
