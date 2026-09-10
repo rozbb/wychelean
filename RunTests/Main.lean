@@ -10,7 +10,7 @@ import Wychelean.Utils.Tests
 
 Runs every specification's test suites. Each suite lives next to the specification it tests; adding
 one means importing its module and listing it here.
-Use `lake test -- --full` to run all SHA3 short- and long-message vectors instead of the default sample.
+Use `lake test -- --full` to include SHA3 long-message vectors alongside the default short-message suites.
 -/
 
 namespace RunTests
