@@ -2,12 +2,17 @@ import Wychelean.Utils.Bytes
 import Wychelean.Utils.Vector
 
 /-!
-Boolean-string operations used by bit-oriented specifications.
+Bits and Boolean-string operations used by bit-oriented specifications.
 The rotation, notations, extension, and slicing definitions are adapted from Microsoft SymCrypt:
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/Defs.lean
 MIT notice: Wychelean/Hashes/SHA3/LICENSE.SymCrypt.
 -/
 namespace Wychelean
+
+/-- Replace the bit at LSB index `i`; an index outside the vector leaves it unchanged. -/
+def _root_.BitVec.setBit (v : BitVec n) (i : Nat) (bit : Bool) : BitVec n :=
+  BitVec.ofBitsLE (Vector.ofFn fun j => if j.val = i then bit else v[j.val])
+
 /-- Rotate a vector at the index level: output[i] = input[(i + n - (k % n)) % n].
     Used by FIPS 202 (SHA3), where index zero is the least significant bit. -/
 def _root_.Vector.rotateLeft (v : Vector α n) (k : Nat) : Vector α n :=

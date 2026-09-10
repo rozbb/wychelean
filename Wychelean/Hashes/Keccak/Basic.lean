@@ -54,7 +54,8 @@ def SPONGE {b n : Nat} (f : Vector Bool b → Vector Bool b) (r : Nat)
   SPONGE_fn f r n (fun i => N[i]) d hr
 
 /-- General Keccak sponge: every supported width, every natural round count, and 0<r<b. -/
-def KECCAK (ℓ : Width) (nr r : Nat) (N : Vector Bool n) (d : Nat)
-    (hr : 0 < r ∧ r < b ℓ) : Vector Bool d := SPONGE (keccak_p ℓ nr) r N d hr
+def KECCAK (width : Width) (rounds r : Nat) (N : Vector Bool n) (d : Nat)
+    (hr : 0 < r ∧ r < b width) : Vector Bool d :=
+  SPONGE (fun S => (keccak_p width rounds (BitVec.ofBitsLE S)).toBitsLE) r N d hr
 
 end Wychelean.Hashes.Keccak

@@ -13,7 +13,7 @@ open scoped Wychelean.Notations
 /-- KECCAK[c], FIPS 202 §5.2: width 1600, 24 rounds, rate 1600-c. -/
 def KECCAK (c : Nat) (N : Vector Bool n) (d : Nat)
     (hc : 0 < c ∧ c < 1600 := by grind) : Vector Bool d :=
-  Keccak.KECCAK 6 24 (1600 - c) N d (by change 0 < 1600-c ∧ 1600-c < 1600; omega)
+  Keccak.KECCAK .w1600 24 (1600 - c) N d (by change 0 < 1600-c ∧ 1600-c < 1600; omega)
 
 /-! ## SHA-3 Hash Functions (§6.1)
 
