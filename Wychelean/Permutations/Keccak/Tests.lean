@@ -141,7 +141,7 @@ private def checkPermutation (v : PermutationVector) : Test :=
   let raw := (hexBytes v.input).toArray
   if h : b v.width ≤ 8 * raw.size then
     let input := (Wychelean.Hashes.SHA3.Rsp.BitString.mk (b v.width) raw h).bits
-    let output := KECCAK_p v.width v.rounds input
+    let output := keccak_p v.width v.rounds input
     let bytes := (Array.range ((b v.width + 7) / 8)).map fun i =>
       (List.range 8).foldl (fun (acc : UInt8) j =>
         acc ||| ((if output.toArray[i*8+j]?.getD false then 1 else 0) <<< j.toUInt8)) 0

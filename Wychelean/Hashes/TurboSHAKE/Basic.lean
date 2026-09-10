@@ -26,7 +26,7 @@ def inputBit (M : Vector UInt8 n) (D : Domain) (i : Fin (8 * n + domainLength D)
 def capacity (strength256 : Bool) : Nat := if strength256 then 512 else 256
 
 def bits (strength256 : Bool) (M : Vector UInt8 n) (D : Domain) (d : Nat) : Vector Bool d :=
-  Keccak.SPONGE_fn (Permutations.Keccak.KECCAK_p 6 12) (1600 - capacity strength256)
+  Keccak.SPONGE_fn (Permutations.Keccak.keccak_p 6 12) (1600 - capacity strength256)
     (8 * n + domainLength D) (inputBit M D) d (by cases strength256 <;> decide)
 
 /-- TurboSHAKE128, RFC 9861 §2. Output length d is in bytes; the default domain is 0x1f.

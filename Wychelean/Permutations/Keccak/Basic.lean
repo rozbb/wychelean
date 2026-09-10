@@ -105,10 +105,10 @@ FIPS 202 Table 1, §3.3 Algorithm 7, and §3.4's 30-round example. -/
 def roundIndex (ℓ : Width) (nr j : Nat) : Int := 12 + 2 * (ℓ.val : Int) - nr + j
 
 /-- FIPS 202 Algorithm 7 for positive nr; zero rounds is an identity extension. -/
-def KECCAK_p (ℓ : Width) (nr : Nat) (S : Vector Bool (b ℓ)) : Vector Bool (b ℓ) :=
+def keccak_p (ℓ : Width) (nr : Nat) (S : Vector Bool (b ℓ)) : Vector Bool (b ℓ) :=
   stateToString (Fin.foldl nr (fun A j => Rnd A (roundIndex ℓ nr j)) (stringToState S))
 
 /-- FIPS 202 §3.4: full-round Keccak-f[b]. -/
-def KECCAK_f (ℓ : Width) := KECCAK_p ℓ (12 + 2 * ℓ.val)
+def keccak_f (ℓ : Width) := keccak_p ℓ (12 + 2 * ℓ.val)
 
 end Wychelean.Permutations.Keccak

@@ -38,9 +38,9 @@ theorem stateToString_stringToState (S : Vector Bool (b ℓ)) : stateToString (s
   rw [show 5 * (i / w ℓ / 5) + i / w ℓ % 5 = i / w ℓ from Nat.div_add_mod _ _]
   exact Nat.div_add_mod _ _
 
-@[simp] theorem KECCAK_p_zero (ℓ : Width) (S : Vector Bool (b ℓ)) : KECCAK_p ℓ 0 S = S := by
-  simp [KECCAK_p, Fin.foldl_zero, stateToString_stringToState]
-theorem KECCAK_f_eq (ℓ : Width) : KECCAK_f ℓ = KECCAK_p ℓ (12 + 2 * ℓ.val) := rfl
+@[simp] theorem keccak_p_zero (ℓ : Width) (S : Vector Bool (b ℓ)) : keccak_p ℓ 0 S = S := by
+  simp [keccak_p, Fin.foldl_zero, stateToString_stringToState]
+theorem keccak_f_eq (ℓ : Width) : keccak_f ℓ = keccak_p ℓ (12 + 2 * ℓ.val) := rfl
 
 /-- Direct executable check of FIPS 202 Table 1 and Algorithm 7 for Keccak-p[800,12]. -/
 theorem rounds_800_12 : (List.range 12).map (roundIndex 5 12) =

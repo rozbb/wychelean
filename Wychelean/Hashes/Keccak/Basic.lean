@@ -55,6 +55,6 @@ def SPONGE {b n : Nat} (f : Vector Bool b → Vector Bool b) (r : Nat)
 
 /-- General Keccak sponge: every supported width, every natural round count, and 0<r<b. -/
 def KECCAK (ℓ : Width) (nr r : Nat) (N : Vector Bool n) (d : Nat)
-    (hr : 0 < r ∧ r < b ℓ) : Vector Bool d := SPONGE (KECCAK_p ℓ nr) r N d hr
+    (hr : 0 < r ∧ r < b ℓ) : Vector Bool d := SPONGE (keccak_p ℓ nr) r N d hr
 
 end Wychelean.Hashes.Keccak
