@@ -6,7 +6,7 @@ import Wychelean.Hashes.SHA3.Basic
 Imported from Microsoft SymCrypt (MIT; see LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/SpecTests/SHA3/TestVectors.lean
 
-All vectors use `#guard` so a wrong result fails `lake build`.
+All vectors use `#guard` and are checked when this module is compiled by `lake test`.
 -/
 
 open Wychelean.Hashes.SHA3

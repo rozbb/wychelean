@@ -1,6 +1,11 @@
 import Wychelean.Utils.Bits
 
-/-! Keccak-p, FIPS 202 §§3–5, https://doi.org/10.6028/NIST.FIPS.202. -/
+/-!
+Keccak-p, FIPS 202 §§3–5: https://doi.org/10.6028/NIST.FIPS.202
+Generalized from Microsoft SymCrypt's SHA3 spec:
+https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/SHA3/Spec.lean
+MIT notice: Wychelean/Hashes/SHA3/LICENSE.SymCrypt.
+-/
 namespace Wychelean.Hashes.Keccak
 open Wychelean
 open scoped Wychelean.Notations
@@ -86,6 +91,10 @@ def rc.table : Vector Bool 255 := Vector.ofFn fun t => rc.algorithm t
 
 def rc (t : Int) : Bool := rc.table[(t % 255).toNat]
 
+/-- Algorithm 5 first reduces its integer argument modulo 255; lookup preserves its result. -/
+theorem rc_eq_algorithm (t : Int) : rc t = rc.algorithm ((t % 255).toNat) := by
+  simp only [rc, rc.table, Vector.getElem_ofFn]
+
 
 
 
@@ -105,6 +114,7 @@ For b=800 (ℓ=5), nr=12 gives indices 10 through 21.
 FIPS 202 Table 1, §3.3 Algorithm 7, and §3.4's 30-round example. -/
 def roundIndex (ℓ : Width) (nr j : Nat) : Int := 12 + 2 * (ℓ.val : Int) - nr + j
 
+/-- FIPS 202 Algorithm 7 for positive nr; zero rounds is an identity extension. -/
 def KECCAK_p (ℓ : Width) (nr : Nat) (S : Vector Bool (b ℓ)) : Vector Bool (b ℓ) :=
   stateToString (Fin.foldl nr (fun A j => Rnd A (roundIndex ℓ nr j)) (stringToState S))
 
@@ -250,5 +260,3 @@ def KECCAK (ℓ : Width) (nr r : Nat) (N : Vector Bool n) (d : Nat)
     (hr : 0 < r ∧ r < b ℓ) : Vector Bool d := SPONGE (KECCAK_p ℓ nr) r N d hr
 
 end Wychelean.Hashes.Keccak
-
-

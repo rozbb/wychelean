@@ -1,11 +1,15 @@
 import Wychelean.Utils.Bytes
 import Wychelean.Utils.Vector
 
-/-! Boolean-string operations used by bit-oriented specifications. -/
+/-!
+Boolean-string operations used by bit-oriented specifications.
+The rotation, notations, extension, and slicing definitions are adapted from Microsoft SymCrypt:
+https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/Defs.lean
+MIT notice: Wychelean/Hashes/SHA3/LICENSE.SymCrypt.
+-/
 namespace Wychelean
-/-- Rotate a vector at the index level: output[i] = input[(i + n - k) % n].
-    Used by FIPS 202 (SHA-3) where index 0 is the least significant bit.
-    For big-endian contexts (index 0 = MSB), use `Bits.rotlBE`. -/
+/-- Rotate a vector at the index level: output[i] = input[(i + n - (k % n)) % n].
+    Used by FIPS 202 (SHA3), where index zero is the least significant bit. -/
 def _root_.Vector.rotateLeft (v : Vector α n) (k : Nat) : Vector α n :=
   if h : n = 0 then v
   else Vector.ofFn fun (i : Fin n) => v[(i.val + n - k % n) % n]'(Nat.mod_lt _ (by omega))
@@ -55,3 +59,15 @@ theorem BitVec.ofBitsLE_rotateLeft (v : Vector Bool n) (k : Nat) :
     congr 1
     rw [show i + n - k % n = (i - k % n) + n by omega, Nat.add_mod_right,
       Nat.mod_eq_of_lt (by omega)]
+
+/-- Taking a whole-byte prefix commutes with packing a Boolean string. -/
+theorem Wychelean.bitsToBytes_slice (v : Vector Bool (8 * n)) (m : Nat) (h : m ≤ n) :
+    bitsToBytes (slice v 0 (8*m) (by omega)) = slice (bitsToBytes v) 0 m (by omega) := by
+  apply Vector.ext
+  intro i hi
+  apply UInt8.toBitVec_inj.mp
+  apply BitVec.eq_of_getLsbD_eq
+  intro j hj
+  rw [bitsToBytes_getLsbD _ _ hi _ hj]
+  simp only [slice, Vector.getElem_ofFn, Nat.zero_add]
+  rw [bitsToBytes_getLsbD _ _ (by omega) _ hj]

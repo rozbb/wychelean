@@ -60,7 +60,7 @@ def SHAKE256 {n} (M : Vector Bool n) (d : Nat) : Vector Bool d := KECCAK 512 (M 
 
 Convert between `Vector UInt8 n` (byte vectors) and `Vector Bool (8*n)`.
 Uses `bytesToBits`/`bitsToBytes` from `Wychelean.Utils.Bytes` — the SHA-3
-LSB-first bit ordering within bytes (§B.1) matches FIPS 203 Algorithms 3–4. -/
+The bit order is the h2b/b2h convention of FIPS 202 Appendix B.1. -/
 
 def sha3_224 {n} (msg : Vector UInt8 n) : Vector UInt8 28 := bitsToBytes (SHA3_224 (bytesToBits msg))
 def sha3_256 {n} (msg : Vector UInt8 n) : Vector UInt8 32 := bitsToBytes (SHA3_256 (bytesToBits msg))
