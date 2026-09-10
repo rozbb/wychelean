@@ -2,7 +2,6 @@ import Wychelean.Hashes.SHA3.Basic
 
 namespace Wychelean.Hashes.SHA3
 open Wychelean
-open scoped Wychelean.Notations
 
 namespace Internal
 
@@ -24,10 +23,7 @@ theorem padLen_dvd (r n : Nat) (hr : 0 < r := by grind) : (n + padLen r n) % r =
 theorem padLen_ge_two (r n : Nat) : 2 ≤ padLen r n := by simp [padLen]
 
 theorem pad_last (r n : Nat) : («pad10*1» r n)[padLen r n - 1]'(by simp [padLen]) = true := by
-  unfold «pad10*1»
-  change ((#v[true] ++ Vector.replicate (padLen.j r n) false) ++ #v[true])[padLen r n - 1] = true
-  rw [Vector.getElem_append_right _ (by simp [padLen])]
-  simp [padLen]
+  simp [«pad10*1», padLen, BitVec.getElem_append]
 
 end Internal
 

@@ -27,15 +27,14 @@ Empty messages use NIST's `Len = 0, Msg = 00` convention.
 namespace Wychelean.Hashes.SHA3.Tests
 open RunTests Rsp
 
-/-- Adapter shared by all NIST tests; expected results always come from checked-in fixtures. -/
-def evaluateBits (variant : Nat) (m : Vector Bool n) : Array UInt8 := Id.run do
-  let bits := match variant with
-    | 224 => (Internal.SHA3_224 m).toArray
-    | 256 => (Internal.SHA3_256 m).toArray
-    | 384 => (Internal.SHA3_384 m).toArray
-    | _ => (Internal.SHA3_512 m).toArray
-  return (Array.range ((bits.size + 7) / 8)).map fun i =>
-    (List.range 8).foldl (fun b j => b ||| ((if bits[i * 8 + j]?.getD false then (1 : UInt8) else 0) <<< j.toUInt8)) 0
+/-- Exercise the public bit API on bit-oriented fixtures. -/
+def evaluateBits (variant : Nat) (m : Vector Bit n) : Array UInt8 :=
+  let msg := BitVec.ofBitsLE m
+  match variant with
+    | 224 => ((sha3_224_bits msg).toBytesLE (n := 28)).toArray
+    | 256 => ((sha3_256_bits msg).toBytesLE (n := 32)).toArray
+    | 384 => ((sha3_384_bits msg).toBytesLE (n := 48)).toArray
+    | _ => ((sha3_512_bits msg).toBytesLE (n := 64)).toArray
 
 /-- Exercise the public byte API on byte-oriented fixtures. -/
 private def evaluateBytes (variant : Nat) (m : Array UInt8) : Array UInt8 :=

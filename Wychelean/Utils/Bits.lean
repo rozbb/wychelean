@@ -10,7 +10,7 @@ MIT notice: Wychelean/Hashes/SHA3/LICENSE.SymCrypt.
 namespace Wychelean
 
 /-- Replace the bit at LSB index `i`; an index outside the vector leaves it unchanged. -/
-def _root_.BitVec.setBit (v : BitVec n) (i : Nat) (bit : Bool) : BitVec n :=
+def _root_.BitVec.setBit (v : BitVec n) (i : Nat) (bit : Bit) : BitVec n :=
   BitVec.ofBitsLE (Vector.ofFn fun j => if j.val = i then bit else v[j.val])
 
 /-- Rotate a vector at the index level: output[i] = input[(i + n - (k % n)) % n].
@@ -25,17 +25,17 @@ scoped instance : OfNat Bool 1 := ⟨true⟩
 scoped macro_rules
 | `(tactic| get_elem_tactic) => `(tactic| grind)
 scoped infixl:65 " ‖ " => Vector.append
-scoped instance : HXor (Vector Bool n) (Vector Bool n) (Vector Bool n) :=
+scoped instance : HXor (Vector Bit n) (Vector Bit n) (Vector Bit n) :=
   ⟨Vector.zipWith (· != ·)⟩
-scoped instance : HAnd (Vector Bool n) (Vector Bool n) (Vector Bool n) :=
+scoped instance : HAnd (Vector Bit n) (Vector Bit n) (Vector Bit n) :=
   ⟨Vector.zipWith (· && ·)⟩
-scoped instance : Complement (Vector Bool n) := ⟨Vector.map (!·)⟩
+scoped instance : Complement (Vector Bit n) := ⟨Vector.map (!·)⟩
 end Notations
 open Notations
-def Bits.zeroExtend (v : Vector Bool n) (m : Nat) : Vector Bool m :=
+def Bits.zeroExtend (v : Vector Bit n) (m : Nat) : Vector Bit m :=
   Vector.ofFn fun (i : Fin m) => if h : i.val < n then v[i.val] else false
 
-def Bits.ofNatLE {n : Nat} (val : Nat) : Vector Bool n :=
+def Bits.ofNatLE {n : Nat} (val : Nat) : Vector Bit n :=
   Vector.ofFn fun (i : Fin n) => (val >>> i.val) % 2 != 0
 
 def slice {n : ℕ} (v : Vector α n) (off len : ℕ) (h : off + len ≤ n := by grind) : Vector α len :=
@@ -44,7 +44,7 @@ def slice {n : ℕ} (v : Vector α n) (off len : ℕ) (h : off + len ≤ n := by
 end Wychelean
 
 /-- The bit-vector rotation agrees with the index-level rotation of Boolean vectors. -/
-theorem BitVec.ofBitsLE_rotateLeft (v : Vector Bool n) (k : Nat) :
+theorem BitVec.ofBitsLE_rotateLeft (v : Vector Wychelean.Bit n) (k : Nat) :
     BitVec.ofBitsLE (v.rotateLeft k) = (BitVec.ofBitsLE v).rotateLeft k := by
   apply BitVec.eq_of_getLsbD_eq
   intro i hi

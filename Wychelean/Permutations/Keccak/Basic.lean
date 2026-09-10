@@ -73,7 +73,7 @@ def χ (A : State width) : State width :=
   Vector.ofFn fun x => Vector.ofFn fun y => A[x][y] ^^^ (~~~A[x+1][y] &&& A[x+2][y])
 
 /-- FIPS 202 §3.2.5, Algorithm 5. -/
-def rc (t : Int) : Bool := Id.run do
+def rc (t : Int) : Bit := Id.run do
   let mut R : BitVec 8 := 1
   for _ in [0 : (t % 255).toNat] do
     let feedback : BitVec 8 := if R[7] then 0x71 else 0
