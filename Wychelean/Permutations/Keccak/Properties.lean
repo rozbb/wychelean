@@ -23,14 +23,28 @@ theorem vecToState_stateToVec (A : State width) :
     have := Nat.mul_le_mul_left (w width) (show 5 * y + x + 1 ≤ 25 by omega)
     simp only [b, Nat.mul_add, Nat.mul_one] at *
     omega
-  simp [vecToState, stateToVec, hz, hbit, Nat.mul_add_div, w_pos,
-    Nat.div_eq_of_lt hz, Nat.mod_eq_of_lt hz, Nat.add_mod,
-    Nat.mod_eq_of_lt hx, Nat.div_eq_of_lt hx]
+  simp [
+    vecToState,
+    stateToVec,
+    hz,
+    hbit,
+    Nat.mul_add_div,
+    w_pos,
+    Nat.div_eq_of_lt hz,
+    Nat.mod_eq_of_lt hz,
+    Nat.add_mod,
+    Nat.mod_eq_of_lt hx,
+    Nat.div_eq_of_lt hx]
 
 theorem stateToVec_vecToState (S : BitVec (b width)) :
     stateToVec (vecToState S) = S := by
   refine BitVec.eq_of_getLsbD_eq fun i hi => ?_
-  simp [stateToVec, vecToState, hi, Nat.mod_lt _ (w_pos width), Nat.div_add_mod]
+  simp [
+    stateToVec,
+    vecToState,
+    hi,
+    Nat.mod_lt _ (w_pos width),
+    Nat.div_add_mod]
 
 /-! ## Rotation offsets -/
 

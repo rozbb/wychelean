@@ -1,9 +1,12 @@
 import Wychelean.Utils.Bits
 
 /-!
-Keccak-p, FIPS 202 §§3–3.4: https://doi.org/10.6028/NIST.FIPS.202
-Generalized from Microsoft SymCrypt's SHA3 spec:
+Keccak-p, FIPS 202 §§3–3.4:
+https://doi.org/10.6028/NIST.FIPS.202
+
+Adapted from Microsoft SymCrypt's SHA3 specification:
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/SHA3/Spec.lean
+
 MIT notice: Wychelean/Hashes/SHA3/LICENSE.SymCrypt.
 -/
 namespace Wychelean.Permutations.Keccak

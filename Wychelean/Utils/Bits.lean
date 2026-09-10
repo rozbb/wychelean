@@ -64,15 +64,3 @@ theorem BitVec.ofBitsLE_rotateLeft (v : Vector Bool n) (k : Nat) :
     congr 1
     rw [show i + n - k % n = (i - k % n) + n by omega, Nat.add_mod_right,
       Nat.mod_eq_of_lt (by omega)]
-
-/-- Taking a whole-byte prefix commutes with packing a Boolean string. -/
-theorem Wychelean.bitsToBytes_slice (v : Vector Bool (8 * n)) (m : Nat) (h : m ≤ n) :
-    bitsToBytes (slice v 0 (8*m) (by omega)) = slice (bitsToBytes v) 0 m (by omega) := by
-  apply Vector.ext
-  intro i hi
-  apply UInt8.toBitVec_inj.mp
-  apply BitVec.eq_of_getLsbD_eq
-  intro j hj
-  rw [bitsToBytes_getLsbD _ _ hi _ hj]
-  simp only [slice, Vector.getElem_ofFn, Nat.zero_add]
-  rw [bitsToBytes_getLsbD _ _ (by omega) _ hj]
