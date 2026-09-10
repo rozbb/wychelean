@@ -1,5 +1,5 @@
 import Wychelean.Utils.Bitwise
-import Wychelean.Utils.Vector
+import Wychelean.Utils.Bytes
 
 /-!
 # SHA-256
@@ -9,17 +9,19 @@ https://doi.org/10.6028/NIST.FIPS.180-4
 
 namespace Wychelean.Hashes.SHA256
 
-/-- Size of a word in bytes (FIPS 180-4, section 3.2). -/
-abbrev wordSize : Nat := 4
-/-- Size of a message block in bytes (FIPS 180-4, section 5.2.1). -/
-abbrev blockSize : Nat := 64
+/-- Size of a word in bits (FIPS 180-4, section 3.2). -/
+abbrev wordBits : Nat := 32
+/-- Size of a message block in bits (FIPS 180-4, section 5.2.1). -/
+abbrev blockBits : Nat := 512
 /-- Number of words in a message block. -/
-abbrev blockWords : Nat := blockSize / wordSize
+abbrev blockWords : Nat := blockBits / wordBits
 /-- Number of rounds (FIPS 180-4, section 6.2.2, step 3). -/
 abbrev numRounds : Nat := 64
-/-- Size in bytes of the message length appended by padding (FIPS 180-4, section 5.1.1). -/
-abbrev lengthSize : Nat := 8
-/-- Size of the digest in bytes (FIPS 180-4, section 6.2). -/
+/-- Size in bits of the message length appended by padding (FIPS 180-4, section 5.1.1). -/
+abbrev lengthBits : Nat := 64
+/-- Size of the digest in bits (FIPS 180-4, section 6.2). -/
+abbrev digestBits : Nat := 256
+/-- Size of the digest in bytes. -/
 abbrev digestSize : Nat := 32
 
 /-- Round constants: (FIPS 180-4, section 4.2.2). -/
@@ -52,9 +54,11 @@ instance : Add State where
     ⟨st.a + st'.a, st.b + st'.b, st.c + st'.c, st.d + st'.d,
      st.e + st'.e, st.f + st'.f, st.g + st'.g, st.h + st'.h⟩
 
-/-- The state as bytes: the words `a` to `h` in order, each big-endian. -/
-def State.toBytes (st : State) : Vector UInt8 digestSize :=
-  #v[st.a, st.b, st.c, st.d, st.e, st.f, st.g, st.h].flatMap UInt32.toBytesBE
+/-- The state as a bit string: the words `a` to `h` in order, `a` most significant
+(FIPS 180-4, section 6.2.2, step 4). -/
+def State.toBitVec (st : State) : BitVec digestBits :=
+  st.a.toBitVec ++ st.b.toBitVec ++ st.c.toBitVec ++ st.d.toBitVec ++
+  st.e.toBitVec ++ st.f.toBitVec ++ st.g.toBitVec ++ st.h.toBitVec
 
 /-- Initial state value: (FIPS 180-4, section 5.3.3). -/
 def H0 : State :=
@@ -62,16 +66,16 @@ def H0 : State :=
     e := 0x510e527f, f := 0x9b05688c, g := 0x1f83d9ab, h := 0x5be0cd19 }
 
 /-- `σ₀(x) = ROTR⁷(x) ⊕ ROTR¹⁸(x) ⊕ SHR³(x)` -/
-def lowerSigma0 (x : UInt32) : UInt32 := (rotr 7 x) ^^^ (rotr 18 x) ^^^ (x >>> 3)
+def lowerSigma0 (x : UInt32) : UInt32 := x.rotr 7 ^^^ x.rotr 18 ^^^ x >>> 3
 
 /-- `σ₁(x) = ROTR¹⁷(x) ⊕ ROTR¹⁹(x) ⊕ SHR¹⁰(x)` -/
-def lowerSigma1 (x : UInt32) : UInt32 := (rotr 17 x) ^^^ (rotr 19 x) ^^^ (x >>> 10)
+def lowerSigma1 (x : UInt32) : UInt32 := x.rotr 17 ^^^ x.rotr 19 ^^^ x >>> 10
 
 /-- `Σ₀(x) = ROTR²(x) ⊕ ROTR¹³(x) ⊕ ROTR²²(x)` -/
-def upperSigma0 (x : UInt32) : UInt32 := (rotr 2 x) ^^^ (rotr 13 x) ^^^ (rotr 22 x)
+def upperSigma0 (x : UInt32) : UInt32 := x.rotr 2 ^^^ x.rotr 13 ^^^ x.rotr 22
 
 /-- `Σ₁(x) = ROTR⁶(x) ⊕ ROTR¹¹(x) ⊕ ROTR²⁵(x)` -/
-def upperSigma1 (x : UInt32) : UInt32 := (rotr 6 x) ^^^ (rotr 11 x) ^^^ (rotr 25 x)
+def upperSigma1 (x : UInt32) : UInt32 := x.rotr 6 ^^^ x.rotr 11 ^^^ x.rotr 25
 
 /-- `Ch(x, y, z) = (x ∧ y) ⊕ (¬x ∧ z)` -/
 def Ch (x y z : UInt32) : UInt32 := (x &&& y) ^^^ (~~~x &&& z)
@@ -98,34 +102,37 @@ def messageSchedule (block : Vector UInt32 blockWords) : Vector UInt32 numRounds
 def rounds (st : State) (W : Vector UInt32 numRounds) : State :=
   Fin.foldl numRounds (fun st t => round st K[t] W[t]) st
 
-/-- Process one block, given as big-endian words (FIPS 180-4, section 6.2.2). -/
+/-- Process one block, given as words (FIPS 180-4, section 6.2.2). -/
 def compress (st : State) (block : Vector UInt32 blockWords) : State :=
   st + rounds st (messageSchedule block)
 
-/-- Parse a block into big-endian words (FIPS 180-4, section 5.2.1). -/
-def bytesToBlock (bytes : Vector UInt8 blockSize) : Vector UInt32 blockWords :=
-  (bytes.toChunks wordSize (by decide)).map UInt32.fromBytesBE
+/-- Parse a block into words, most significant first (FIPS 180-4, section 5.2.1). -/
+def bitsToBlock (block : BitVec blockBits) : Vector UInt32 blockWords :=
+  (block.toChunksBE wordBits (by decide)).map UInt32.ofBitVec
 
-/-- Number of `0x00` bytes appended by padding: the least count that fills the final block. -/
-def numZeros (len : Nat) : Nat := (blockSize - (len + 1 + lengthSize) % blockSize) % blockSize
+/-- Number of `0` bits appended by padding: the least count that fills the final block. -/
+def numZeros (n : Nat) : Nat := (blockBits - (n + 1 + lengthBits) % blockBits) % blockBits
 
 /-- Pad a message (FIPS 180-4, section 5.1.1) -/
-def padded {len : Nat} (msg : Vector UInt8 len) : Vector UInt8 (len + 1 + numZeros len + lengthSize) :=
-  let zeros : Vector UInt8 (numZeros len) := Vector.replicate _ 0
-  let bitLength : Vector UInt8 lengthSize := (len * 8).toUInt64.toBytesBE
-  msg.push 0x80 ++ zeros ++ bitLength
+def padded {n : Nat} (msg : BitVec n) : BitVec (n + 1 + numZeros n + lengthBits) :=
+  msg ++ 1#1 ++ 0#(numZeros n) ++ BitVec.ofNat lengthBits n
 
 /-- The padded length is a multiple of the block size. -/
-theorem padded_aligned (len : Nat) : (len + 1 + numZeros len + lengthSize) % blockSize = 0 := by
-  simp only [numZeros, blockSize, lengthSize]; omega
+theorem padded_aligned (n : Nat) : (n + 1 + numZeros n + lengthBits) % blockBits = 0 := by
+  simp only [numZeros, blockBits, lengthBits]; omega
 
-/-- Parse a padded message into blocks of big-endian words (FIPS 180-4, section 5.2.1). -/
-def parse {n : Nat} (msg : Vector UInt8 n) (h : n % blockSize = 0) :
-    Vector (Vector UInt32 blockWords) (n / blockSize) :=
-  (msg.toChunks blockSize h).map bytesToBlock
+/-- Parse a padded message into blocks of words (FIPS 180-4, section 5.2.1). -/
+def parse {n : Nat} (msg : BitVec n) (h : n % blockBits = 0) :
+    Vector (Vector UInt32 blockWords) (n / blockBits) :=
+  (msg.toChunksBE blockBits h).map bitsToBlock
 
-/-- SHA-256 of a message of fewer than `2 ^ 64` bits (FIPS 180-4, section 1). -/
-def sha256 {len : Nat} (msg : Vector UInt8 len) (_ : 8 * len < 2 ^ 64) : Vector UInt8 digestSize :=
-  ((parse (padded msg) (padded_aligned len)).foldl compress H0).toBytes
+/-- SHA-256 of a message of fewer than `2 ^ 64` bits (FIPS 180-4, section 1).
+Bit `n - 1` of `msg` is the first message bit (FIPS 180-4, section 3.1). -/
+def sha256_bits {n : Nat} (msg : BitVec n) (_ : n < 2 ^ 64) : BitVec digestBits :=
+  ((parse (padded msg) (padded_aligned n)).foldl compress H0).toBitVec
+
+/-- SHA-256 of a byte string; byte zero is most significant (FIPS 180-4, section 3.1). -/
+def sha256 {len : Nat} (msg : ByteVec len) (h : 8 * len < 2 ^ 64) : ByteVec digestSize :=
+  (sha256_bits (BitVec.ofBytesBE msg) h).toBytesBE
 
 end Wychelean.Hashes.SHA256
