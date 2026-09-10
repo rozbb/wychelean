@@ -45,6 +45,7 @@ private def evaluateBits (file : String) (v : HashVector) : IO Digest := do
 
 private def knownAnswers (dir file : String) (count : Nat) (byteOriented := true) : Suite where
   name := s!"SHA256 {dir}/{file}"
+  verbose := false
   tests := do
     let vectors ← loadRsp dir file parseKat
     unless vectors.length == count do
@@ -55,6 +56,7 @@ private def knownAnswers (dir file : String) (count : Nat) (byteOriented := true
 
 private def monteCarlo (dir : String) : Suite where
   name := s!"SHA256 {dir}/SHA256Monte.rsp"
+  verbose := false
   tests := do
     let file := "SHA256Monte.rsp"
     let (initial, expected) ← loadRsp dir file parseMonte

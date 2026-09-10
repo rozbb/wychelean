@@ -41,6 +41,7 @@ private def vectorDir : System.FilePath := "Wychelean/Hashes/SHA3/TestVectors"
 private def knownAnswers (dir file : String) (variant : Variant)
     (byteOriented := true) : Suite where
   name := s!"{dir}/{file}"
+  verbose := false
   tests := do
     let vectors ← RunTests.Parser.parseFile
       (parseKat variant.digestBits) (vectorDir / dir / file)
