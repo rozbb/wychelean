@@ -11,7 +11,8 @@ import Wychelean.Utils.Tests
 
 Runs every specification's test suites. Each suite lives next to the specification it tests; adding
 one means importing its module and listing it here.
-Use `lake test -- --full` to add the SHA3 long-message vectors and the bit-oriented SHA-2 Monte Carlo suites.
+Use `lake test -- --full` to add the SHA3 long-message vectors and the SHA-2 Monte Carlo suites
+that do not run by default.
 -/
 
 namespace RunTests
