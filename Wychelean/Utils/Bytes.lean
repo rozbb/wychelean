@@ -27,7 +27,7 @@ def toBitsLE (v : BitVec n) : Vector Bool n := Vector.ofFn fun i => v.getLsbD i
   simp [hi, toBitsLE]
 
 /-- Byte zero holds bits 0–7. This convention is used by FIPS 202, Appendix B.1. -/
-def fromBytesLE (v : Vector UInt8 n) : BitVec (8 * n) :=
+def ofBytesLE (v : Vector UInt8 n) : BitVec (8 * n) :=
   ofBitsLE (Vector.ofFn fun (i : Fin (8 * n)) =>
     v[i.val / 8]'(by omega) |>.toBitVec.getLsbD (i.val % 8))
 
@@ -35,48 +35,48 @@ def fromBytesLE (v : Vector UInt8 n) : BitVec (8 * n) :=
 def toBytesLE (v : BitVec (8 * n)) : Vector UInt8 n :=
   Vector.ofFn fun i => ⟨ofBitsLE (Vector.ofFn fun (j : Fin 8) => v.getLsbD (8 * i.val + j.val))⟩
 
-@[simp] theorem getLsbD_fromBytesLE (v : Vector UInt8 n) (i : Nat) (hi : i < 8 * n) :
-    (fromBytesLE v).getLsbD i = (v[i / 8]'(by omega)).toBitVec.getLsbD (i % 8) := by
-  simp [fromBytesLE, hi]
+@[simp] theorem getLsbD_ofBytesLE (v : Vector UInt8 n) (i : Nat) (hi : i < 8 * n) :
+    (ofBytesLE v).getLsbD i = (v[i / 8]'(by omega)).toBitVec.getLsbD (i % 8) := by
+  simp [ofBytesLE, hi]
 
 @[simp] theorem getLsbD_toBytesLE (v : BitVec (8 * n)) (i : Nat) (hi : i < n)
     (j : Nat) (hj : j < 8) :
     (toBytesLE v)[i].toBitVec.getLsbD j = v.getLsbD (8 * i + j) := by
   simp [toBytesLE, hj]
 
-@[simp] theorem fromBytesLE_toBytesLE (v : BitVec (8 * n)) :
-    fromBytesLE (toBytesLE v) = v := by
+@[simp] theorem ofBytesLE_toBytesLE (v : BitVec (8 * n)) :
+    ofBytesLE (toBytesLE v) = v := by
   apply eq_of_getLsbD_eq
   intro i hi
-  rw [getLsbD_fromBytesLE _ _ hi, getLsbD_toBytesLE _ _ (by omega) _ (by omega)]
+  rw [getLsbD_ofBytesLE _ _ hi, getLsbD_toBytesLE _ _ (by omega) _ (by omega)]
   congr 1
   omega
 
-@[simp] theorem toBytesLE_fromBytesLE (v : Vector UInt8 n) :
-    toBytesLE (fromBytesLE v) = v := by
+@[simp] theorem toBytesLE_ofBytesLE (v : Vector UInt8 n) :
+    toBytesLE (ofBytesLE v) = v := by
   apply Vector.ext
   intro i hi
   apply UInt8.toBitVec_inj.mp
   apply eq_of_getLsbD_eq
   intro j hj
-  rw [getLsbD_toBytesLE _ _ hi _ hj, getLsbD_fromBytesLE _ _ (by omega)]
+  rw [getLsbD_toBytesLE _ _ hi _ hj, getLsbD_ofBytesLE _ _ (by omega)]
   have hdiv : (8 * i + j) / 8 = i := by omega
   have hmod : (8 * i + j) % 8 = j := by omega
   simp [hdiv, hmod]
 
 /-- Byte zero is most significant, as in FIPS 180-4 §3.1. -/
-def fromBytesBE (v : Vector UInt8 n) : BitVec (8 * n) := fromBytesLE v.reverse
-/-- Whole-byte big-endian decoding, inverse to fromBytesBE. -/
+def ofBytesBE (v : Vector UInt8 n) : BitVec (8 * n) := ofBytesLE v.reverse
+/-- Whole-byte big-endian decoding, inverse to ofBytesBE. -/
 def toBytesBE (v : BitVec (8 * n)) : Vector UInt8 n := (toBytesLE v).reverse
 
-@[simp] theorem fromBytesBE_toBytesBE (v : BitVec (8 * n)) :
-    fromBytesBE (toBytesBE v) = v := by simp [fromBytesBE, toBytesBE]
-@[simp] theorem toBytesBE_fromBytesBE (v : Vector UInt8 n) :
-    toBytesBE (fromBytesBE v) = v := by simp [fromBytesBE, toBytesBE]
+@[simp] theorem ofBytesBE_toBytesBE (v : BitVec (8 * n)) :
+    ofBytesBE (toBytesBE v) = v := by simp [ofBytesBE, toBytesBE]
+@[simp] theorem toBytesBE_ofBytesBE (v : Vector UInt8 n) :
+    toBytesBE (ofBytesBE v) = v := by simp [ofBytesBE, toBytesBE]
 /-- Bit i is in byte n-1-i/8, with the same bit position within that byte. -/
-theorem getLsbD_fromBytesBE (v : Vector UInt8 n) (i : Nat) (hi : i < 8 * n) :
-    (fromBytesBE v).getLsbD i = (v[n - 1 - i / 8]'(by omega)).toBitVec.getLsbD (i % 8) := by
-  rw [fromBytesBE, getLsbD_fromBytesLE _ _ hi]
+theorem getLsbD_ofBytesBE (v : Vector UInt8 n) (i : Nat) (hi : i < 8 * n) :
+    (ofBytesBE v).getLsbD i = (v[n - 1 - i / 8]'(by omega)).toBitVec.getLsbD (i % 8) := by
+  rw [ofBytesBE, getLsbD_ofBytesLE _ _ hi]
   simp [Vector.getElem_reverse]
 
 /-- Encoding commutes with XOR, pointwise on the Boolean representation. -/

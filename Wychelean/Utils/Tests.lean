@@ -51,10 +51,10 @@ def vector : Suite where
 def bytes : Suite where
   name := "Byte / BitVec encodings"
   tests := pure [
-    check "LE byte order" (0x030201 : BitVec 24) (BitVec.fromBytesLE #v[1,2,3]),
-    check "BE byte order" (0x010203 : BitVec 24) (BitVec.fromBytesBE #v[1,2,3]),
-    check "empty LE" (0 : BitVec 0) (BitVec.fromBytesLE #v[]),
-    check "empty BE" (0 : BitVec 0) (BitVec.fromBytesBE #v[]),
+    check "LE byte order" (0x030201 : BitVec 24) (BitVec.ofBytesLE #v[1,2,3]),
+    check "BE byte order" (0x010203 : BitVec 24) (BitVec.ofBytesBE #v[1,2,3]),
+    check "empty LE" (0 : BitVec 0) (BitVec.ofBytesLE #v[]),
+    check "empty BE" (0 : BitVec 0) (BitVec.ofBytesBE #v[]),
     check "LE unpack" (#v[1,2,3] : Vector UInt8 3) (BitVec.toBytesLE (0x030201 : BitVec 24)),
     check "BE unpack" (#v[1,2,3] : Vector UInt8 3) (BitVec.toBytesBE (0x010203 : BitVec 24)),
     check "FIPS byte bit order" [true,false,false,false,false,false,false,true]

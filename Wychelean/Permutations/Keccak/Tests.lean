@@ -20,7 +20,7 @@ private def readState (width : Width) (wordBytes : Nat) (text : String) : IO (Bi
   let bytes := (words.map fun word => word.toArray.reverse).flatten
   unless bytes.size * 8 == b width do
     throw (IO.userError s!"expected a {b width}-bit state, got {bytes.size} bytes")
-  return (BitVec.fromBytesLE bytes.toVector).extractLsb' 0 (b width)
+  return (BitVec.ofBytesLE bytes.toVector).extractLsb' 0 (b width)
 
 /-- Read the rows following a labeled state in the upstream trace format. -/
 private def stateAfter (trace label : String) (occurrence rows : Nat) : IO String := do
