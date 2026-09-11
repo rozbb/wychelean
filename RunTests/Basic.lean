@@ -14,10 +14,6 @@ namespace RunTests
 
 /-! ## Hex -/
 
-/-- Decode a complete, unprefixed lowercase hex string of exactly `n` bytes. -/
-def fromHex (s: String): Except String (Vector UInt8 n) :=
-  (Parser.parse (Parser.readHexVec n) s).mapError fun error => s!"invalid hex string {s}: {error}"
-
 /-- Render bytes as lowercase hex, the way specifications print test vectors. -/
 def toHex (v: Vector UInt8 n): String :=
   v.foldl (fun acc b => acc ++ b.toBitVec.toHex) ""

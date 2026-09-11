@@ -1,11 +1,12 @@
 import Wychelean.Hashes.SHA256.Rsp
 import RunTests.Basic
+import RunTests.Parser.Basic
 
 /-! SHA256 FIPS examples and NIST CAVP suites. -/
 
 namespace Wychelean.Hashes.SHA256.Tests
 
-open RunTests
+open RunTests RunTests.Parser
 open Wychelean.Hashes.SHA256.Rsp
 
 /-- SHA256 examples from FIPS 180-2, Appendix B. -/

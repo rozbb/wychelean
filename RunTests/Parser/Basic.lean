@@ -34,6 +34,10 @@ def parse (parser : Parser α) (text : String) : Except String α :=
     let line := ((pos.1.sliceTo pos.2).copy.toList.count '\n') + 1
     .error s!"line {line}: {error}"
 
+/-- Decode a complete, unprefixed lowercase hex string of exactly `n` bytes. -/
+def fromHex (s : String) : Except String (Vector UInt8 n) :=
+  (parse (readHexVec n) s).mapError fun error => s!"invalid hex string {s}: {error}"
+
 /-- Read and parse a file, including its path in parse errors. -/
 def parseFile (parser : Parser α) (path : System.FilePath) : IO α := do
   let text ← IO.FS.readFile path
