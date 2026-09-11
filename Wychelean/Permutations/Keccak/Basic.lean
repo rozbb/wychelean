@@ -41,8 +41,11 @@ def vecToState (S : BitVec (b width)) : State width :=
 /-- FIPS 202 §3.1.3: serialize the lanes in Equation (1) order, least significant bit first. -/
 def stateToVec (A : State width) : BitVec (b width) :=
   BitVec.ofBitsLE (Vector.ofFn fun i =>
-    have hd : i.val / w width < 25 := Nat.div_lt_of_lt_mul (by simpa only [b, Nat.mul_comm] using i.isLt)
-    A[i.val / w width % 5][i.val / w width / 5].getLsbD (i.val % w width))
+    let l := i.val / w width
+    let z := i.val % w width
+    have hd : l < 25 :=
+      (Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _)).2 i.isLt
+    A[l % 5][l / 5].getLsbD z)
 
 /-- Algorithm 1, θ. Fin 5 arithmetic performs reduction modulo 5. -/
 def θ (A : State width) : State width :=
@@ -66,17 +69,21 @@ def ρ (A : State width) : State width :=
 
 /-- Algorithm 3. -/
 def π (A : State width) : State width :=
-  Vector.ofFn fun x => Vector.ofFn fun y => A[x+3*y][x]
+  Vector.ofFn fun (x : Fin 5) => Vector.ofFn fun (y : Fin 5) => A[x+3*y][x]
 
 /-- Algorithm 4. -/
 def χ (A : State width) : State width :=
-  Vector.ofFn fun x => Vector.ofFn fun y => A[x][y] ^^^ (~~~A[x+1][y] &&& A[x+2][y])
+  Vector.ofFn fun (x : Fin 5) => Vector.ofFn fun (y : Fin 5) =>
+    A[x][y] ^^^ (~~~A[x + 1][y] &&& A[x + 2][y])
+
+/-- FIPS 202 Algorithm 5, steps 3b–3e: feedback at 6, 5, 4, 0. -/
+def LfsrTaps : BitVec 8 := 0b01110001
 
 /-- FIPS 202 §3.2.5, Algorithm 5. -/
 def rc (t : Int) : Bit := Id.run do
   let mut R : BitVec 8 := 1
   for _ in [0 : (t % 255).toNat] do
-    let feedback : BitVec 8 := if R[7] then 0x71 else 0
+    let feedback := if R.msb then LfsrTaps else 0
     R := (R <<< 1) ^^^ feedback
   return R[0]
 
