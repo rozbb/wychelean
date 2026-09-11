@@ -1,30 +1,30 @@
-import Wychelean.Hashes.SHA256.Rsp
+import Wychelean.Hashes.SHA512.Rsp
 import RunTests.Basic
 
-/-! SHA256 FIPS examples and NIST CAVP suites. -/
+/-! SHA512 FIPS examples and NIST CAVP suites. -/
 
-namespace Wychelean.Hashes.SHA256.Tests
+namespace Wychelean.Hashes.SHA512.Tests
 
 open RunTests
-open Wychelean.Hashes.SHA256.Rsp
+open Wychelean.Hashes.SHA512.Rsp
 
-/-- SHA256 examples from FIPS 180-2, Appendix B. -/
+/-- SHA512 examples from FIPS 180-2, Appendix C. -/
 def basic : Suite where
-  name := "SHA256 FIPS examples"
+  name := "SHA512 FIPS examples"
   tests := do
-    -- FIPS 180-2, Appendix B.1–B.3: https://csrc.nist.gov/files/pubs/fips/180-2/final/docs/fips180-2.pdf
+    -- FIPS 180-2, Appendix C.1–C.3: https://csrc.nist.gov/files/pubs/fips/180-2/final/docs/fips180-2.pdf
     let abc ← IO.ofExcept (fromHex
-      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+      "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f")
     let multiBlock ← IO.ofExcept (fromHex
-      "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1")
+      "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909")
     let millionA ← IO.ofExcept (fromHex
-      "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0")
+      "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b")
     return [
-      check "FIPS abc" abc (sha256 "abc".toUTF8.data.toVector (by decide)),
-      check "FIPS 56-byte message" multiBlock
-        (sha256 "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".toUTF8.data.toVector (by decide)),
+      check "FIPS abc" abc (sha512 "abc".toUTF8.data.toVector (by decide)),
+      check "FIPS 112-byte message" multiBlock
+        (sha512 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu".toUTF8.data.toVector (by decide)),
       check "FIPS million-a message" millionA
-        (sha256 (Vector.replicate 1000000 (0x61 : UInt8)) (by decide))
+        (sha512 (Vector.replicate 1000000 (0x61 : UInt8)) (by decide))
     ]
 
 /-! ## NIST response files -/
@@ -36,17 +36,17 @@ private def bitDir : String := "shabittestvectors"
 private def evaluateBytes (file : String) (v : HashVector) : IO Digest := do
   unless v.msg.length % 8 == 0 do
     throw (IO.userError s!"{file}: byte-oriented vector has a partial byte")
-  if h : 8 * v.msg.bytes.size < 2 ^ 64 then return sha256 v.msg.bytes.toVector h
-  else throw (IO.userError s!"{file}: vector exceeds the SHA256 length bound")
+  if h : 8 * v.msg.bytes.size < 2 ^ 128 then return sha512 v.msg.bytes.toVector h
+  else throw (IO.userError s!"{file}: vector exceeds the SHA512 length bound")
 
 /-- Evaluate a vector through the bit interface. -/
 private def evaluateBits (file : String) (v : HashVector) : IO Digest := do
-  if h : v.msg.length < 2 ^ 64 then
-    return (sha256_bits (BitVec.ofBytesBEPrefix v.msg.length v.msg.bytes.toVector) h).toBytesBE
-  else throw (IO.userError s!"{file}: vector exceeds the SHA256 length bound")
+  if h : v.msg.length < 2 ^ 128 then
+    return (sha512_bits (BitVec.ofBytesBEPrefix v.msg.length v.msg.bytes.toVector) h).toBytesBE
+  else throw (IO.userError s!"{file}: vector exceeds the SHA512 length bound")
 
 private def knownAnswers (dir file : String) (count : Nat) (byteOriented := true) : Suite where
-  name := s!"SHA256 {dir}/{file}"
+  name := s!"SHA512 {dir}/{file}"
   verbose := false
   tests := do
     let vectors ← loadRsp dir file parseKat
@@ -57,10 +57,10 @@ private def knownAnswers (dir file : String) (count : Nat) (byteOriented := true
       return check s!"vector {i}, Len = {v.msg.length}" v.digest actual
 
 private def monteCarlo (dir : String) : Suite where
-  name := s!"SHA256 {dir}/SHA256Monte.rsp"
+  name := s!"SHA512 {dir}/SHA512Monte.rsp"
   verbose := false
   tests := do
-    let file := "SHA256Monte.rsp"
+    let file := "SHA512Monte.rsp"
     let (initial, expected) ← loadRsp dir file parseMonte
     unless expected.length == 100 do
       throw (IO.userError s!"{file}: expected 100 checkpoints, found {expected.length}")
@@ -74,15 +74,15 @@ private def monteCarlo (dir : String) : Suite where
 /-! ## Response-file validation -/
 
 private def katText (len : Nat) (msg : String) : String :=
-  s!"[L = 32]\n\nLen = {len}\nMsg = {msg}\nMD = {"".pushn '0' 64}\n"
+  s!"[L = 64]\n\nLen = {len}\nMsg = {msg}\nMD = {"".pushn '0' 128}\n"
 
 private def monteText (counts : List Nat) : String :=
-  let seed := s!"Seed = {"".pushn '0' 64}\n\n"
-  let record := fun (c : Nat) => s!"COUNT = {c}\nMD = {"".pushn '0' 64}\n\n"
-  s!"[L = 32]\n\n{seed}{String.join (counts.map record)}"
+  let seed := s!"Seed = {"".pushn '0' 128}\n\n"
+  let record := fun (c : Nat) => s!"COUNT = {c}\nMD = {"".pushn '0' 128}\n\n"
+  s!"[L = 64]\n\n{seed}{String.join (counts.map record)}"
 
 private def parserChecks : Suite where
-  name := "SHA256 response-file validation"
+  name := "SHA512 response-file validation"
   tests := pure [
     check "Len = 2, Msg = 40 gives 2 bits" (some 2)
       ((Parser.parse parseKat (katText 2 "40")).toOption.bind (·.head?) |>.map (·.msg.length)),
@@ -92,13 +92,15 @@ private def parserChecks : Suite where
     check "COUNT out of order is rejected" false (Parser.parse parseMonte (monteText [0, 2, 1])).toBool
   ]
 
-/-- All SHA256 suites. `full` adds the Monte Carlo suites (100,000 hashes each). -/
+/-- All SHA512 suites. The byte-oriented Monte Carlo suite (100,000 hashes) always runs;
+`full` adds the bit-oriented one, which repeats it from a different seed. -/
 def suites (full := false) : List Suite :=
   let default := [basic,
-    knownAnswers byteDir "SHA256ShortMsg.rsp" 65,
-    knownAnswers byteDir "SHA256LongMsg.rsp" 64,
-    knownAnswers bitDir "SHA256ShortMsg.rsp" 513 (byteOriented := false),
+    knownAnswers byteDir "SHA512ShortMsg.rsp" 129,
+    knownAnswers byteDir "SHA512LongMsg.rsp" 128,
+    knownAnswers bitDir "SHA512ShortMsg.rsp" 1025 (byteOriented := false),
+    monteCarlo byteDir,
     parserChecks]
-  if full then default ++ [monteCarlo byteDir, monteCarlo bitDir] else default
+  if full then default ++ [monteCarlo bitDir] else default
 
-end Wychelean.Hashes.SHA256.Tests
+end Wychelean.Hashes.SHA512.Tests

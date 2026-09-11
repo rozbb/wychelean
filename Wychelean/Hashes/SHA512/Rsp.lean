@@ -1,16 +1,16 @@
-import Wychelean.Hashes.SHA256
+import Wychelean.Hashes.SHA512
 import RunTests.Parser.Rsp
 
-/-! SHA256 response-file parsing and Monte Carlo support (SHAVS).
+/-! SHA512 response-file parsing and Monte Carlo support (SHAVS).
 https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/SHAVS.pdf
 -/
 
-namespace Wychelean.Hashes.SHA256.Rsp
+namespace Wychelean.Hashes.SHA512.Rsp
 
 open Std.Internal.Parsec Std.Internal.Parsec.String
 open RunTests.Parser RunTests.Parser.Rsp
 
-private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA256/Fixtures"
+private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA512/Fixtures"
 
 private def digestKey : String := "MD"
 private def countKey : String := "COUNT"
@@ -43,10 +43,10 @@ def parseMonte : Parser (Digest × List Digest) := responseFile do
 def checkpoint (seed : Digest) : Digest := Id.run do
   let mut (m0, m1, m2) := (seed, seed, seed)
   for _ in [0:1000] do
-    (m0, m1, m2) := (m1, m2, sha256 (m0 ++ m1 ++ m2) (by decide))
+    (m0, m1, m2) := (m1, m2, sha512 (m0 ++ m1 ++ m2) (by decide))
   return m2
 
 def loadRsp {α : Type} (dir file : String) (parser : Parser α) : IO α := do
   parseFile parser (fixtureDir / dir / file)
 
-end Wychelean.Hashes.SHA256.Rsp
+end Wychelean.Hashes.SHA512.Rsp
