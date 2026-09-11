@@ -38,6 +38,22 @@ def parse (parser : Parser α) (text : String) : Except String α :=
 def fromHex (s : String) : Except String (Vector UInt8 n) :=
   (parse (readHexVec n) s).mapError fun error => s!"invalid hex string {s}: {error}"
 
+/-- Interpret a string literal as a hex byte sequence (Vector UInt8) -/
+scoped syntax (name := hexLit) "hex! " str : term
+
+open Lean in
+macro_rules
+  | `(hex! $s:str) => do
+    let text := s.getString
+    if text.length % 2 != 0 then
+      Macro.throwErrorAt s s!"hex string has {text.length} digits, which is not a whole number of \
+        bytes"
+    match fromHex (n := text.length / 2) text with
+    | .error error => Macro.throwErrorAt s error
+    | .ok bytes =>
+      let digits := bytes.toArray.map fun byte => (quote byte.toNat : Term)
+      `((#v[$digits,*] : Vector UInt8 $(quote bytes.size)))
+
 /-- Read and parse a file, including its path in parse errors. -/
 def parseFile (parser : Parser α) (path : System.FilePath) : IO α := do
   let text ← IO.FS.readFile path
