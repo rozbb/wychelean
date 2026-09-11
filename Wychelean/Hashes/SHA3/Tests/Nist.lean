@@ -16,7 +16,7 @@ private def Variant.digestBits : Variant → Nat
   | .sha3_384 => 384
   | .sha3_512 => 512
 
-/-- Exercise the public bit API on bit-oriented fixtures. -/
+/-- Exercise the public bit API on bit-oriented test vectors. -/
 def evaluateBits (variant : Variant) (m : Vector Bit n) : Array UInt8 :=
   let msg := BitVec.ofBitsLE m
   let digest : BitVec variant.digestBits := match variant with
@@ -28,7 +28,7 @@ def evaluateBits (variant : Variant) (m : Vector Bit n) : Array UInt8 :=
     (digest.cast (by cases variant <;> rfl)).toBytesLE
   bytes.toArray
 
-/-- Exercise the public byte API on byte-oriented fixtures. -/
+/-- Exercise the public byte API on byte-oriented test vectors. -/
 private def evaluateBytes (variant : Variant) (m : Array UInt8) : Array UInt8 :=
   match variant with
     | .sha3_224 => (sha3_224 m.toVector).toArray
@@ -36,14 +36,14 @@ private def evaluateBytes (variant : Variant) (m : Array UInt8) : Array UInt8 :=
     | .sha3_384 => (sha3_384 m.toVector).toArray
     | .sha3_512 => (sha3_512 m.toVector).toArray
 
-private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA3/Fixtures"
+private def vectorDir : System.FilePath := "Wychelean/Hashes/SHA3/TestVectors"
 
 private def knownAnswers (dir file : String) (variant : Variant)
     (byteOriented := true) : Suite where
   name := s!"{dir}/{file}"
   tests := do
     let vectors ← RunTests.Parser.parseFile
-      (parseKat variant.digestBits) (fixtureDir / dir / file)
+      (parseKat variant.digestBits) (vectorDir / dir / file)
     vectors.zipIdx.mapM fun (v, i) => do
       let actual ← if byteOriented then do
         unless v.msg.length % 8 == 0 && v.output.length % 8 == 0 do
@@ -53,7 +53,7 @@ private def knownAnswers (dir file : String) (variant : Variant)
       return check s!"{i}, Len={v.msg.length}, Outputlen={v.output.length}"
         (toHex v.output.bytes.toVector) (toHex actual.toVector)
 
-/-- All short-message fixtures; `full` also includes the long-message fixtures. -/
+/-- All short-message test vectors; `full` also includes the long-message ones. -/
 def suites (full := false) : List Suite :=
   let byte (file : String) (variant : Variant) :=
     knownAnswers "sha-3bytetestvectors" file variant

@@ -14,10 +14,6 @@ namespace RunTests
 
 /-! ## Hex -/
 
-/-- Decode a complete, unprefixed lowercase hex string of exactly `n` bytes. -/
-def fromHex (s: String): Except String (Vector UInt8 n) :=
-  (Parser.parse (Parser.readHexVec n) s).mapError fun error => s!"invalid hex string {s}: {error}"
-
 /-- Render bytes as lowercase hex, the way specifications print test vectors. -/
 def toHex (v: Vector UInt8 n): String :=
   v.foldl (fun acc b => acc ++ b.toBitVec.toHex) ""
@@ -36,7 +32,7 @@ structure Test where
 /-- A named group of tests, usually the vectors of one specification. -/
 structure Suite where
   name: String
-  /-- Load fixtures and evaluate checks when this suite runs. -/
+  /-- Load test vectors and evaluate checks when this suite runs. -/
   tests: IO (List Test)
 
 /-- A test that checks `actual` against the `expected` answer the specification gives. -/
