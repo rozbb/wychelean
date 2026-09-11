@@ -1,4 +1,4 @@
-# Keccak Fixtures
+# Keccak Test Vectors
 
 Unmodified files from the Keccak authors’ [XKCP repository](https://github.com/XKCP/XKCP), pinned below.
 

@@ -51,8 +51,8 @@ def wycheproof: Suite where
   name := "X25519 (Wycheproof known-answer tests)"
   tests := do
     let file ← parseFile Xdh.ofJson vectorFile
-    -- Guard against the fixture being swapped for another algorithm's, which would otherwise show
-    -- up as hundreds of mismatched shared secrets rather than as one clear error.
+    -- Guard against the file being swapped for another algorithm's test vectors, which would
+    -- otherwise show up as hundreds of mismatched shared secrets rather than as one clear error.
     for group in file.groups do
       let curve ← IO.ofExcept (getField String group.header "curve")
       unless group.type == "XdhComp" && curve == "curve25519" do

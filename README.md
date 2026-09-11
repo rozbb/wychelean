@@ -22,7 +22,7 @@ Then run `lake build` to build the library and verify all the theorems.
 Run `lake test` from the repository root. It builds and runs the native `RunTests` executable.
 
 Every primitive contains its own tests in `Tests.lean`. Suites are registered in
-`RunTests/Main.lean`; each suite loads its fixtures and evaluates its checks when it runs.
+`RunTests/Main.lean`; each suite loads its test vectors and evaluates its checks when it runs.
 The ordinary `lake build` target does not import the test suites.
 
 # Docs

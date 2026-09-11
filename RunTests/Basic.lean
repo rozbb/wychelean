@@ -32,7 +32,7 @@ structure Test where
 /-- A named group of tests, usually the vectors of one specification. -/
 structure Suite where
   name: String
-  /-- Load fixtures and evaluate checks when this suite runs. -/
+  /-- Load test vectors and evaluate checks when this suite runs. -/
   tests: IO (List Test)
 
 /-- A test that checks `actual` against the `expected` answer the specification gives. -/

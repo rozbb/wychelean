@@ -3,7 +3,7 @@ import RunTests.Basic
 import RunTests.Parser.Basic
 
 /-!
-The fixture files are unchanged Keccak-author traces from XKCP:
+The test vector files are unchanged Keccak-author traces from XKCP:
 https://github.com/XKCP/XKCP/tree/eb5244d6b95fb1c434b211bac293093e18aa8fd1/tests/TestVectors
 
 Each file contains two full permutations. For Keccak-p[800,12], the input and expected
@@ -35,7 +35,7 @@ private def permutations (width : Width) : Suite where
   name := s!"XKCP Keccak-f[{b width}] published traces"
   tests := do
     let file := s!"KeccakF-{b width}-IntermediateValues.txt"
-    let text ← IO.FS.readFile ("Wychelean/Permutations/Keccak/Fixtures" / file)
+    let text ← IO.FS.readFile ("Wychelean/Permutations/Keccak/TestVectors" / file)
     let traces := (text.splitOn "Input of permutation:\n").drop 1
     unless traces.length == 2 do
       throw (IO.userError s!"{file}: expected two permutation traces")
