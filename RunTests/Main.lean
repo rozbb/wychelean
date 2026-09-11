@@ -1,6 +1,8 @@
 import RunTests.Basic
 import Wychelean.DH.X25519.Tests
 import Wychelean.Hashes.SHA256.Tests
+import Wychelean.Hashes.SHA3.Tests
+import Wychelean.Permutations.Keccak.Tests
 import Wychelean.Utils.Tests
 
 /-!
@@ -8,22 +10,28 @@ import Wychelean.Utils.Tests
 
 Runs every specification's test suites. Each suite lives next to the specification it tests; adding
 one means importing its module and listing it here.
+Use `lake test -- --full` to include SHA3 long-message vectors alongside the default short-message suites.
 -/
 
 namespace RunTests
 
 open Wychelean
 
-def suites: List Suite :=
+def suites (full := false): List Suite :=
   [ Utils.Tests.suites,
     X25519.Tests.suites,
-    Hashes.SHA256.Tests.suites ].flatten
+    Hashes.SHA256.Tests.suites,
+    Hashes.SHA3.Tests.suites full,
+    Permutations.Keccak.Tests.suites ].flatten
 
 end RunTests
 
-def main: IO UInt32 := do
+def main (args : List String): IO UInt32 := do
+  unless args.isEmpty || args == ["--full"] do
+    IO.eprintln "usage: lake test [-- --full]"
+    return 1
   try
-    RunTests.runSuites RunTests.suites
+    RunTests.runSuites (RunTests.suites (args == ["--full"]))
   catch e =>
     IO.eprintln s!"test setup failed: {e}"
     return 1

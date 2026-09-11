@@ -1,3 +1,4 @@
+import Wychelean.Utils.Bytes
 import Wychelean.Utils.Bitwise
 import Wychelean.Utils.Vector
 import RunTests.Basic
@@ -47,6 +48,19 @@ def vector : Suite where
     check "chunks ((#v[] : Vector Nat 0).toChunks 4 (by decide))" ([]) (chunks ((#v[] : Vector Nat 0).toChunks 4 (by decide)))
   ]
 
-def suites : List Suite := [bitwise, vector]
+def bytes : Suite where
+  name := "Byte / BitVec encodings"
+  tests := pure [
+    check "LE byte order" (0x030201 : BitVec 24) (BitVec.ofBytesLE #v[1,2,3]),
+    check "BE byte order" (0x010203 : BitVec 24) (BitVec.ofBytesBE #v[1,2,3]),
+    check "empty LE" (0 : BitVec 0) (BitVec.ofBytesLE #v[]),
+    check "empty BE" (0 : BitVec 0) (BitVec.ofBytesBE #v[]),
+    check "LE unpack" (#v[1,2,3] : Vector UInt8 3) (BitVec.toBytesLE (0x030201 : BitVec 24)),
+    check "BE unpack" (#v[1,2,3] : Vector UInt8 3) (BitVec.toBytesBE (0x010203 : BitVec 24)),
+    check "FIPS byte bit order" [true,false,false,false,false,false,false,true]
+      (bytesToBits #v[0x81]).toList
+  ]
+
+def suites : List Suite := [bitwise, vector, bytes]
 
 end Wychelean.Utils.Tests
