@@ -5,8 +5,10 @@ import Wychelean.Hashes.SHA3.Basic
 
 An incremental (streaming) sponge: `init → absorb → squeeze*`. FIPS 202 only defines the
 functional sponge (Algorithm 8); this models the software pattern of squeezing on demand, as
-ML-KEM's `SampleNTT` (FIPS 203 Algorithm 7) requires from its XOF. Each `squeeze` returns the
-next bits of the same output stream that `shake128`/`shake256` produce in one call.
+ML-KEM's `SampleNTT` (FIPS 203 Algorithm 7) requires from its XOF. Consecutive `squeeze`s are
+meant to return successive bits of the stream that `shake128`/`shake256` produce in one call;
+that correspondence is checked by the SHAKE variable-output tests but not yet proved. `absorb`
+is defined for the initial context only, as FIPS 203 §4.1 uses it: the XOF is absorbed once.
 
 Adapted from Microsoft SymCrypt (MIT; see LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/SHA3/XOF.lean
@@ -39,8 +41,9 @@ def sponge.init : sponge.state r := {
   x := 0,
   hx := by omega }
 
-/-- Pad and absorb a bit vector (FIPS 202 Algorithm 8, steps 1–6); the first output block is
-then available. -/
+/-- Pad and absorb a bit vector into the initial context (FIPS 202 Algorithm 8, steps 1–6); the
+first output block is then available. The argument is the context of `init`, kept for the
+`XOF.Absorb(ctx, str)` shape of FIPS 203 §4.1. -/
 def sponge.absorb1 {n} (_s : sponge.state r) (N : BitVec n) : sponge.state r :=
   let S := absorb f r N
   { S, Z := (S.extractLsb' 0 r).toBitsLE.toArray, x := 0, hx := by omega }
@@ -51,6 +54,12 @@ def sponge.squeeze_r (s : sponge.state r) : sponge.state r :=
   let Z := s.Z ++ (S.extractLsb' 0 r).toBitsLE.toArray
   have hx : s.x ≤ Z.size := Nat.le_trans s.hx (by simp [Z])
   { s with Z, S, hx }
+
+@[simp] theorem sponge.squeeze_r_x (s : sponge.state r) : (squeeze_r f r s).x = s.x := rfl
+
+@[simp] theorem sponge.squeeze_r_size (s : sponge.state r) :
+    (squeeze_r f r s).Z.size = s.Z.size + r := by
+  simp [squeeze_r]
 
 /-- Squeeze `d` bits on demand, permuting only when the stream is exhausted. -/
 def sponge.squeeze1 (hr : 0 < r ∧ r < b := by decide) (s : sponge.state r) (d : Nat) :
@@ -64,7 +73,7 @@ def sponge.squeeze1 (hr : 0 < r ∧ r < b := by decide) (s : sponge.state r) (d 
 termination_by s.x + d - s.Z.size
 decreasing_by
   have := hr.1
-  simp only [squeeze_r, squeezeStep, Array.size_append, BitVec.toBitsLE, Vector.size_toArray]
+  simp only [sponge.squeeze_r_x, sponge.squeeze_r_size]
   omega
 
 end Incremental
