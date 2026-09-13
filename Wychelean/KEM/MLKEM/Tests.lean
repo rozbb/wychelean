@@ -1,8 +1,10 @@
 import Wychelean.KEM.MLKEM.Tests.Guards
 import Wychelean.KEM.MLKEM.Tests.Cavp
+import Wychelean.KEM.MLKEM.Tests.Wycheproof
 
 namespace Wychelean.KEM.MLKEM.Tests
 
-def suites : List RunTests.Suite := cavpSuites
+/-- Known-answer tests; `full` runs every Wycheproof case instead of a sample per group. -/
+def suites (full := false) : List RunTests.Suite := cavpSuites ++ wycheproofSuites full
 
 end Wychelean.KEM.MLKEM.Tests

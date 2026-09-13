@@ -11,8 +11,8 @@ import Wychelean.Utils.Tests
 
 Runs every specification's test suites. Each suite lives next to the specification it tests; adding
 one means importing its module and listing it here.
-Use `lake test -- --full` to include the SHA3 and SHAKE long-message and Monte Carlo vectors alongside the
-default suites.
+Use `lake test -- --full` to add the SHA3 and SHAKE long-message and Monte Carlo vectors and to run
+every ML-KEM Wycheproof case rather than a sample of each group.
 -/
 
 namespace RunTests
@@ -25,7 +25,7 @@ def suites (full := false): List Suite :=
     Hashes.SHA256.Tests.suites,
     Hashes.SHA3.Tests.suites full,
     Hashes.SHA3.Tests.shakeSuites full,
-    KEM.MLKEM.Tests.suites,
+    KEM.MLKEM.Tests.suites full,
     Permutations.Keccak.Tests.suites ].flatten
 
 end RunTests
