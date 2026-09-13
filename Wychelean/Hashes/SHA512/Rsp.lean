@@ -10,7 +10,7 @@ namespace Wychelean.Hashes.SHA512.Rsp
 open Std.Internal.Parsec Std.Internal.Parsec.String
 open RunTests.Parser RunTests.Parser.Rsp
 
-private def fixtureDir : System.FilePath := "Wychelean/Hashes/SHA512/Fixtures"
+private def vectorDir : System.FilePath := "Wychelean/Hashes/SHA512/TestVectors"
 
 private def digestKey : String := "MD"
 private def countKey : String := "COUNT"
@@ -47,6 +47,6 @@ def checkpoint (seed : Digest) : Digest := Id.run do
   return m2
 
 def loadRsp {α : Type} (dir file : String) (parser : Parser α) : IO α := do
-  parseFile parser (fixtureDir / dir / file)
+  parseFile parser (vectorDir / dir / file)
 
 end Wychelean.Hashes.SHA512.Rsp

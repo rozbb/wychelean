@@ -1,11 +1,12 @@
 import Wychelean.Hashes.SHA512.Rsp
 import RunTests.Basic
+import RunTests.Parser.Basic
 
 /-! SHA512 FIPS examples and NIST CAVP suites. -/
 
 namespace Wychelean.Hashes.SHA512.Tests
 
-open RunTests
+open RunTests RunTests.Parser
 open Wychelean.Hashes.SHA512.Rsp
 
 /-- SHA512 examples from FIPS 180-2, Appendix C. -/
@@ -13,12 +14,9 @@ def basic : Suite where
   name := "SHA512 FIPS examples"
   tests := do
     -- FIPS 180-2, Appendix C.1–C.3: https://csrc.nist.gov/files/pubs/fips/180-2/final/docs/fips180-2.pdf
-    let abc ← IO.ofExcept (fromHex
-      "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f")
-    let multiBlock ← IO.ofExcept (fromHex
-      "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909")
-    let millionA ← IO.ofExcept (fromHex
-      "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b")
+    let abc := hex! "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
+    let multiBlock := hex! "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909"
+    let millionA := hex! "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b"
     return [
       check "FIPS abc" abc (sha512 "abc".toUTF8.data.toVector (by decide)),
       check "FIPS 112-byte message" multiBlock
