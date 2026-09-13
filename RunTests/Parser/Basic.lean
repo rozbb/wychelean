@@ -26,6 +26,10 @@ def readHexVec (size : Nat) : Parser (Vector UInt8 size) := do
   if h : bytes.size = size then return ⟨bytes, h⟩
   else fail s!"expected {size} bytes, found {bytes.size}"
 
+/-- Reinterpret bytes as a vector of exactly `n` bytes. -/
+def toFixed (n : Nat) (bytes : Array UInt8) : Except String (Vector UInt8 n) :=
+  if h : bytes.size = n then .ok ⟨bytes, h⟩ else .error s!"expected {n} bytes, found {bytes.size}"
+
 /-- Run a combinator, requiring it to consume the entire input. -/
 def parse (parser : Parser α) (text : String) : Except String α :=
   match (parser <* eof) ⟨text, text.startPos⟩ with
