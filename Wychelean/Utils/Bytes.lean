@@ -7,6 +7,10 @@ abbrev Bit := Bool
 abbrev Byte := UInt8
 abbrev ByteVec (n : Nat) := Vector Byte n
 
+/-- Specifications write small counters directly as bytes, e.g. `(i : Byte)`; the cast wraps
+modulo 256 like `UInt8.ofNat`. -/
+instance : NatCast Byte := ⟨UInt8.ofNat⟩
+
 end Wychelean
 
 namespace BitVec

@@ -25,6 +25,11 @@ scoped instance : OfNat Bool 1 := ⟨true⟩
 scoped macro_rules
 | `(tactic| get_elem_tactic) => `(tactic| grind)
 scoped infixl:65 " ‖ " => Vector.append
+/-- Stepped ranges whose step is a variable known to be positive from the context. -/
+scoped macro_rules
+| `([ $start : $stop : $step ]) =>
+  `({ start := $start, stop := $stop, step := $step, step_pos := by first | decide | omega :
+      Std.Legacy.Range })
 scoped instance : HXor (Vector Bit n) (Vector Bit n) (Vector Bit n) :=
   ⟨Vector.zipWith (· != ·)⟩
 scoped instance : HAnd (Vector Bit n) (Vector Bit n) (Vector Bit n) :=
