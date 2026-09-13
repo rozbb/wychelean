@@ -27,8 +27,8 @@ Aeneas-specific constructs:
 - `Byte` is `UInt8`, so `.val` on bytes became `.toNat`.
 - The halving and doubling loop ranges of `NTT` and `NTT⁻¹` are written as list literals, and
   the index bound they justify is supplied by `Bounds.ntt_idx_lt` at the top of the inner loop.
-- Standard `[a:b:s]` ranges are `Std.Range`, whose membership matches the upstream `SRRange`;
-  a positive-step proof for `2 * len` is supplied by `Bounds.len_pos` before the range is formed.
+- Standard `[a:b:s]` ranges are core `Std.Legacy.Range`, whose membership matches the upstream
+  `SRRange`; a scoped macro lets the step `2 * len` be proved positive from `Bounds.len_pos`.
 - `scalar_tac`/`simp_scalar` side goals are discharged with `omega`/`grind`.
 - `PolyMatrix` is a vector of row vectors rather than Mathlib's `Matrix`, which is a function
   type: the compiler re-evaluates a function-valued accumulator on every access, so `Â * ŝ` was
@@ -52,6 +52,8 @@ Aeneas-specific constructs:
 - **SHA3/SHAKE**: wrapper functions (H, J, G, PRF, XOF) are defined here in terms of
   `Wychelean.Hashes.SHA3` (byte-level wrappers) and its `XOF` module (incremental sponge API).
 - **Rounding**: `⌈ x ⌋` denotes `⌊x + 1/2⌋` (nearest integer), defined in `Wychelean.Utils.Round`.
+- **Byte counters**: `(i : Byte)` casts a small natural number to a byte (scoped
+  `NatCast Byte` from `Wychelean.Notations`).
 - **`‖`** (concatenation): FIPS `X ‖ Y` is `X ‖ Y` on `Vector`s (from `Wychelean.Notations`).
 - **Transpose**: `Âᵀ` in K-PKE.Encrypt uses `PolyMatrix.transpose`.
 - **`.cast`** appears where Lean cannot unify dependent-type arithmetic across
@@ -72,6 +74,13 @@ open scoped Wychelean.Notations
 
 /-- Byte vectors, the interface type of FIPS 203. -/
 abbrev 𝔹 := ByteVec
+
+/-- Stepped ranges `[a : b : s]` whose step is a variable, as in the NTT loops: the positivity
+proof is taken from the context (`Bounds.len_pos`) when `decide` cannot supply it. -/
+scoped macro_rules
+| `([ $start : $stop : $step ]) =>
+  `({ start := $start, stop := $stop, step := $step, step_pos := by first | decide | omega :
+      Std.Legacy.Range })
 
 /-! ## Bounds infrastructure for `get_elem_tactic`
 
@@ -104,24 +113,27 @@ theorem idx_mul_add_lt (i d j n : Nat) (hi : i < n) (hj : j < d) :
 
 /-! ### NTT butterfly bounds (§4.3) -/
 
+/-- The halving list of Algorithm 9 has the same members as the doubling list of Algorithm 10. -/
+theorem mem_halving {len : ℕ} (h0 : len ∈ [128, 64, 32, 16, 8, 4, 2]) :
+    len ∈ [2, 4, 8, 16, 32, 64, 128] := by
+  simp only [List.mem_cons, List.mem_nil_iff, or_false] at h0 ⊢
+  omega
+
 /-- The loop variable `len` of Algorithms 9 and 10 is positive, so `[0 : 256 : 2 * len]` is a
 well-formed range. -/
-theorem len_pos {len : ℕ}
-    (h0 : len ∈ [128, 64, 32, 16, 8, 4, 2] ∨ len ∈ [2, 4, 8, 16, 32, 64, 128]) : 0 < 2 * len := by
+theorem len_pos {len : ℕ} (h0 : len ∈ [2, 4, 8, 16, 32, 64, 128]) : 0 < 2 * len := by
   simp only [List.mem_cons, List.mem_nil_iff, or_false] at h0
-  rcases h0 with h0 | h0 <;> rcases h0 with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> omega
+  omega
 
-/-- `j + len < 256` inside the butterfly loops of Algorithms 9 and 10, where `len` runs over
-the halving list `[128, …, 2]` or the doubling list `[2, …, 128]`. -/
-theorem ntt_idx_lt {len start j : ℕ} {hlen : 0 < 2 * len}
-    (h0 : len ∈ [128, 64, 32, 16, 8, 4, 2] ∨ len ∈ [2, 4, 8, 16, 32, 64, 128])
+/-- `j + len < 256` inside the butterfly loops of Algorithms 9 and 10. -/
+theorem ntt_idx_lt {len start j : ℕ} {hlen : 0 < 2 * len} (h0 : len ∈ [2, 4, 8, 16, 32, 64, 128])
     (h1 : start ∈ ({ start := 0, stop := 256, step := 2 * len, step_pos := hlen } : Std.Legacy.Range))
     (hj : j ∈ [start : start + len]) : j + len < 256 := by
   have hs : start < 256 := h1.2.1
   have hm : (start - 0) % (2 * len) = 0 := h1.2.2
   have hj' : j < start + len := hj.2.1
   simp only [List.mem_cons, List.mem_nil_iff, or_false] at h0
-  rcases h0 with h0 | h0 <;> rcases h0 with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> omega
+  rcases h0 with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> omega
 
 /-! ### Encoding/sampling index bounds (§4.2.1, §4.2.2) -/
 
@@ -174,7 +186,7 @@ lambda and infinitely unfold `Add` on the element type, blowing
 reproducible in plain Lean (no imports beyond `Init`) with element type
 `Fin n` (any `n ≥ 2`) or `ZMod n`; `Vector.zipWith` avoids it because its
 body is a non-recursive `Array.zipWith` wrapper that `whnf` does not
-recurse into.  See `Repro_GrindWhnfTimeout.lean` for the minimal repro. -/
+recurse into.  (Upstream keeps a minimal repro next to the specification.) -/
 def Polynomial.add (f g : Polynomial m) : Polynomial m :=
   Vector.zipWith (· + ·) f g
 
@@ -370,7 +382,7 @@ def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : 𝔹 (32 * d * k)) (_ : 1 �
 /-! ## §4.2.2 Algorithm 7 — SampleNTT(B)
 
 Uses rejection sampling to deterministically generate an element of `T_q`
-from a byte stream `B ∥ XOF(B)`. -/
+from the XOF output stream of the 34-byte seed `B`. -/
 def SampleNTT (B : 𝔹 34) : Polynomial := Id.run do
   let mut ctx := XOF.Init
   ctx := XOF.Absorb ctx B
@@ -415,12 +427,12 @@ def NTT (f : Polynomial) : Polynomial := Id.run do
   let mut «f̂» := f
   let mut i := 1
   for h0: len in [128, 64, 32, 16, 8, 4, 2] do
-    have hlen := len_pos (.inl h0)
+    have hlen := len_pos (mem_halving h0)
     for h1: start in [0 : 256 : 2*len] do
       let zeta := ζ ^ (bitRev 7 i)
       i := i + 1
       for h: j in [start : start+len] do
-        have := ntt_idx_lt (.inl h0) h1 h
+        have := ntt_idx_lt (mem_halving h0) h1 h
         let t := zeta * «f̂»[j + len]
         «f̂» := «f̂».set (j + len) («f̂»[j] - t)
         «f̂» := «f̂».set j         («f̂»[j] + t)
@@ -434,12 +446,12 @@ def NTTInv («f̂» : Polynomial) : Polynomial := Id.run do
   let mut f := «f̂»
   let mut i := 127
   for h0: len in [2, 4, 8, 16, 32, 64, 128] do
-    have hlen := len_pos (.inr h0)
+    have hlen := len_pos h0
     for h1: start in [0:256:2*len] do
       let zeta := ζ ^ bitRev 7 i
       i := i - 1
       for h: j in [start:start+len] do
-        have := ntt_idx_lt (.inr h0) h1 h
+        have := ntt_idx_lt h0 h1 h
         let t := f[j]
         f := f.set j (t + f[j + len])
         f := f.set (j + len) (zeta * (f[j + len] - t))
@@ -518,9 +530,8 @@ def K_PKE.KeyGen (p : ParameterSet) (d : 𝔹 32) : 𝔹 (384 * k p + 32) × �
 
 Uses the encryption key to encrypt a plaintext message using the randomness `r`.
 
-*Mechanization note*: FIPS 203 names the noise vector `r` in Algorithm 14, but
-this collides with the randomness parameter `r : 𝔹 32`. We rename the noise
-vector to `y` (and its NTT to `ŷ`) to avoid shadowing. -/
+*Mechanization note*: the noise vector is `y` (its NTT `ŷ`), as in FIPS 203 Algorithm 14;
+the randomness parameter is `r : 𝔹 32`. -/
 def K_PKE.Encrypt (p : ParameterSet) (ekPKE : 𝔹 (384 * k p + 32)) (m : 𝔹 32) (r : 𝔹 32) :
     𝔹 (32 * (dᵤ p * k p + dᵥ p)) := Id.run do
   let mut N := 0                                                               -- Alg. 14, step 1

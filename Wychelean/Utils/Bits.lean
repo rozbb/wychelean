@@ -36,11 +36,10 @@ scoped instance : OfNat Bool 1 := ⟨true⟩
 scoped macro_rules
 | `(tactic| get_elem_tactic) => `(tactic| grind)
 scoped infixl:65 " ‖ " => Vector.append
-/-- Stepped ranges whose step is a variable known to be positive from the context. -/
-scoped macro_rules
-| `([ $start : $stop : $step ]) =>
-  `({ start := $start, stop := $stop, step := $step, step_pos := by first | decide | omega :
-      Std.Legacy.Range })
+/-- Specifications write small counters directly as bytes, e.g. `(i : Byte)`; the cast wraps
+modulo 256 like `UInt8.ofNat`. Scoped, as Mathlib scopes its `UIntX` casts, because a global
+cast into `UInt8` interferes with coercion elaboration. -/
+scoped instance : NatCast Byte := ⟨UInt8.ofNat⟩
 scoped instance : HXor (Vector Bit n) (Vector Bit n) (Vector Bit n) :=
   ⟨Vector.zipWith (· != ·)⟩
 scoped instance : HAnd (Vector Bit n) (Vector Bit n) (Vector Bit n) :=
