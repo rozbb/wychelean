@@ -7,8 +7,9 @@ import RunTests.Basic
 
 NIST CAVP SHAKE response files (see `TestVectors/README.md`): short and long messages, variable
 output lengths, and the SHA3VS §6.3.3 Monte Carlo recurrence, each in byte- and bit-oriented
-form. The variable-output files also exercise the incremental XOF: the output is squeezed three
-bytes at a time, as ML-KEM's SampleNTT does, and must equal the one-shot result.
+form. The variable-output files also exercise the incremental XOF: the output is squeezed in
+three-byte requests, as ML-KEM's SampleNTT does, and in a schedule of requests that straddle
+the rate boundary (0, 1, rate - 1, rate, rate + 1 bytes), and must equal the one-shot result.
 -/
 
 namespace Wychelean.Hashes.SHA3.Tests
@@ -36,24 +37,33 @@ private def evaluateBytes (xof : Xof) (m : Array UInt8) (len : Nat) : Array UInt
   | .shake128 => (shake128 m.toVector len).toArray
   | .shake256 => (shake256 m.toVector len).toArray
 
-/-- The incremental API, squeezing `chunk` bytes at a time. -/
-private def evaluateIncremental (xof : Xof) (m : Array UInt8) (len chunk : Nat) : Array UInt8 :=
-  Id.run do
-    let mut out : Array UInt8 := #[]
-    match xof with
-    | .shake128 =>
-      let mut s := SHAKE128.absorb SHAKE128.init m.toVector
-      while out.size < len do
-        let (s', c) := SHAKE128.squeeze s (min chunk (len - out.size))
-        s := s'
-        out := out ++ c.toArray
-    | .shake256 =>
-      let mut s := SHAKE256.absorb SHAKE256.init m.toVector
-      while out.size < len do
-        let (s', c) := SHAKE256.squeeze s (min chunk (len - out.size))
-        s := s'
-        out := out ++ c.toArray
-    return out
+/-- The incremental API, squeezing `len` bytes in requests of the sizes in `schedule`, cycled. -/
+private def evaluateIncremental (xof : Xof) (m : Array UInt8) (len : Nat) (schedule : Array Nat) :
+    Array UInt8 := Id.run do
+  let mut out : Array UInt8 := #[]
+  let mut k := 0
+  match xof with
+  | .shake128 =>
+    let mut s := SHAKE128.absorb SHAKE128.init m.toVector
+    while out.size < len do
+      let (s', c) := SHAKE128.squeeze s (min schedule[k % schedule.size]! (len - out.size))
+      s := s'
+      out := out ++ c.toArray
+      k := k + 1
+  | .shake256 =>
+    let mut s := SHAKE256.absorb SHAKE256.init m.toVector
+    while out.size < len do
+      let (s', c) := SHAKE256.squeeze s (min schedule[k % schedule.size]! (len - out.size))
+      s := s'
+      out := out ++ c.toArray
+      k := k + 1
+  return out
+
+/-- Request sizes for the incremental checks: SampleNTT's three bytes, and a schedule crossing
+the rate boundary of `xof` (168 bytes for SHAKE128, 136 for SHAKE256). -/
+private def schedules (xof : Xof) : List (Array Nat) :=
+  let rate := match xof with | .shake128 => 168 | .shake256 => 136
+  [#[3], #[1, rate - 1, 0, rate + 1, rate, 5, 0, 2]]
 
 private def vectorDir : System.FilePath := "Wychelean/Hashes/SHA3/TestVectors"
 
@@ -71,9 +81,11 @@ private def knownAnswers (dir file : String) (xof : Xof) (parser : Parser (List 
         let len := v.output.length / 8
         let actual := evaluateBytes xof v.msg.bytes len
         if incremental then
-          let chunked := evaluateIncremental xof v.msg.bytes len 3
-          unless chunked == actual do
-            return { name, failure := some "incremental squeeze differs from one-shot output" }
+          for schedule in schedules xof do
+            let chunked := evaluateIncremental xof v.msg.bytes len schedule
+            unless chunked == actual do
+              return { name, failure := some s!"incremental squeeze with requests {schedule} \
+                differs from one-shot output" }
         return check name expected (toHex actual.toVector)
       else
         return check name expected (toHex (evaluateBits xof v.msg.bits v.output.length).toVector)

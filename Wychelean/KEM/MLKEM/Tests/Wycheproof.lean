@@ -20,7 +20,9 @@ All four file kinds drive the internal API of FIPS 203 (§6) with explicit seeds
 
 A case marked `invalid` must be rejected, which here means a length that does not fit the
 parameter set, or `Encaps`/`Decaps` returning `none`. A `valid` case must be accepted and give
-the expected answer.
+the expected answer. Malformed expected values are reported as fixture problems, never as a
+pass, and the random tapes returned by `KeyGen` and `Encaps` are checked to have advanced by
+exactly the bytes those algorithms read.
 -/
 
 namespace Wychelean.KEM.MLKEM.Tests
@@ -42,16 +44,42 @@ private abbrev ctSize (p : ParameterSet) : ℕ := 32 * (dᵤ p * k p + dᵥ p)
 /-- A random tape that replays `bytes`, as the RBG of §3.3 would deliver them. -/
 private def tapeOf (bytes : Array UInt8) : RandomTape := fun i => bytes[i]?.getD 0
 
-/-- Combine a case's expected result with what the specification did: `.error` is a rejection,
-`.ok` carries the comparisons an accepted input must pass. -/
-private def judge (c : Case α) (run : Except String (List Test)) : Test :=
-  match c.result, run with
-  | .invalid, .error _ => { name := c.name, failure := none }
-  | .invalid, .ok _ => { name := c.name, failure := some "expected the input to be rejected" }
-  | _, .error reason => { name := c.name, failure := some s!"rejected: {reason}" }
-  | _, .ok tests =>
+/-- Bytes of a tape, to check how far a call advanced it. -/
+private def tapeBytes (tape : RandomTape) (n : Nat) : Vector UInt8 n := Vector.ofFn fun i => tape i
+
+/-- What the specification did with a case's inputs. -/
+private inductive Outcome where
+  /-- The input was rejected: a length that does not fit the parameter set, or `none` from
+  `Encaps`/`Decaps`. -/
+  | rejected (reason : String)
+  /-- The input was accepted; the comparisons against the expected outputs, or a description of
+  a malformed fixture. -/
+  | accepted (checks : Except String (List Test))
+
+/-- Reinterpret an input as a fixed-length vector, rejecting the case otherwise. -/
+private def input (n : Nat) (bytes : Array UInt8) : Except Outcome (Vector UInt8 n) :=
+  (toFixed n bytes).mapError .rejected
+
+/-- Combine a case's expected result with the outcome: `invalid` must be rejected; `valid` must
+be accepted and match; `acceptable` may be rejected but must match if accepted. A malformed
+expected value is a fixture problem, never a pass. -/
+private def judge (c : Case α) (run : Except Outcome Unit) : Test :=
+  let outcome := match run with
+    | .error o => o
+    | .ok () => .accepted (.error "no outcome recorded")
+  match c.result, outcome with
+  | .invalid, .rejected _ => { name := c.name, failure := none }
+  | .invalid, .accepted _ => { name := c.name, failure := some "expected the input to be rejected" }
+  | .acceptable, .rejected _ => { name := c.name, failure := none }
+  | .valid, .rejected reason => { name := c.name, failure := some s!"rejected: {reason}" }
+  | _, .accepted (.error problem) => { name := c.name, failure := some s!"fixture: {problem}" }
+  | _, .accepted (.ok tests) =>
     { name := c.name,
       failure := (tests.find? (·.failure.isSome)).bind fun t => t.failure.map (s!"{t.name}: {·}") }
+
+/-- Finish a run: the input was accepted, the comparisons are `checks`. -/
+private def accept (checks : Except String (List Test)) : Except Outcome Unit :=
+  .error (.accepted checks)
 
 /-! ## Case payloads -/
 
@@ -63,12 +91,14 @@ private structure KeyGenCase where
 private def KeyGenCase.ofJson (j : Lean.Json) : Except String KeyGenCase := do
   return { seed := ← getHexBytes j "seed", ek := ← getHexBytes j "ek", dk := ← getHexBytes j "dk" }
 
-private def KeyGenCase.run (p : ParameterSet) (c : KeyGenCase) : Except String (List Test) := do
-  let seed ← toFixed 64 c.seed
-  let ek ← toFixed (ekSize p) c.ek
-  let dk ← toFixed (dkSize p) c.dk
-  let (ek', dk', _) := KeyGen p (tapeOf seed.toArray)
-  return [check "ek" ek ek', check "dk" dk dk']
+private def KeyGenCase.run (p : ParameterSet) (c : KeyGenCase) : Except Outcome Unit := do
+  let seed ← input 64 c.seed
+  let (ek', dk', tape) := KeyGen p (tapeOf (seed.toArray ++ #[0xa5, 0x5a]))
+  accept do
+    let ek ← toFixed (ekSize p) c.ek
+    let dk ← toFixed (dkSize p) c.dk
+    return [check "ek" ek ek', check "dk" dk dk',
+            check "tape advanced by 64 bytes" #v[0xa5, 0x5a] (tapeBytes tape 2)]
 
 private structure KemCase where
   seed : Array UInt8
@@ -80,16 +110,17 @@ private def KemCase.ofJson (j : Lean.Json) : Except String KemCase := do
   return { seed := ← getHexBytes j "seed", ek := ← getHexBytes? j "ek",
            c := ← getHexBytes j "c", K := ← getHexBytes j "K" }
 
-private def KemCase.run (p : ParameterSet) (c : KemCase) : Except String (List Test) := do
-  let seed ← toFixed 64 c.seed
+private def KemCase.run (p : ParameterSet) (c : KemCase) : Except Outcome Unit := do
+  let seed ← input 64 c.seed
   let (ek', dk) := KeyGen_internal p (slice seed 0 32) (slice seed 32 32)
-  let ct ← toFixed (ctSize p) c.c
-  let K ← toFixed 32 c.K
-  let some K' := Decaps p dk ct | throw "decapsulation key failed its hash check"
-  let ekChecks ← match c.ek with
-    | none => pure []
-    | some ek => do let ek ← toFixed (ekSize p) ek; pure [check "ek" ek ek']
-  return ekChecks ++ [check "K" K K']
+  let ct ← input (ctSize p) c.c
+  let some K' := Decaps p dk ct | throw (.rejected "decapsulation key failed its hash check")
+  accept do
+    let K ← toFixed 32 c.K
+    let ekChecks ← match c.ek with
+      | none => pure []
+      | some ek => do let ek ← toFixed (ekSize p) ek; pure [check "ek" ek ek']
+    return ekChecks ++ [check "K" K K']
 
 private structure EncapsCase where
   m : Array UInt8
@@ -101,14 +132,16 @@ private def EncapsCase.ofJson (j : Lean.Json) : Except String EncapsCase := do
   return { m := ← getHexBytes j "m", ek := ← getHexBytes j "ek",
            c := ← getHexBytes j "c", K := ← getHexBytes j "K" }
 
-private def EncapsCase.run (p : ParameterSet) (c : EncapsCase) : Except String (List Test) := do
-  let m ← toFixed 32 c.m
-  let ek ← toFixed (ekSize p) c.ek
-  let some (K', c', _) := Encaps p ek (tapeOf m.toArray)
-    | throw "encapsulation key failed the modulus check"
-  let K ← toFixed 32 c.K
-  let ct ← toFixed (ctSize p) c.c
-  return [check "K" K K', check "c" ct c']
+private def EncapsCase.run (p : ParameterSet) (c : EncapsCase) : Except Outcome Unit := do
+  let m ← input 32 c.m
+  let ek ← input (ekSize p) c.ek
+  let some (K', c', tape) := Encaps p ek (tapeOf (m.toArray ++ #[0xa5, 0x5a]))
+    | throw (.rejected "encapsulation key failed the modulus check")
+  accept do
+    let K ← toFixed 32 c.K
+    let ct ← toFixed (ctSize p) c.c
+    return [check "K" K K', check "c" ct c',
+            check "tape advanced by 32 bytes" #v[0xa5, 0x5a] (tapeBytes tape 2)]
 
 private structure DecapsCase where
   dk : Array UInt8
@@ -120,36 +153,38 @@ private def DecapsCase.ofJson (j : Lean.Json) : Except String DecapsCase := do
   return { dk := ← getHexBytes j "dk", ek := ← getHexBytes j "ek",
            c := ← getHexBytes j "c", K := ← getHexBytes? j "K" }
 
-private def DecapsCase.run (p : ParameterSet) (c : DecapsCase) : Except String (List Test) := do
-  let dk ← toFixed (dkSize p) c.dk
-  let ct ← toFixed (ctSize p) c.c
-  let some K' := Decaps p dk ct | throw "decapsulation key failed its hash check"
-  let some K := c.K | throw "case is valid but gives no shared key"
-  let K ← toFixed 32 K
-  let ek ← toFixed (ekSize p) c.ek
-  return [check "K" K K', check "embedded ek" ek (slice dk (384 * k p) (384 * k p + 32))]
+private def DecapsCase.run (p : ParameterSet) (c : DecapsCase) : Except Outcome Unit := do
+  let dk ← input (dkSize p) c.dk
+  let ct ← input (ctSize p) c.c
+  let some K' := Decaps p dk ct | throw (.rejected "decapsulation key failed its hash check")
+  accept do
+    let some K := c.K | throw "case gives no shared key"
+    let K ← toFixed 32 K
+    let ek ← toFixed (ekSize p) c.ek
+    return [check "K" K K', check "embedded ek" ek (slice dk (384 * k p) (384 * k p + 32))]
 
 /-! ## Suites -/
 
-/-- Every `invalid` case of a group, which is rejected before any expensive computation, and the
-first `limit` others. -/
+/-- Every `invalid` case of a group (rejected before any expensive computation), every flagged
+case (the file's `notes` mark these as the edge cases, e.g. implicit rejection), and the first
+`limit` others. -/
 private def sample (limit : Option Nat) (cases : Array (Case α)) : Array (Case α) :=
   match limit with
   | none => cases
   | some n => Id.run do
     let mut kept := #[]
-    let mut accepted := 0
+    let mut plain := 0
     for c in cases do
-      if c.result == .invalid then
+      if c.result == .invalid || !c.flags.isEmpty then
         kept := kept.push c
-      else if accepted < n then
+      else if plain < n then
         kept := kept.push c
-        accepted := accepted + 1
+        plain := plain + 1
     return kept
 
 /-- Run a file's cases, taking the parameter set from each group's header. -/
 private def suite (file : String) (type : String) (ofJson : Lean.Json → Except String α)
-    (run : ParameterSet → α → Except String (List Test)) (limit : Option Nat) : Suite where
+    (run : ParameterSet → α → Except Outcome Unit) (limit : Option Nat) : Suite where
   name := s!"ML-KEM Wycheproof {file}"
   tests := do
     let parsed ← parseFile ofJson (vectorDir / file)
@@ -164,7 +199,7 @@ private def suite (file : String) (type : String) (ofJson : Lean.Json → Except
 
 /-- All twelve files for the three parameter sets. A Keccak permutation costs milliseconds in this
 specification and each accepted case runs hundreds of them, so by default each group contributes
-its `invalid` cases and its first eight others; `full` runs every case. -/
+its `invalid` and flagged cases and its first eight others; `full` runs every case. -/
 def wycheproofSuites (full := false) : List Suite := Id.run do
   let limit := if full then none else some 8
   let mut suites := []

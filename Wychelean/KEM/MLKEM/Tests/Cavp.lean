@@ -12,7 +12,7 @@ https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b
 which attributes them to SymCrypt's `unittest/kat_kem.dat`, derived from NIST ACVP
 ML-KEM-keyGen-FIPS203 and ML-KEM-encapDecap-FIPS203. Each parameter set runs
 `KeyGen_internal` against the expected keys, `Encaps_internal` against the expected shared key
-and ciphertext, and a `KeyGen → Encaps → Decaps` round trip.
+and ciphertext, and a `KeyGen_internal → Encaps_internal → Decaps_internal`/`Decaps` round trip.
 -/
 
 namespace Wychelean.KEM.MLKEM.Tests
