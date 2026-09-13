@@ -11,7 +11,18 @@ namespace Wychelean
 
 /-- Replace the bit at LSB index `i`; an index outside the vector leaves it unchanged. -/
 def _root_.BitVec.setBit (v : BitVec n) (i : Nat) (bit : Bit) : BitVec n :=
-  BitVec.ofBitsLE (Vector.ofFn fun j => if j.val = i then bit else v[j.val])
+  if bit then v ||| (1#n <<< i) else v &&& ~~~(1#n <<< i)
+
+@[simp] theorem _root_.BitVec.getLsbD_setBit (v : BitVec n) (i : Nat) (bit : Bit) (j : Nat) :
+    (v.setBit i bit).getLsbD j = if j = i ∧ i < n then bit else v.getLsbD j := by
+  simp only [BitVec.setBit]
+  by_cases hj : j < n
+  · by_cases hji : j = i
+    · subst hji
+      cases bit <;> simp [hj]
+    · cases bit <;> simp [BitVec.getLsbD_shiftLeft, hji, Nat.sub_eq_zero_iff_le]
+      <;> omega
+  · cases bit <;> simp [BitVec.getLsbD_of_ge _ _ (Nat.le_of_not_lt hj)] <;> omega
 
 /-- Rotate a vector at the index level: output[i] = input[(i + n - (k % n)) % n].
     Used by FIPS 202 (SHA3), where index zero is the least significant bit. -/
