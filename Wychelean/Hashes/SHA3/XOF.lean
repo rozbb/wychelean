@@ -26,11 +26,12 @@ variable
   (r : Nat)  -- rate: number of bits added/squeezed at a time
   (hr : 0 < r ∧ r < b := by decide)
 
-structure sponge.state where
+/-- The state of a sponge; the rate is a phantom parameter, fixed by the functions below. -/
+structure sponge.state (_rate : Nat) where
   S : BitVec b        -- permutation internal state
-  Z : Array Bit       -- bits already squeezed, excluding the rate block still in `S`
+  Z : Array Bit       -- output stream squeezed so far, including the rate block of `S`
   x : Nat             -- number of bits already returned
-  hx : x ≤ Z.size + r
+  hx : x ≤ Z.size
 
 def sponge.init : sponge.state r := {
   S := 0,
@@ -38,28 +39,31 @@ def sponge.init : sponge.state r := {
   x := 0,
   hx := by omega }
 
-/-- Pad and absorb a bit vector (FIPS 202 Algorithm 8, steps 1–6). -/
-def sponge.absorb1 {n} (s : sponge.state r) (N : BitVec n) : sponge.state r :=
-  { s with S := absorb f r N }
+/-- Pad and absorb a bit vector (FIPS 202 Algorithm 8, steps 1–6); the first output block is
+then available. -/
+def sponge.absorb1 {n} (_s : sponge.state r) (N : BitVec n) : sponge.state r :=
+  let S := absorb f r N
+  { S, Z := (S.extractLsb' 0 r).toBitsLE.toArray, x := 0, hx := by omega }
 
-/-- Squeeze `r` extra bits into the buffer. -/
+/-- Permute and append the next rate block to the output stream. -/
 def sponge.squeeze_r (s : sponge.state r) : sponge.state r :=
-  let (block, S) := squeezeStep f r s.S
-  let Z := s.Z ++ block.toBitsLE.toArray
-  have hx : s.x ≤ Z.size + r := Nat.le_trans s.hx (by simp [Z])
+  let (_, S) := squeezeStep f r s.S
+  let Z := s.Z ++ (S.extractLsb' 0 r).toBitsLE.toArray
+  have hx : s.x ≤ Z.size := Nat.le_trans s.hx (by simp [Z])
   { s with Z, S, hx }
 
-/-- Squeeze `d` bits on demand, permuting only when the buffer is exhausted. -/
-def sponge.squeeze1 (s : sponge.state r) (d : Nat) : sponge.state r × Vector Bit d :=
-  if hd : s.Z.size + r < s.x + d then
-    squeeze1 (squeeze_r f r s) d
+/-- Squeeze `d` bits on demand, permuting only when the stream is exhausted. -/
+def sponge.squeeze1 (hr : 0 < r ∧ r < b := by decide) (s : sponge.state r) (d : Nat) :
+    sponge.state r × Vector Bit d :=
+  if hd : s.Z.size < s.x + d then
+    squeeze1 hr (squeeze_r f r s) d
   else
-    let A := s.Z ++ (s.S.extractLsb' 0 r).toBitsLE.toArray
-    let D : Vector Bit d := (A.extract s.x (s.x + d)).toVector.cast (by simp [A]; omega)
-    have hx : s.x + d ≤ s.Z.size + r := by omega
+    let D : Vector Bit d := (s.Z.extract s.x (s.x + d)).toVector.cast (by simp; omega)
+    have hx : s.x + d ≤ s.Z.size := by omega
     ({ s with x := s.x + d, hx }, D)
-termination_by s.x + d - (s.Z.size + r)
+termination_by s.x + d - s.Z.size
 decreasing_by
+  have := hr.1
   simp only [squeeze_r, squeezeStep, Array.size_append, BitVec.toBitsLE, Vector.size_toArray]
   omega
 
