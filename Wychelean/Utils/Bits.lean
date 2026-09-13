@@ -41,6 +41,29 @@ def Bits.ofNatLE {n : Nat} (val : Nat) : Vector Bit n :=
 def slice {n : ℕ} (v : Vector α n) (off len : ℕ) (h : off + len ≤ n := by grind) : Vector α len :=
   Vector.ofFn fun i => v[off + i]
 
+/-! ## Bit reversal
+
+`bitRev n i` reverses the `n` least-significant bits of `i` (FIPS 203 §2.3, BitRev₇).
+Adapted from Microsoft SymCrypt (MIT; see Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
+https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/NatBit.lean
+`Nat.ofBitsList` is spelled out directly; upstream uses Aeneas' `Nat.ofBits`. -/
+
+/-- The `n` least-significant bits of `x`, least significant first. -/
+def _root_.Nat.bitsn (x n : ℕ) : Vector Bool n := Vector.ofFn fun i => x.testBit i
+
+/-- The number whose bits, least significant first, are `bits`. -/
+def _root_.Nat.ofBitsList (bits : List Bool) : Nat :=
+  bits.foldr (fun b acc => 2 * acc + b.toNat) 0
+
+/-- Reverse the `n` least-significant bits of `i` (FIPS 203 BitRev₇). -/
+def bitRev (n : Nat) (i : Nat) : Nat :=
+  let bits := i.bitsn n
+  let bits := List.reverse bits.toList
+  Nat.ofBitsList bits
+
+#guard List.map (bitRev 2) [0, 1, 2, 3] = [0, 2, 1, 3]
+#guard List.map (bitRev 3) [0, 1, 2, 3, 4, 5, 6, 7] = [0, 4, 2, 6, 1, 5, 3, 7]
+
 end Wychelean
 
 /-- The bit-vector rotation agrees with the index-level rotation of Boolean vectors. -/
