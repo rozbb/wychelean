@@ -1,8 +1,6 @@
 import Mathlib.Data.ZMod.Basic
 import Mathlib.Data.Bool.Basic
 import Mathlib.Algebra.BigOperators.Fin
-import Mathlib.LinearAlgebra.Matrix.Defs
-import Mathlib.LinearAlgebra.Matrix.RowCol
 import Mathlib.Tactic.IntervalCases
 import Wychelean.Utils.Round
 import Wychelean.Utils.Bits
@@ -32,6 +30,10 @@ Aeneas-specific constructs:
 - Standard `[a:b:s]` ranges are `Std.Range`, whose membership matches the upstream `SRRange`;
   a positive-step proof for `2 * len` is supplied by `Bounds.len_pos` before the range is formed.
 - `scalar_tac`/`simp_scalar` side goals are discharged with `omega`/`grind`.
+- `PolyMatrix` is a vector of row vectors rather than Mathlib's `Matrix`, which is a function
+  type: the compiler re-evaluates a function-valued accumulator on every access, so `Â * ŝ` was
+  re-running the whole matrix expansion sixteen times. `PolyMatrix.transpose` replaces
+  `Matrix.transpose`.
 
 ## Mechanization notes
 
@@ -51,7 +53,7 @@ Aeneas-specific constructs:
   `Wychelean.Hashes.SHA3` (byte-level wrappers) and its `XOF` module (incremental sponge API).
 - **Rounding**: `⌈ x ⌋` denotes `⌊x + 1/2⌋` (nearest integer), defined in `Wychelean.Utils.Round`.
 - **`‖`** (concatenation): FIPS `X ‖ Y` is `X ‖ Y` on `Vector`s (from `Wychelean.Notations`).
-- **Transpose**: `Âᵀ` in K-PKE.Encrypt uses `Matrix.transpose`.
+- **Transpose**: `Âᵀ` in K-PKE.Encrypt uses `PolyMatrix.transpose`.
 - **`.cast`** appears where Lean cannot unify dependent-type arithmetic across
   `ParameterSet` branches (e.g., `384 * k` vs `32 * 12 * k`). This is inherent to
   working with parameter-dependent byte lengths.
@@ -251,13 +253,20 @@ def PolyVector.set {k : K} {m : ℕ} (v : PolyVector m k) (i : ℕ) (f : Polynom
     (_ : i < k := by get_elem_tactic) : PolyVector m k :=
   Vector.set v i f
 
-@[reducible] def PolyMatrix (m : ℕ) (k : K) := Matrix (Fin k) (Fin k) (Polynomial m)
-def PolyMatrix.zero (m : ℕ) (k : K) : PolyMatrix m k := Matrix.of (fun _ _ => Polynomial.zero m)
+/-- A `k × k` matrix of polynomials as a vector of rows, so that entries are stored, not
+recomputed (see the provenance notes). -/
+@[reducible] def PolyMatrix (m : ℕ) (k : K) := Vector (Vector (Polynomial m) k) k
+def PolyMatrix.zero (m : ℕ) (k : K) : PolyMatrix m k :=
+  Vector.replicate k (Vector.replicate k (Polynomial.zero m))
 
 /-- Element-wise matrix update: `M.update i j val` sets entry (i,j) to `val`. -/
 def PolyMatrix.update {k : K} {m : ℕ} (M : PolyMatrix m k) (i j : ℕ) (val : Polynomial m)
     (hi : i < k := by get_elem_tactic) (_ : j < k := by get_elem_tactic) : PolyMatrix m k :=
-  Matrix.updateRow M ⟨i, hi⟩ (fun col => if col = j then val else M ⟨i, hi⟩ col)
+  M.set i (M[i].set j val)
+
+/-- `Mᵀ`, the transpose used by K-PKE.Encrypt (Algorithm 14, step 19). -/
+def PolyMatrix.transpose {k : K} {m : ℕ} (M : PolyMatrix m k) : PolyMatrix m k :=
+  Vector.ofFn fun i => Vector.ofFn fun j => M[j][i]
 
 instance {k : K} {m : ℕ} : Add (PolyVector m k) where
   add v w := Vector.ofFn fun i => v[i] + w[i]
@@ -467,7 +476,7 @@ def PolyMatrix.MulVectorNTT {k : K} (A : PolyMatrix q k) (v : PolyVector q k) : 
   let mut w := PolyVector.zero q k
   for hi: i in [0:k] do
     for hj: j in [0:k] do
-      w := w.set i (w[i] + MultiplyNTTs (A ⟨i, by grind⟩ ⟨j, by grind⟩) v[j])
+      w := w.set i (w[i] + MultiplyNTTs A[i][j] v[j])
   pure w
 
 instance {k} : HMul (PolyMatrix q k) (PolyVector q k) (PolyVector q k) where
@@ -531,7 +540,7 @@ def K_PKE.Encrypt (p : ParameterSet) (ekPKE : 𝔹 (384 * k p + 32)) (m : 𝔹 3
     N := N + 1
   let e₂ := SamplePolyCBD (PRF η₂ r N)                                         -- Alg. 14, step 17
   let «ŷ» := PolyVector.NTT y                                                  -- Alg. 14, step 18
-  let u := PolyVector.NTTInv (Matrix.transpose «Â» * «ŷ») + e₁                 -- Alg. 14, step 19
+  let u := PolyVector.NTTInv (PolyMatrix.transpose «Â» * «ŷ») + e₁             -- Alg. 14, step 19
   let μ := Polynomial.Decompress 1 (ByteDecode (m.cast (by grind)))          -- Alg. 14, step 20
   let v := NTTInv (PolyVector.innerProductNTT «t̂» «ŷ») + e₂ + μ                -- Alg. 14, step 21
   let c₁ := PolyVector.ByteEncode (dᵤ p) (PolyVector.Compress (dᵤ p) u)        -- Alg. 14, step 22
