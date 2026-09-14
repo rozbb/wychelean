@@ -335,14 +335,14 @@ def SamplePolyCBD {η : Η} (B : ByteVec (64 * η)) : Polynomial := Id.run do
 
 Computes the NTT representation `f̂ ∈ T_q` of a polynomial `f ∈ R_q`
 using Cooley–Tukey butterflies with the seven layers of `ζ = 17`. -/
-def NTT (f : Polynomial) : NTTPolynomial := Lattice.NTT.ntt ζ 7 f
+def NTT (f : Polynomial) : NTTPolynomial := f.ntt
 
 /-! ## §4.3 Algorithm 10 — NTT⁻¹(f̂)
 
 Computes the polynomial `f ∈ R_q` corresponding to an NTT representation `f̂ ∈ T_q`
 using Gentleman–Sande butterflies; the final scaling by `128⁻¹ = 3303` is `(2^7)⁻¹` in the
 library. -/
-def NTTInv («f̂» : NTTPolynomial) : Polynomial := Lattice.NTT.nttInv ζ 7 «f̂»
+def NTTInv («f̂» : NTTPolynomial) : Polynomial := «f̂».nttInv
 
 /-! ## §4.3.1 Algorithm 12 — BaseCaseMultiply(a₀,a₁,b₀,b₁,γ)
 

@@ -105,4 +105,14 @@ def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : Tq q ζ levels) (hL : levels 
 
 end NTT
 
+/-- `f.ntt : Tq q ζ levels`, the transform with the parameters of the target type. -/
+abbrev Poly.ntt {q : ℕ} (f : Poly q 256) {ζ : ZMod q} {levels : ℕ} [h : Fact (levels ≤ 8)] :
+    Tq q ζ levels :=
+  NTT.ntt ζ levels f h.out
+
+/-- `f̂.nttInv : Poly q 256`, the inverse transform. -/
+abbrev Tq.nttInv {q levels : ℕ} {ζ : ZMod q} [h : Fact (levels ≤ 8)] («f̂» : Tq q ζ levels) :
+    Poly q 256 :=
+  NTT.nttInv ζ levels «f̂» h.out
+
 end Wychelean.Lattice
