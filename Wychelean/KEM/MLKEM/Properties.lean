@@ -34,6 +34,6 @@ theorem nttInvSpec_mul (f g : Polynomial) :
 theorem mul_residue («f̂» «ĝ» : NTTPolynomial) (i : ℕ) (hi : i < 128) :
     («f̂» * «ĝ»)[i] = #v[«f̂»[i][0] * «ĝ»[i][0] + «f̂»[i][1] * «ĝ»[i][1] * ζ ^ (2 * bitRev 7 i + 1),
                        «f̂»[i][0] * «ĝ»[i][1] + «f̂»[i][1] * «ĝ»[i][0]] :=
-  EvalDomain.getElem_mul_two «f̂» «ĝ» i hi
+  Residues.getElem_mul_two «f̂» «ĝ» i hi
 
 end Wychelean.KEM.MLKEM

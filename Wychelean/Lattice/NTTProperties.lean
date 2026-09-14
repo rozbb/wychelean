@@ -80,9 +80,9 @@ theorem point_pow (ζ : ZMod q) (hζ : ζ ^ 2 ^ levels = -1) (i : ℕ) :
 theorem nttSpec_mul [Fact q.Prime] (ζ : ZMod q) (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
     (f g : Poly (ZMod q) 256) :
     nttSpec ζ levels (f * g) hL = nttSpec ζ levels f hL * nttSpec ζ levels g hL := by
-  apply EvalDomain.ext
+  apply Residues.ext
   intro i hi
-  rw [EvalDomain.getElem_mul, getElem_nttSpec, getElem_nttSpec, getElem_nttSpec]
+  rw [Residues.getElem_mul, getElem_nttSpec, getElem_nttSpec, getElem_nttSpec]
   exact modBinomial_mul hL f g _ (point_pow ζ hζ _)
 
 /-! ### The inverse transform -/

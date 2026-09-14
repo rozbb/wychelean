@@ -8,65 +8,65 @@ open Wychelean
 /-- The product ring `∏ᵢ ℤ_q[X]/(X^d - γᵢ)` for the `m` evaluation points `γ`: residue `i` is a
 polynomial of degree below `d`, read modulo `X^d - γᵢ`. Elements are multiplied residue by
 residue; the points need no relation to each other here. -/
-structure EvalDomain (q d m : ℕ) (γ : Fin m → ZMod q) where
+structure Residues (q d m : ℕ) (γ : Fin m → ZMod q) where
   residues : Vector (Poly (ZMod q) d) m
 deriving DecidableEq
 
-namespace EvalDomain
+namespace Residues
 
 variable {q d m : ℕ} {γ : Fin m → ZMod q}
 
-instance : GetElem (EvalDomain q d m γ) ℕ (Poly (ZMod q) d) fun _ i => i < m where
+instance : GetElem (Residues q d m γ) ℕ (Poly (ZMod q) d) fun _ i => i < m where
   getElem a i h := a.residues[i]
 
-instance : Zero (EvalDomain q d m γ) where zero := ⟨Vector.replicate m 0⟩
+instance : Zero (Residues q d m γ) where zero := ⟨Vector.replicate m 0⟩
 
-instance : Add (EvalDomain q d m γ) where
+instance : Add (Residues q d m γ) where
   add a b := ⟨Vector.zipWith (· + ·) a.residues b.residues⟩
 
-instance : Sub (EvalDomain q d m γ) where
+instance : Sub (Residues q d m γ) where
   sub a b := ⟨Vector.zipWith (· - ·) a.residues b.residues⟩
 
 /-- Residue `i` is multiplied in `ℤ_q[X]/(X^d - γᵢ)`. -/
-instance : Mul (EvalDomain q d m γ) where
+instance : Mul (Residues q d m γ) where
   mul a b := ⟨Vector.ofFn fun i => Poly.mulBinomial (γ i) a.residues[i] b.residues[i]⟩
 
 @[simp] theorem getElem_mk (v : Vector (Poly (ZMod q) d) m) (i : ℕ) (hi : i < m) :
-    (⟨v⟩ : EvalDomain q d m γ)[i] = v[i] := rfl
+    (⟨v⟩ : Residues q d m γ)[i] = v[i] := rfl
 
-@[simp] theorem residues_getElem (a : EvalDomain q d m γ) (i : ℕ) (hi : i < m) :
+@[simp] theorem residues_getElem (a : Residues q d m γ) (i : ℕ) (hi : i < m) :
     a.residues[i] = a[i] := rfl
 
-theorem ext {a b : EvalDomain q d m γ} (h : ∀ (i : ℕ) (hi : i < m), a[i] = b[i]) : a = b := by
+theorem ext {a b : Residues q d m γ} (h : ∀ (i : ℕ) (hi : i < m), a[i] = b[i]) : a = b := by
   cases a; cases b
   congr 1
   exact Vector.ext h
 
-@[simp] theorem getElem_add (a b : EvalDomain q d m γ) (i : ℕ) (hi : i < m) :
+@[simp] theorem getElem_add (a b : Residues q d m γ) (i : ℕ) (hi : i < m) :
     (a + b)[i] = a[i] + b[i] :=
   Vector.getElem_zipWith hi
 
-@[simp] theorem getElem_sub (a b : EvalDomain q d m γ) (i : ℕ) (hi : i < m) :
+@[simp] theorem getElem_sub (a b : Residues q d m γ) (i : ℕ) (hi : i < m) :
     (a - b)[i] = a[i] - b[i] :=
   Vector.getElem_zipWith hi
 
-@[simp] theorem getElem_zero (i : ℕ) (hi : i < m) : (0 : EvalDomain q d m γ)[i] = 0 :=
+@[simp] theorem getElem_zero (i : ℕ) (hi : i < m) : (0 : Residues q d m γ)[i] = 0 :=
   Vector.getElem_replicate ..
 
-@[simp] theorem getElem_mul (a b : EvalDomain q d m γ) (i : ℕ) (hi : i < m) :
+@[simp] theorem getElem_mul (a b : Residues q d m γ) (i : ℕ) (hi : i < m) :
     (a * b)[i] = Poly.mulBinomial (γ ⟨i, hi⟩) a[i] b[i] :=
   Vector.getElem_ofFn ..
 
 /-- With residues of degree two, residue `i` of a product is the base case of FIPS 203
 Algorithm 12 at `γᵢ`. -/
-theorem getElem_mul_two {γ : Fin m → ZMod q} (a b : EvalDomain q 2 m γ) (i : ℕ) (hi : i < m) :
+theorem getElem_mul_two {γ : Fin m → ZMod q} (a b : Residues q 2 m γ) (i : ℕ) (hi : i < m) :
     (a * b)[i] = #v[a[i][0] * b[i][0] + a[i][1] * b[i][1] * γ ⟨i, hi⟩,
                    a[i][0] * b[i][1] + a[i][1] * b[i][0]] := by
   rw [getElem_mul, Poly.mulBinomial_two]
 
 /-- The residues laid out consecutively, residue `i` at indices `d·i, …, d·i + d - 1`
 (the coefficient order of FIPS 203 §2.4.6). -/
-def flatten (a : EvalDomain q d m γ) : Vector (ZMod q) (m * d) := a.residues.flatten
+def flatten (a : Residues q d m γ) : Vector (ZMod q) (m * d) := a.residues.flatten
 
 theorem flat_idx_lt {r i : ℕ} (hr : r < d) (hi : i < m) : r + d * i < m * d := by
   have := Nat.mul_le_mul_left d (Nat.succ_le_of_lt hi)
@@ -75,10 +75,10 @@ theorem flat_idx_lt {r i : ℕ} (hr : r < d) (hi : i < m) : r + d * i < m * d :=
   omega
 
 /-- The inverse of `flatten`: cut a coefficient vector into `m` residues of size `d`. -/
-def ofFlat (v : Vector (ZMod q) (m * d)) : EvalDomain q d m γ :=
+def ofFlat (v : Vector (ZMod q) (m * d)) : Residues q d m γ :=
   ⟨Vector.ofFn fun i => Vector.ofFn fun r => v[r.val + d * i.val]'(flat_idx_lt r.isLt i.isLt)⟩
 
-end EvalDomain
+end Residues
 
 namespace NTT
 
@@ -119,7 +119,7 @@ end NTT
 with residues of degree below `256 / 2^levels` (FIPS 203 §2.4.6 for `levels = 7`, FIPS 204 §7.5
 for `levels = 8`). -/
 abbrev NTTDomain (ζ : ZMod q) (levels : ℕ) :=
-  EvalDomain q (NTT.blockSize levels) (2 ^ levels) (NTT.points ζ levels)
+  Residues q (NTT.blockSize levels) (2 ^ levels) (NTT.points ζ levels)
 
 namespace NTT
 

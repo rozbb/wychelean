@@ -279,17 +279,17 @@ def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : ByteVec (32 * d * k)) (_ : 
 def NTTPolynomial.ByteEncode («f̂» : NTTPolynomial) : ByteVec (32 * 12) :=
   MLKEM.ByteEncode 12 «f̂».flatten
 def NTTPolynomial.ByteDecode (B : ByteVec (32 * 12)) : NTTPolynomial :=
-  Lattice.EvalDomain.ofFlat (MLKEM.ByteDecode B)
+  Lattice.Residues.ofFlat (MLKEM.ByteDecode B)
 def NTTVector.ByteEncode {k : K} (v : NTTVector k) : ByteVec (vecLen' k) :=
   ((v.map NTTPolynomial.ByteEncode).flatten).cast (by simp only [vecLen']; omega)
 def NTTVector.ByteDecode {k : K} (bytes : ByteVec (vecLen' k)) : NTTVector k :=
-  (PolyVector.ByteDecode (k := k) 12 (bytes.cast (by simp only [vecLen']))).map Lattice.EvalDomain.ofFlat
+  (PolyVector.ByteDecode (k := k) 12 (bytes.cast (by simp only [vecLen']))).map Lattice.Residues.ofFlat
 
 /-! ## §4.2.2 Algorithm 7 — SampleNTT(B)
 
 Uses rejection sampling to deterministically generate an element of `T_q`
 from the XOF output stream of `B = ρ ‖ j ‖ i`, a seed and two index bytes. -/
-def SampleNTT (B : ByteVec (seedLen + 2)) : NTTPolynomial := Lattice.EvalDomain.ofFlat <| Id.run do
+def SampleNTT (B : ByteVec (seedLen + 2)) : NTTPolynomial := Lattice.Residues.ofFlat <| Id.run do
   let mut ctx := XOF.Init
   ctx := XOF.Absorb ctx B
   let mut «â» := Polynomial.zero

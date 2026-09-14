@@ -69,7 +69,7 @@ open Bounds
 with twiddles `ζ^BitRev(i)`. -/
 def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256) (hL : levels ≤ 8 := by decide) :
     NTTDomain ζ levels :=
-  EvalDomain.ofFlat <| Vector.cast (pow_mul_blockSize hL).symm <| Id.run do
+  Residues.ofFlat <| Vector.cast (pow_mul_blockSize hL).symm <| Id.run do
   let mut «f̂» := f
   let mut i := 1
   for h0: len in lens levels do
