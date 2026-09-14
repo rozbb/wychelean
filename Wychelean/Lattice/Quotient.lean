@@ -85,6 +85,31 @@ private theorem monomial_mul (a b : ZMod q) (i j : Fin n) :
       simp only [h1, h2, ↓reduceIte, map_zero, zero_mul]
     · intro h; exact absurd (Finset.mem_univ _) h
 
+theorem toR_zero : toR c (0 : Poly q n) = 0 := by
+  simp [toR]
+
+theorem toR_const (a : ZMod q) [NeZero n] : toR c (const a : Poly q n) = AdjoinRoot.of _ a := by
+  simp only [toR, Fin.getElem_fin, getElem_const]
+  rw [Finset.sum_eq_single (0 : Fin n)]
+  · simp
+  · intro i _ hi
+    have : ¬ i.val = 0 := fun h => hi (Fin.ext h)
+    simp [this]
+  · intro h; exact absurd (Finset.mem_univ _) h
+
+theorem toR_one [NeZero n] : toR c (1 : Poly q n) = 1 := by
+  rw [show (1 : Poly q n) = const 1 from rfl, toR_const, map_one]
+
+theorem toR_neg (f : Poly q n) : toR c (-f) = -toR c f := by
+  simp only [toR, Fin.getElem_fin, getElem_neg, map_neg, neg_mul, Finset.sum_neg_distrib]
+
+theorem toR_sub (f g : Poly q n) : toR c (f - g) = toR c f - toR c g := by
+  simp only [toR, Fin.getElem_fin, getElem_sub, map_sub, sub_mul, Finset.sum_sub_distrib]
+
+theorem toR_smul (a : ZMod q) (f : Poly q n) : toR c (a • f) = AdjoinRoot.of _ a * toR c f := by
+  simp only [toR, Fin.getElem_fin, getElem_smul, map_mul, Finset.mul_sum]
+  exact Finset.sum_congr rfl fun i _ => by ring
+
 theorem toR_mulBinomial (f g : Poly q n) : toR c (mulBinomial c f g) = toR c f * toR c g := by
   simp only [toR, Fin.getElem_fin, getElem_mulBinomial, map_sum, Finset.sum_mul, Finset.mul_sum,
     monomial_mul]
@@ -121,6 +146,40 @@ theorem toR_injective [Fact q.Prime] : Function.Injective (toR c : Poly q n → 
   have := congrArg (fun p => p.coeff i) hzero
   simp only [coeff_sub, coeff_sum_C_mul_X_pow _ i hi, coeff_zero] at this
   exact sub_eq_zero.mp this
+
+theorem toR_mul (f g : Poly q n) : toR (-1) (f * g) = toR (-1) f * toR (-1) g :=
+  toR_mulBinomial f g
+
+theorem toR_pow [NeZero n] (f : Poly q n) (k : ℕ) : toR (-1) (f ^ k) = toR (-1) f ^ k := by
+  induction k with
+  | zero => rw [pow_zero', toR_one, pow_zero]
+  | succ k ih => rw [pow_succ', toR_mul, ih, pow_succ]
+
+theorem toR_natCast [NeZero n] (k : ℕ) : toR c ((k : ℕ) : Poly q n) = k := by
+  rw [show ((k : ℕ) : Poly q n) = const k from rfl, toR_const, map_natCast]
+
+theorem toR_intCast [NeZero n] (k : ℤ) : toR c ((k : ℤ) : Poly q n) = k := by
+  rw [show ((k : ℤ) : Poly q n) = const k from rfl, toR_const, map_intCast]
+
+theorem toR_nsmul (k : ℕ) (f : Poly q n) : toR c (k • f) = k • toR c f := by
+  rw [show k • f = (k : ZMod q) • f from rfl, toR_smul, map_natCast, nsmul_eq_mul]
+
+theorem toR_zsmul (k : ℤ) (f : Poly q n) : toR c (k • f) = k • toR c f := by
+  rw [show k • f = (k : ZMod q) • f from rfl, toR_smul, map_intCast, zsmul_eq_mul]
+
+/-- The ring structure of `ℤ_q[X] / (X^n + 1)` on coefficient vectors, transported along the
+injective `toR (-1)` (`q` prime, `n ≥ 1`). -/
+instance instCommRing [Fact q.Prime] [NeZero n] : CommRing (Poly q n) :=
+  Function.Injective.commRing (toR (-1)) toR_injective toR_zero toR_one toR_add toR_mul toR_neg
+    toR_sub toR_nsmul toR_zsmul toR_pow toR_natCast toR_intCast
+
+/-- `toR (-1)` as a ring homomorphism. -/
+def toRingHom [Fact q.Prime] [NeZero n] : Poly q n →+* R q n (-1) where
+  toFun := toR (-1)
+  map_one' := toR_one
+  map_mul' := toR_mul
+  map_zero' := toR_zero
+  map_add' := toR_add
 
 end Poly
 

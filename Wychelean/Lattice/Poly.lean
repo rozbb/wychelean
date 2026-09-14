@@ -50,13 +50,45 @@ def mulBinomial (c : ZMod q) (f g : Poly q n) : Poly q n :=
 /-- The product in `ℤ_q[X] / (X^n + 1)`, the case `c = -1`. -/
 def mul (f g : Poly q n) : Poly q n := mulBinomial (-1) f g
 
+/-- The constant polynomial `c`. -/
+def const (c : ZMod q) : Poly q n := Vector.ofFn fun i => if i.val = 0 then c else 0
+
+/-- Pointwise negation. -/
+def neg (f : Poly q n) : Poly q n := f.map (- ·)
+
+instance : Zero (Poly q n) where zero := zero
+instance : One (Poly q n) where one := const 1
 instance : Add (Poly q n) where add := add
 instance : Sub (Poly q n) where sub := sub
+instance : Neg (Poly q n) where neg := neg
 instance : Mul (Poly q n) where mul := mul
 instance : SMul (ZMod q) (Poly q n) where smul c f := scalarMul f c
+instance : NatCast (Poly q n) where natCast k := const k
+instance : IntCast (Poly q n) where intCast k := const k
+instance : SMul ℕ (Poly q n) where smul k f := scalarMul f k
+instance : SMul ℤ (Poly q n) where smul k f := scalarMul f k
+instance : Pow (Poly q n) ℕ where pow f k := npowRec k f
 
-@[simp] theorem getElem_zero (i : ℕ) (hi : i < n) : (zero : Poly q n)[i] = 0 := by
-  simp [zero]
+@[simp] theorem getElem_zero (i : ℕ) (hi : i < n) : (0 : Poly q n)[i] = 0 :=
+  Vector.getElem_replicate ..
+
+@[simp] theorem getElem_const (c : ZMod q) (i : ℕ) (hi : i < n) :
+    (const c : Poly q n)[i] = if i = 0 then c else 0 :=
+  Vector.getElem_ofFn ..
+
+@[simp] theorem getElem_one (i : ℕ) (hi : i < n) : (1 : Poly q n)[i] = if i = 0 then 1 else 0 :=
+  Vector.getElem_ofFn ..
+
+@[simp] theorem getElem_natCast (k : ℕ) (i : ℕ) (hi : i < n) :
+    ((k : ℕ) : Poly q n)[i] = if i = 0 then (k : ZMod q) else 0 :=
+  Vector.getElem_ofFn ..
+
+@[simp] theorem getElem_intCast (k : ℤ) (i : ℕ) (hi : i < n) :
+    ((k : ℤ) : Poly q n)[i] = if i = 0 then (k : ZMod q) else 0 :=
+  Vector.getElem_ofFn ..
+
+@[simp] theorem getElem_neg (f : Poly q n) (i : ℕ) (hi : i < n) : (-f)[i] = -f[i] :=
+  Vector.getElem_map ..
 
 @[simp] theorem getElem_add (f g : Poly q n) (i : ℕ) (hi : i < n) : (f + g)[i] = f[i] + g[i] :=
   Vector.getElem_zipWith hi
@@ -67,6 +99,17 @@ instance : SMul (ZMod q) (Poly q n) where smul c f := scalarMul f c
 @[simp] theorem getElem_smul (c : ZMod q) (f : Poly q n) (i : ℕ) (hi : i < n) :
     (c • f)[i] = f[i] * c :=
   Vector.getElem_map ..
+
+@[simp] theorem getElem_nsmul (k : ℕ) (f : Poly q n) (i : ℕ) (hi : i < n) :
+    (k • f)[i] = f[i] * k :=
+  Vector.getElem_map ..
+
+@[simp] theorem getElem_zsmul (k : ℤ) (f : Poly q n) (i : ℕ) (hi : i < n) :
+    (k • f)[i] = f[i] * k :=
+  Vector.getElem_map ..
+
+theorem pow_zero' (f : Poly q n) : f ^ 0 = 1 := rfl
+theorem pow_succ' (f : Poly q n) (k : ℕ) : f ^ (k + 1) = f ^ k * f := rfl
 
 theorem getElem_mulBinomial (c : ZMod q) (f g : Poly q n) (k : ℕ) (hk : k < n) :
     (mulBinomial c f g)[k] = ∑ i : Fin n, ∑ j : Fin n,

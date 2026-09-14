@@ -7,65 +7,10 @@ import Wychelean.Lattice
 import Wychelean.Hashes.SHA3.XOF
 
 /-!
-# ML-KEM (Module-Lattice-Based Key-Encapsulation Mechanism)
-
-Based on: FIPS 203: Module-Lattice-Based Key-Encapsulation Mechanism Standard
-URL: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.pdf
-
-All algorithm, section, and equation references are to FIPS 203.
-
-## Provenance
-
-A line-by-line port of the Microsoft SymCrypt specification (MIT; see
-Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
+# ML-KEM
+FIPS 203: https://doi.org/10.6028/NIST.FIPS.203
+Adapted from Microsoft SymCrypt (MIT; see Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/MLKEM/Spec.lean
-That specification is the target of SymCrypt's machine-checked proofs about its Rust ML-KEM
-implementation. It is retained here, in its original imperative form, as the executable
-reference against which a higher-level specification can be checked. The only changes replace
-Aeneas-specific constructs:
-
-- `Byte` is `UInt8`, so `.val` on bytes became `.toNat`.
-- Standard `[a:b]` ranges are core `Std.Legacy.Range`, whose membership matches the upstream
-  `SRRange`.
-- `scalar_tac`/`simp_scalar` side goals are discharged with `omega`/`grind`.
-- The polynomial ring, its vectors and matrices, and the NTT loops live in the shared
-  `Wychelean.Lattice` library (`Poly`, `PolyVec`, `PolyMat`, `NTT.ntt`/`nttInv`, generic in the
-  modulus, root of unity and number of layers); this file instantiates them with ML-KEM's
-  parameters and keeps only the FIPS 203 names. `PolyMatrix` is a vector of row vectors rather
-  than Mathlib's `Matrix`, which is a function type: the compiler re-evaluates a function-valued
-  accumulator on every access, so `Â * ŝ` was re-running the whole matrix expansion sixteen
-  times.
-
-## Mechanization notes
-
-- **Byte vectors** use `𝔹 n` (= `Vector Byte n`) at all interfaces, matching FIPS 203.
-- **Polynomials** are `Vector (ZMod m) 256`, representing elements of ℤ_m^256.
-  The modulus `m` depends on the parameter `d`: `m = 2^d` if `d < 12`, `m = q` if `d = 12`.
-- **NTT domain**: the same `Polynomial` type represents both `R_q` and `T_q` elements;
-  the distinction is tracked by convention (hat notation in comments), not in types.
-- **Hat variables** (`f̂`, `ŝ`, etc.): Lean identifiers use `«f̂»` escaping for
-  combining-circumflex characters that lack precomposed forms.
-- **Randomness**: `_internal` functions take random bytes as explicit parameters.
-  Top-level ML-KEM.KeyGen and ML-KEM.Encaps use a `RandomTape` for completeness.
-- **SampleNTT** uses a `while` loop (Lean compiles this via `Lean.Loop`, which is total but
-  opaque to the kernel: `SampleNTT` and its callers evaluate natively, not by `decide`).
-  The FIPS 203 while loop has no a priori bound (Appendix B).
-- **SHA3/SHAKE**: wrapper functions (H, J, G, PRF, XOF) are defined here in terms of
-  `Wychelean.Hashes.SHA3` (byte-level wrappers) and its `XOF` module (incremental sponge API).
-- **Rounding**: `⌈ x ⌋` denotes `⌊x + 1/2⌋` (nearest integer), defined in `Wychelean.Utils.Round`.
-- **Byte counters**: `(i : Byte)` casts a small natural number to a byte (scoped
-  `NatCast Byte` from `Wychelean.Notations`).
-- **`‖`** (concatenation): FIPS `X ‖ Y` is `X ‖ Y` on `Vector`s (from `Wychelean.Notations`).
-- **Transpose**: `Âᵀ` in K-PKE.Encrypt uses `PolyMatrix.transpose`.
-- **`.cast`** appears where Lean cannot unify dependent-type arithmetic across
-  `ParameterSet` branches (e.g., `384 * k` vs `32 * 12 * k`). This is inherent to
-  working with parameter-dependent byte lengths.
-- **Input validation**: Type-level enforcement provides all length checks (Algorithms 19–21).
-  The encapsulation key modulus check (§7.2, Eq. 7.1) is explicitly implemented in `Encaps`.
-  The decapsulation key hash check (§7.3) is explicitly implemented in `Decaps`.
-  RBG failure checks are trivially satisfied by the `RandomTape` model.
-- **Algorithm ordering**: Algorithm 12 (BaseCaseMultiply) is defined before
-  Algorithm 11 (MultiplyNTTs) because the latter calls the former.
 -/
 
 namespace Wychelean.KEM.MLKEM
