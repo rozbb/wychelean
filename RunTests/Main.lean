@@ -3,6 +3,7 @@ import Wychelean.DH.X25519.Tests
 import Wychelean.Hashes.SHA256.Tests
 import Wychelean.Hashes.SHA3.Tests
 import Wychelean.KEM.MLKEM.Tests
+import Wychelean.Lattice.Tests
 import Wychelean.Permutations.Keccak.Tests
 import Wychelean.Utils.Tests
 
@@ -26,6 +27,7 @@ def suites (full := false): List Suite :=
     Hashes.SHA3.Tests.suites full,
     Hashes.SHA3.Tests.shakeSuites full,
     KEM.MLKEM.Tests.suites full,
+    Lattice.Tests.suites,
     Permutations.Keccak.Tests.suites ].flatten
 
 end RunTests

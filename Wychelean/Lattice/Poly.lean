@@ -50,7 +50,7 @@ def mul (f g : Poly q n) : Poly q n :=
 instance : Add (Poly q n) where add := add
 instance : Sub (Poly q n) where sub := sub
 instance : Mul (Poly q n) where mul := mul
-instance : HMul (Poly q n) (ZMod q) (Poly q n) where hMul := scalarMul
+instance : SMul (ZMod q) (Poly q n) where smul c f := scalarMul f c
 
 end Poly
 

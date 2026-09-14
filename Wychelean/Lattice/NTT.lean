@@ -101,7 +101,7 @@ def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : Poly q 256) (hL : levels ≤ 
         let t := f[j]
         f := f.set j (t + f[j + len])
         f := f.set (j + len) (zeta * (f[j + len] - t))
-  f := f * ((2 ^ levels : ZMod q)⁻¹)
+  f := ((2 ^ levels : ZMod q)⁻¹) • f
   pure f
 
 end NTT
