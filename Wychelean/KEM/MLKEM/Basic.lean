@@ -3,7 +3,7 @@ import Mathlib.Data.Bool.Basic
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.IntervalCases
 import Wychelean.Utils.Round
-import Wychelean.Utils.Bits
+import Wychelean.Lattice
 import Wychelean.Hashes.SHA3.XOF
 
 /-!
@@ -25,15 +25,16 @@ reference against which a higher-level specification can be checked. The only ch
 Aeneas-specific constructs:
 
 - `Byte` is `UInt8`, so `.val` on bytes became `.toNat`.
-- The halving and doubling loop ranges of `NTT` and `NTT⁻¹` are written as list literals, and
-  the index bound they justify is supplied by `Bounds.ntt_idx_lt` at the top of the inner loop.
-- Standard `[a:b:s]` ranges are core `Std.Legacy.Range`, whose membership matches the upstream
-  `SRRange`; a scoped macro lets the step `2 * len` be proved positive from `Bounds.len_pos`.
+- Standard `[a:b]` ranges are core `Std.Legacy.Range`, whose membership matches the upstream
+  `SRRange`.
 - `scalar_tac`/`simp_scalar` side goals are discharged with `omega`/`grind`.
-- `PolyMatrix` is a vector of row vectors rather than Mathlib's `Matrix`, which is a function
-  type: the compiler re-evaluates a function-valued accumulator on every access, so `Â * ŝ` was
-  re-running the whole matrix expansion sixteen times. `PolyMatrix.transpose` replaces
-  `Matrix.transpose`.
+- The polynomial ring, its vectors and matrices, and the NTT loops live in the shared
+  `Wychelean.Lattice` library (`Poly`, `PolyVec`, `PolyMat`, `NTT.ntt`/`nttInv`, generic in the
+  modulus, root of unity and number of layers); this file instantiates them with ML-KEM's
+  parameters and keeps only the FIPS 203 names. `PolyMatrix` is a vector of row vectors rather
+  than Mathlib's `Matrix`, which is a function type: the compiler re-evaluates a function-valued
+  accumulator on every access, so `Â * ŝ` was re-running the whole matrix expansion sixteen
+  times.
 
 ## Mechanization notes
 
@@ -75,13 +76,6 @@ open scoped Wychelean.Notations
 /-- Byte vectors, the interface type of FIPS 203. -/
 abbrev 𝔹 := ByteVec
 
-/-- Stepped ranges `[a : b : s]` whose step is a variable, as in the NTT loops: the positivity
-proof is taken from the context (`Bounds.len_pos`) when `decide` cannot supply it. -/
-scoped macro_rules
-| `([ $start : $stop : $step ]) =>
-  `({ start := $start, stop := $stop, step := $step, step_pos := by first | decide | omega :
-      Std.Legacy.Range })
-
 /-! ## Bounds infrastructure for `get_elem_tactic`
 
 These scoped lemmas let `grind` discharge array-index bounds arising from `for`
@@ -110,30 +104,6 @@ theorem idx_mul_add_lt (i d j n : Nat) (hi : i < n) (hj : j < d) :
   calc i * d + j < i * d + d := by omega
     _ = (i + 1) * d := by ring
     _ ≤ n * d := Nat.mul_le_mul_right d hi
-
-/-! ### NTT butterfly bounds (§4.3) -/
-
-/-- The halving list of Algorithm 9 has the same members as the doubling list of Algorithm 10. -/
-theorem mem_halving {len : ℕ} (h0 : len ∈ [128, 64, 32, 16, 8, 4, 2]) :
-    len ∈ [2, 4, 8, 16, 32, 64, 128] := by
-  simp only [List.mem_cons, List.mem_nil_iff, or_false] at h0 ⊢
-  omega
-
-/-- The loop variable `len` of Algorithms 9 and 10 is positive, so `[0 : 256 : 2 * len]` is a
-well-formed range. -/
-theorem len_pos {len : ℕ} (h0 : len ∈ [2, 4, 8, 16, 32, 64, 128]) : 0 < 2 * len := by
-  simp only [List.mem_cons, List.mem_nil_iff, or_false] at h0
-  omega
-
-/-- `j + len < 256` inside the butterfly loops of Algorithms 9 and 10. -/
-theorem ntt_idx_lt {len start j : ℕ} {hlen : 0 < 2 * len} (h0 : len ∈ [2, 4, 8, 16, 32, 64, 128])
-    (h1 : start ∈ ({ start := 0, stop := 256, step := 2 * len, step_pos := hlen } : Std.Legacy.Range))
-    (hj : j ∈ [start : start + len]) : j + len < 256 := by
-  have hs : start < 256 := h1.2.1
-  have hm : (start - 0) % (2 * len) = 0 := h1.2.2
-  have hj' : j < start + len := hj.2.1
-  simp only [List.mem_cons, List.mem_nil_iff, or_false] at h0
-  rcases h0 with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> omega
 
 /-! ### Encoding/sampling index bounds (§4.2.1, §4.2.2) -/
 
@@ -170,40 +140,11 @@ abbrev q : Nat := 3329
 /-- ℤ_q = ℤ/3329ℤ, the coefficient ring. -/
 abbrev Zq := ZMod q
 
-/-- Polynomial ring element: `ℤ_m[X] / (X^256 + 1)`, represented as `Vector (ZMod m) 256`.
-    When `d = 12`, `m = q`; when `d < 12`, `m = 2^d` (§4.2.1). -/
-abbrev Polynomial (m : ℕ := q) := Vector (ZMod m) 256
+/-- Polynomial ring element: `ℤ_m[X] / (X^256 + 1)`, represented as `Vector (ZMod m) 256`
+(`Lattice.Poly`). When `d = 12`, `m = q`; when `d < 12`, `m = 2^d` (§4.2.1). -/
+abbrev Polynomial (m : ℕ := q) := Lattice.Poly m 256
 
-def Polynomial.zero (m : ℕ := q) : Polynomial m := Vector.replicate 256 0
-
-/-- Pointwise addition.
-
-The body uses `Vector.zipWith` rather than the seemingly-equivalent
-`Vector.ofFn (fun i => f[i] + g[i])`.  This is a *grind workaround*: the
-latter shape causes `grind`'s `whnf` to descend through `Vector.ofFn`'s
-lambda and infinitely unfold `Add` on the element type, blowing
-`maxRecDepth` on any goal containing `_ + _ : Polynomial m`.  The bug is
-reproducible in plain Lean (no imports beyond `Init`) with element type
-`Fin n` (any `n ≥ 2`) or `ZMod n`; `Vector.zipWith` avoids it because its
-body is a non-recursive `Array.zipWith` wrapper that `whnf` does not
-recurse into.  (Upstream keeps a minimal repro next to the specification.) -/
-def Polynomial.add (f g : Polynomial m) : Polynomial m :=
-  Vector.zipWith (· + ·) f g
-
-/-- Pointwise subtraction.  See `Polynomial.add` for the `zipWith`
-rationale. -/
-def Polynomial.sub (f g : Polynomial m) : Polynomial m :=
-  Vector.zipWith (· - ·) f g
-
-instance {m} : Add (Polynomial m) where add := Polynomial.add
-
-instance {m} : Sub (Polynomial m) where sub := Polynomial.sub
-
-def Polynomial.scalarMul (f : Polynomial m) (c : ZMod m) : Polynomial m :=
-  f.map fun v => v * c
-
-instance {m} : HMul (Polynomial m) (ZMod m) (Polynomial m) where
-  hMul := Polynomial.scalarMul
+abbrev Polynomial.zero (m : ℕ := q) : Polynomial m := Lattice.Poly.zero
 
 /-- ζ = 17 ∈ ℤ_q is a primitive 256-th root of unity modulo q (§4.3). -/
 def ζ : Zq := 17
@@ -258,30 +199,15 @@ def η₂ : Η := ⟨2, by grind⟩
 
 /-! ## Vectors and Matrices of Polynomials (§2.4.4–§2.4.8) -/
 
-@[reducible] def PolyVector (m : ℕ) (k : K) := Vector (Polynomial m) k
-def PolyVector.zero (m : ℕ) (k : K) : PolyVector m k := Vector.replicate k (Polynomial.zero m)
+abbrev PolyVector (m : ℕ) (k : K) := Lattice.PolyVec m 256 k
+abbrev PolyVector.zero (m : ℕ) (k : K) : PolyVector m k := Lattice.PolyVec.zero
 
-def PolyVector.set {k : K} {m : ℕ} (v : PolyVector m k) (i : ℕ) (f : Polynomial m)
-    (_ : i < k := by get_elem_tactic) : PolyVector m k :=
-  Vector.set v i f
-
-/-- A `k × k` matrix of polynomials as a vector of rows, so that entries are stored, not
-recomputed (see the provenance notes). -/
-@[reducible] def PolyMatrix (m : ℕ) (k : K) := Vector (Vector (Polynomial m) k) k
-def PolyMatrix.zero (m : ℕ) (k : K) : PolyMatrix m k :=
-  Vector.replicate k (Vector.replicate k (Polynomial.zero m))
-
-/-- Element-wise matrix update: `M.update i j val` sets entry (i,j) to `val`. -/
-def PolyMatrix.update {k : K} {m : ℕ} (M : PolyMatrix m k) (i j : ℕ) (val : Polynomial m)
-    (hi : i < k := by get_elem_tactic) (_ : j < k := by get_elem_tactic) : PolyMatrix m k :=
-  M.set i (M[i].set j val)
-
+/-- A `k × k` matrix of polynomials as a vector of rows (see the provenance notes). -/
+abbrev PolyMatrix (m : ℕ) (k : K) := Lattice.PolyMat m 256 k
+abbrev PolyMatrix.zero (m : ℕ) (k : K) : PolyMatrix m k := Lattice.PolyMat.zero
 /-- `Mᵀ`, the transpose used by K-PKE.Encrypt (Algorithm 14, step 19). -/
-def PolyMatrix.transpose {k : K} {m : ℕ} (M : PolyMatrix m k) : PolyMatrix m k :=
-  Vector.ofFn fun i => Vector.ofFn fun j => M[j][i]
-
-instance {k : K} {m : ℕ} : Add (PolyVector m k) where
-  add v w := Vector.ofFn fun i => v[i] + w[i]
+abbrev PolyMatrix.transpose {m : ℕ} {k : K} (M : PolyMatrix m k) : PolyMatrix m k :=
+  Lattice.PolyMat.transpose M
 
 /-! ## §4.1 Cryptographic Functions (Eq. 4.1–4.5)
 
@@ -422,41 +348,15 @@ def SamplePolyCBD {η : Η} (B : 𝔹 (64 * η)) : Polynomial := Id.run do
 /-! ## §4.3 Algorithm 9 — NTT(f)
 
 Computes the NTT representation `f̂ ∈ T_q` of a polynomial `f ∈ R_q`
-using Cooley–Tukey butterflies. -/
-def NTT (f : Polynomial) : Polynomial := Id.run do
-  let mut «f̂» := f
-  let mut i := 1
-  for h0: len in [128, 64, 32, 16, 8, 4, 2] do
-    have hlen := len_pos (mem_halving h0)
-    for h1: start in [0 : 256 : 2*len] do
-      let zeta := ζ ^ (bitRev 7 i)
-      i := i + 1
-      for h: j in [start : start+len] do
-        have := ntt_idx_lt (mem_halving h0) h1 h
-        let t := zeta * «f̂»[j + len]
-        «f̂» := «f̂».set (j + len) («f̂»[j] - t)
-        «f̂» := «f̂».set j         («f̂»[j] + t)
-  pure «f̂»
+using Cooley–Tukey butterflies with the seven layers of `ζ = 17`. -/
+def NTT (f : Polynomial) : Polynomial := Lattice.NTT.ntt ζ 7 f
 
 /-! ## §4.3 Algorithm 10 — NTT⁻¹(f̂)
 
 Computes the polynomial `f ∈ R_q` corresponding to an NTT representation `f̂ ∈ T_q`
-using Gentleman–Sande butterflies. -/
-def NTTInv («f̂» : Polynomial) : Polynomial := Id.run do
-  let mut f := «f̂»
-  let mut i := 127
-  for h0: len in [2, 4, 8, 16, 32, 64, 128] do
-    have hlen := len_pos h0
-    for h1: start in [0:256:2*len] do
-      let zeta := ζ ^ bitRev 7 i
-      i := i - 1
-      for h: j in [start:start+len] do
-        have := ntt_idx_lt h0 h1 h
-        let t := f[j]
-        f := f.set j (t + f[j + len])
-        f := f.set (j + len) (zeta * (f[j + len] - t))
-  f := f * (3303 : Zq)
-  pure f
+using Gentleman–Sande butterflies; the final scaling by `128⁻¹ = 3303` is `(2^7)⁻¹` in the
+library. -/
+def NTTInv («f̂» : Polynomial) : Polynomial := Lattice.NTT.nttInv ζ 7 «f̂»
 
 /-! ## §4.3.1 Algorithm 12 — BaseCaseMultiply(a₀,a₁,b₀,b₁,γ)
 
