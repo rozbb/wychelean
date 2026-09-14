@@ -49,7 +49,7 @@ def suite : Suite where
     (polys.map fun f => check "nttInv loops = nttInvSpec" (NTT.nttInvSpec ζ 7 (NTT f)) (NTTInv (NTT f))) ++
     (polys.map fun f => check "nttInvSpec (nttSpec f) = f" f (NTT.nttInvSpec ζ 7 (NTT.nttSpec ζ 7 f))) ++
     ((polys.zip polys.reverse).map fun (f, g) =>
-      check "MultiplyNTTs = mulNTT" (NTT.mulNTT ζ 7 (NTT f) (NTT g)) (MultiplyNTTs (NTT f) (NTT g)))
+      check "MultiplyNTTs = NTTDomain.mul" (NTT f * NTT g) (MultiplyNTTs (NTT f) (NTT g)))
 
 def suites : List Suite := [suite]
 

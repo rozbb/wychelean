@@ -72,11 +72,11 @@ theorem modBinomial_mul [Fact q.Prime] (hL : levels ≤ 8) (f g : Poly (ZMod q) 
 
 /-- Block `i` of the transform is the residue at `point i`. -/
 theorem block_nttSpec (ζ : ZMod q) (hL : levels ≤ 8) (f : Poly (ZMod q) 256) (i : Fin (2 ^ levels)) :
-    block hL (nttSpec ζ levels f hL) i = modBinomial levels hL f (point ζ levels i) := by
+    NTTDomain.block (pow_dvd hL) (nttSpec ζ levels f hL) i = modBinomial levels hL f (point ζ levels i) := by
   apply Vector.ext
   intro r hr
-  simp only [block, nttSpec, Tq.getElem_mk, Vector.getElem_ofFn]
-  have hd := blockSize_pos levels
+  simp only [NTTDomain.block, nttSpec, NTTDomain.getElem_mk, Vector.getElem_ofFn]
+  have hd := blockSize_pos hL
   have h1 : (r + blockSize levels * i.val) / blockSize levels = i.val := by
     rw [Nat.add_mul_div_left _ _ hd, Nat.div_eq_of_lt hr, Nat.zero_add]
   have h2 : (r + blockSize levels * i.val) % blockSize levels = r := by
@@ -92,11 +92,12 @@ theorem point_pow (ζ : ZMod q) (hζ : ζ ^ 2 ^ levels = -1) (i : ℕ) :
 `ζ^(2^levels) = -1`). -/
 theorem nttSpec_mul [Fact q.Prime] (ζ : ZMod q) (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
     (f g : Poly (ZMod q) 256) :
-    nttSpec ζ levels (f * g) hL = mulNTT ζ levels (nttSpec ζ levels f hL) (nttSpec ζ levels g hL) hL := by
-  apply Tq.ext
+    nttSpec ζ levels (f * g) hL =
+      NTTDomain.mul (pow_dvd hL) (nttSpec ζ levels f hL) (nttSpec ζ levels g hL) := by
+  apply NTTDomain.ext
   intro idx hidx
-  simp only [mulNTT, Tq.getElem_mk, Vector.getElem_ofFn, block_nttSpec]
-  simp only [nttSpec, Tq.getElem_mk, Vector.getElem_ofFn]
+  simp only [NTTDomain.mul, NTTDomain.getElem_mk, Vector.getElem_ofFn, block_nttSpec]
+  simp only [nttSpec, NTTDomain.getElem_mk, Vector.getElem_ofFn]
   rw [modBinomial_mul hL f g _ (point_pow ζ hζ _)]
 
 /-! ### The inverse transform -/
@@ -191,10 +192,10 @@ theorem nttInvSpec_nttSpec [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ le
     le_of_lt (lt_of_lt_of_le ht0 (Nat.pow_le_pow_right (by decide) (Nat.le_succ _)))
   rw [getElem_nttInvSpec]
   have hsum : ∀ i : Fin (2 ^ levels),
-      (block hL (nttSpec ζ levels f hL) i)[k % blockSize levels]'(Nat.mod_lt _ (blockSize_pos levels)) *
+      (NTTDomain.block (pow_dvd hL) (nttSpec ζ levels f hL) i)[k % blockSize levels]'(Nat.mod_lt _ (blockSize_pos hL)) *
           (point ζ levels i.val)⁻¹ ^ (k / blockSize levels) =
         ∑ t : Fin (2 ^ levels),
-          f[k % blockSize levels + blockSize levels * t.val]'(block_idx_lt hL (Nat.mod_lt _ (blockSize_pos levels)) t.isLt) *
+          f[k % blockSize levels + blockSize levels * t.val]'(block_idx_lt hL (Nat.mod_lt _ (blockSize_pos hL)) t.isLt) *
             point ζ levels i.val ^ (t.val + (2 ^ (levels + 1) - k / blockSize levels)) := by
     intro i
     rw [block_nttSpec, getElem_modBinomial, inv_pow_point ζ hζ _ _ hle, Finset.sum_mul]
@@ -216,10 +217,10 @@ theorem nttInvSpec_nttSpec [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ le
   · intro h; exact absurd (Finset.mem_univ _) h
 
 /-- Multiplying in the NTT domain computes the product in `ℤ_q[X]/(X^256 + 1)`. -/
-theorem nttInvSpec_mulNTT [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
+theorem nttInvSpec_mul [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
     (f g : Poly (ZMod q) 256) :
-    nttInvSpec ζ levels (mulNTT ζ levels (nttSpec ζ levels f hL) (nttSpec ζ levels g hL) hL) hL =
-      f * g := by
+    nttInvSpec ζ levels
+      (NTTDomain.mul (pow_dvd hL) (nttSpec ζ levels f hL) (nttSpec ζ levels g hL)) hL = f * g := by
   rw [← nttSpec_mul ζ hL hζ, nttInvSpec_nttSpec ζ hL hζ]
 
 end Inverse

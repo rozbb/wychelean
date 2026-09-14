@@ -25,8 +25,8 @@ theorem ζ_pow_128 : ζ ^ 2 ^ 7 = -1 := by decide +kernel
 
 /-- FIPS 203 §4.3: multiplication in `T_q` (Algorithms 11–12) implements multiplication in `R_q`,
 stated for the residue form of the transform. -/
-theorem nttInvSpec_mulNTT (f g : Polynomial) :
-    NTT.nttInvSpec ζ 7 (NTT.mulNTT ζ 7 (NTT.nttSpec ζ 7 f) (NTT.nttSpec ζ 7 g)) = f * g :=
-  NTT.nttInvSpec_mulNTT ζ (by decide) ζ_pow_128 f g
+theorem nttInvSpec_mul (f g : Polynomial) :
+    NTT.nttInvSpec ζ 7 (NTT.nttSpec ζ 7 f * NTT.nttSpec ζ 7 g) = f * g :=
+  NTT.nttInvSpec_mul ζ (by decide) ζ_pow_128 f g
 
 end Wychelean.KEM.MLKEM

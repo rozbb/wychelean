@@ -92,10 +92,11 @@ abbrev Polynomial.zero (m : ℕ := q) : Polynomial m := Lattice.Poly.zero
 def ζ : Zq := 17
 
 /-- The NTT domain `T_q` (§2.4.6): a type of its own, with `*` the blockwise product of
-Algorithms 11–12 (`Lattice.Tq`), so ring and NTT-domain elements cannot be confused. -/
-abbrev NTTPolynomial := Lattice.Tq q ζ 7
+Algorithms 11–12 (`Lattice.NTTDomain`), so ring and NTT-domain elements cannot be confused. -/
+abbrev NTTPolynomial := Lattice.NTTDomain q (2 ^ 7) (Lattice.NTT.points ζ 7)
 
 instance : Fact (7 ≤ 8) := ⟨by decide⟩
+instance : Fact (2 ^ 7 ∣ 256) := ⟨by decide⟩
 
 /-- m(d) = 2^d if d < 12, q if d = 12 (§4.2.1). -/
 abbrev m (d : ℕ) := if d < 12 then 2^d else q
