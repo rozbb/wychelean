@@ -1,5 +1,4 @@
-import Wychelean.Lattice.Poly
-import Wychelean.Utils.Bits
+import Wychelean.Lattice.NTTSpec
 import Mathlib.Tactic.IntervalCases
 
 /-!
@@ -69,7 +68,7 @@ open Bounds
 /-- Forward transform, FIPS 203 Algorithm 9 / FIPS 204 Algorithm 41: Cooley–Tukey butterflies
 with twiddles `ζ^BitRev(i)`. -/
 def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly q 256) (hL : levels ≤ 8 := by decide) :
-    Poly q 256 := Id.run do
+    Tq q ζ levels := ⟨Id.run do
   let mut «f̂» := f
   let mut i := 1
   for h0: len in lens levels do
@@ -82,13 +81,13 @@ def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly q 256) (hL : levels ≤ 8 := by d
         let t := zeta * «f̂»[j + len]
         «f̂» := «f̂».set (j + len) («f̂»[j] - t)
         «f̂» := «f̂».set j         («f̂»[j] + t)
-  pure «f̂»
+  pure «f̂»⟩
 
 /-- Inverse transform, FIPS 203 Algorithm 10 / FIPS 204 Algorithm 42: Gentleman–Sande
 butterflies followed by division by `2^levels`. -/
-def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : Poly q 256) (hL : levels ≤ 8 := by decide) :
+def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : Tq q ζ levels) (hL : levels ≤ 8 := by decide) :
     Poly q 256 := Id.run do
-  let mut f := «f̂»
+  let mut f := «f̂».residues
   let mut i := 2 ^ levels - 1
   for h0: len in (lens levels).reverse do
     have h0' := List.mem_reverse.mp h0

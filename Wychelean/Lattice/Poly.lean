@@ -140,25 +140,28 @@ instance : Add (PolyVec q n k) where
 
 end PolyVec
 
-/-- A `k × k` matrix of polynomials as a vector of rows (FIPS 203 §2.4.5), stored rather than
-represented as a function so that entries are computed once. -/
-abbrev PolyMat (q n k : ℕ) := Vector (Vector (Poly q n) k) k
+/-- A `k × k` matrix as a vector of rows (FIPS 203 §2.4.5), stored rather than represented as a
+function so that entries are computed once. -/
+abbrev Mat (α : Type) (k : ℕ) := Vector (Vector α k) k
 
-namespace PolyMat
+namespace Mat
 
-variable {q n k : ℕ}
+variable {α : Type} {k : ℕ}
 
-def zero : PolyMat q n k := Vector.replicate k (Vector.replicate k Poly.zero)
+def zero [Zero α] : Mat α k := Vector.replicate k (Vector.replicate k 0)
 
 /-- `M.update i j val` sets entry `(i, j)` to `val`. -/
-def update (M : PolyMat q n k) (i j : ℕ) (val : Poly q n)
-    (hi : i < k := by get_elem_tactic) (_ : j < k := by get_elem_tactic) : PolyMat q n k :=
+def update (M : Mat α k) (i j : ℕ) (val : α)
+    (hi : i < k := by get_elem_tactic) (_ : j < k := by get_elem_tactic) : Mat α k :=
   M.set i (M[i].set j val)
 
 /-- `Mᵀ`. -/
-def transpose (M : PolyMat q n k) : PolyMat q n k :=
+def transpose (M : Mat α k) : Mat α k :=
   Vector.ofFn fun i => Vector.ofFn fun j => M[j][i]
 
-end PolyMat
+end Mat
+
+/-- A `k × k` matrix of polynomials. -/
+abbrev PolyMat (q n k : ℕ) := Mat (Poly q n) k
 
 end Wychelean.Lattice

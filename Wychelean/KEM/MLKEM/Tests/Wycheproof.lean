@@ -37,10 +37,6 @@ private def parameterSet : String → Except String ParameterSet
   | "ML-KEM-1024" => .ok .ML_KEM_1024
   | other => .error s!"unknown parameter set {other}"
 
-private abbrev ekSize (p : ParameterSet) : ℕ := 384 * k p + 32
-private abbrev dkSize (p : ParameterSet) : ℕ := 768 * k p + 96
-private abbrev ctSize (p : ParameterSet) : ℕ := 32 * (dᵤ p * k p + dᵥ p)
-
 /-- A random tape that replays `bytes`, as the RBG of §3.3 would deliver them. -/
 private def tapeOf (bytes : Array UInt8) : RandomTape := fun i => bytes[i]?.getD 0
 
@@ -95,8 +91,8 @@ private def KeyGenCase.run (p : ParameterSet) (c : KeyGenCase) : Except Outcome 
   let seed ← input 64 c.seed
   let (ek', dk', tape) := KeyGen p (tapeOf (seed.toArray ++ #[0xa5, 0x5a]))
   accept do
-    let ek ← toFixed (ekSize p) c.ek
-    let dk ← toFixed (dkSize p) c.dk
+    let ek ← toFixed (ekLen p) c.ek
+    let dk ← toFixed (dkLen p) c.dk
     return [check "ek" ek ek', check "dk" dk dk',
             check "tape advanced by 64 bytes" #v[0xa5, 0x5a] (tapeBytes tape 2)]
 
@@ -113,13 +109,13 @@ private def KemCase.ofJson (j : Lean.Json) : Except String KemCase := do
 private def KemCase.run (p : ParameterSet) (c : KemCase) : Except Outcome Unit := do
   let seed ← input 64 c.seed
   let (ek', dk) := KeyGen_internal p (slice seed 0 32) (slice seed 32 32)
-  let ct ← input (ctSize p) c.c
+  let ct ← input (ctLen p) c.c
   let some K' := Decaps p dk ct | throw (.rejected "decapsulation key failed its hash check")
   accept do
     let K ← toFixed 32 c.K
     let ekChecks ← match c.ek with
       | none => pure []
-      | some ek => do let ek ← toFixed (ekSize p) ek; pure [check "ek" ek ek']
+      | some ek => do let ek ← toFixed (ekLen p) ek; pure [check "ek" ek ek']
     return ekChecks ++ [check "K" K K']
 
 private structure EncapsCase where
@@ -134,12 +130,12 @@ private def EncapsCase.ofJson (j : Lean.Json) : Except String EncapsCase := do
 
 private def EncapsCase.run (p : ParameterSet) (c : EncapsCase) : Except Outcome Unit := do
   let m ← input 32 c.m
-  let ek ← input (ekSize p) c.ek
+  let ek ← input (ekLen p) c.ek
   let some (K', c', tape) := Encaps p ek (tapeOf (m.toArray ++ #[0xa5, 0x5a]))
     | throw (.rejected "encapsulation key failed the modulus check")
   accept do
     let K ← toFixed 32 c.K
-    let ct ← toFixed (ctSize p) c.c
+    let ct ← toFixed (ctLen p) c.c
     return [check "K" K K', check "c" ct c',
             check "tape advanced by 32 bytes" #v[0xa5, 0x5a] (tapeBytes tape 2)]
 
@@ -154,14 +150,14 @@ private def DecapsCase.ofJson (j : Lean.Json) : Except String DecapsCase := do
            c := ← getHexBytes j "c", K := ← getHexBytes? j "K" }
 
 private def DecapsCase.run (p : ParameterSet) (c : DecapsCase) : Except Outcome Unit := do
-  let dk ← input (dkSize p) c.dk
-  let ct ← input (ctSize p) c.c
+  let dk ← input (dkLen p) c.dk
+  let ct ← input (ctLen p) c.c
   let some K' := Decaps p dk ct | throw (.rejected "decapsulation key failed its hash check")
   accept do
     let some K := c.K | throw "case gives no shared key"
     let K ← toFixed 32 K
-    let ek ← toFixed (ekSize p) c.ek
-    return [check "K" K K', check "embedded ek" ek (slice dk (384 * k p) (384 * k p + 32))]
+    let ek ← toFixed (ekLen p) c.ek
+    return [check "K" K K', check "embedded ek" ek (dkParts p dk).2.1]
 
 /-! ## Suites -/
 

@@ -86,12 +86,12 @@ private def parseAll : Parser (Kat × Kat × Kat) := responseFile do
 private def run (p : ParameterSet) (kat : Kat) : IO (List Test) := do
   let d ← IO.ofExcept (toFixed 32 kat.d)
   let z ← IO.ofExcept (toFixed 32 kat.z)
-  let kgEk ← IO.ofExcept (toFixed (384 * k p + 32) kat.ek)
-  let kgDk ← IO.ofExcept (toFixed (768 * k p + 96) kat.dk)
-  let encEk ← IO.ofExcept (toFixed (384 * k p + 32) kat.encEk)
+  let kgEk ← IO.ofExcept (toFixed (ekLen p) kat.ek)
+  let kgDk ← IO.ofExcept (toFixed (dkLen p) kat.dk)
+  let encEk ← IO.ofExcept (toFixed (ekLen p) kat.encEk)
   let m ← IO.ofExcept (toFixed 32 kat.m)
   let encK ← IO.ofExcept (toFixed 32 kat.K)
-  let encC ← IO.ofExcept (toFixed (32 * (dᵤ p * k p + dᵥ p)) kat.c)
+  let encC ← IO.ofExcept (toFixed (ctLen p) kat.c)
   let (ek, dk) := KeyGen_internal p d z
   let (K, c) := Encaps_internal p encEk m
   let (K2, c2) := Encaps_internal p ek m

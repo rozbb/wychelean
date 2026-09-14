@@ -74,7 +74,7 @@ theorem block_nttSpec (ζ : ZMod q) (hL : levels ≤ 8) (f : Poly q 256) (i : Fi
     block hL (nttSpec ζ levels f hL) i = modBinomial levels hL f (point ζ levels i) := by
   apply Vector.ext
   intro r hr
-  simp only [block, nttSpec, Vector.getElem_ofFn]
+  simp only [block, nttSpec, Tq.getElem_mk, Vector.getElem_ofFn]
   have hd := blockSize_pos levels
   have h1 : (r + blockSize levels * i.val) / blockSize levels = i.val := by
     rw [Nat.add_mul_div_left _ _ hd, Nat.div_eq_of_lt hr, Nat.zero_add]
@@ -92,10 +92,10 @@ theorem point_pow (ζ : ZMod q) (hζ : ζ ^ 2 ^ levels = -1) (i : ℕ) :
 theorem nttSpec_mul [Fact q.Prime] (ζ : ZMod q) (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
     (f g : Poly q 256) :
     nttSpec ζ levels (f * g) hL = mulNTT ζ levels (nttSpec ζ levels f hL) (nttSpec ζ levels g hL) hL := by
-  apply Vector.ext
+  apply Tq.ext
   intro idx hidx
-  simp only [mulNTT, Vector.getElem_ofFn, block_nttSpec]
-  simp only [nttSpec, Vector.getElem_ofFn]
+  simp only [mulNTT, Tq.getElem_mk, Vector.getElem_ofFn, block_nttSpec]
+  simp only [nttSpec, Tq.getElem_mk, Vector.getElem_ofFn]
   rw [modBinomial_mul hL f g _ (point_pow ζ hζ _)]
 
 /-! ### The inverse transform -/

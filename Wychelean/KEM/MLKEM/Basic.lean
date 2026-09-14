@@ -18,9 +18,6 @@ namespace Wychelean.KEM.MLKEM
 open Wychelean Wychelean.Hashes
 open scoped Wychelean.Notations
 
-/-- Byte vectors, the interface type of FIPS 203. -/
-abbrev 𝔹 := ByteVec
-
 /-! ## Bounds infrastructure for `get_elem_tactic`
 
 These scoped lemmas let `grind` discharge array-index bounds arising from `for`
@@ -77,7 +74,7 @@ open Bounds
 
 /-! ## §2.4 / §8 Constants and Parameters (Table 2) -/
 
-/- `𝔹 n` (from Defs) is the standard interface type in FIPS 203. -/
+/- `ByteVec n` (from Defs) is the standard interface type in FIPS 203. -/
 
 /-- q = 3329, the modulus for ML-KEM (§2). -/
 abbrev q : Nat := 3329
@@ -93,6 +90,12 @@ abbrev Polynomial.zero (m : ℕ := q) : Polynomial m := Lattice.Poly.zero
 
 /-- ζ = 17 ∈ ℤ_q is a primitive 256-th root of unity modulo q (§4.3). -/
 def ζ : Zq := 17
+
+/-- The NTT domain `T_q` (§2.4.6): a type of its own, with `*` the blockwise product of
+Algorithms 11–12 (`Lattice.Tq`), so ring and NTT-domain elements cannot be confused. -/
+abbrev NTTPolynomial := Lattice.Tq q ζ 7
+
+instance : Fact (7 ≤ 8) := ⟨by decide⟩
 
 /-- m(d) = 2^d if d < 12, q if d = 12 (§4.2.1). -/
 abbrev m (d : ℕ) := if d < 12 then 2^d else q
@@ -142,6 +145,26 @@ def η₂ : Η := ⟨2, by grind⟩
   | .ML_KEM_768  => 4
   | .ML_KEM_1024 => 5
 
+/-! ### Sizes in bytes (Table 3) -/
+
+/-- `ByteEncode₁₂` of a vector of `k` polynomials: `384k`. -/
+abbrev vecLen' (k : K) : ℕ := 384 * k
+abbrev vecLen (p : ParameterSet) : ℕ := vecLen' (k p)
+/-- K-PKE encryption key: the encoded `t̂` and the seed `ρ`. -/
+abbrev ekPKELen (p : ParameterSet) : ℕ := vecLen p + 32
+/-- K-PKE decryption key: the encoded `ŝ`. -/
+abbrev dkPKELen (p : ParameterSet) : ℕ := vecLen p
+/-- ML-KEM encapsulation key: the K-PKE encryption key. -/
+abbrev ekLen (p : ParameterSet) : ℕ := ekPKELen p
+/-- ML-KEM decapsulation key: `dkPKE ‖ ek ‖ H(ek) ‖ z`, i.e. `768k + 96`. -/
+abbrev dkLen (p : ParameterSet) : ℕ := dkPKELen p + ekLen p + 32 + 32
+/-- First ciphertext component, `ByteEncode_dᵤ` of a compressed vector. -/
+abbrev c₁Len (p : ParameterSet) : ℕ := 32 * dᵤ p * k p
+/-- Second ciphertext component, `ByteEncode_dᵥ` of a compressed polynomial. -/
+abbrev c₂Len (p : ParameterSet) : ℕ := 32 * dᵥ p
+/-- Ciphertext: `32(dᵤk + dᵥ)`. -/
+abbrev ctLen (p : ParameterSet) : ℕ := c₁Len p + c₂Len p
+
 /-! ## Vectors and Matrices of Polynomials (§2.4.4–§2.4.8) -/
 
 abbrev PolyVector (m : ℕ) (k : K) := Lattice.PolyVec m 256 k
@@ -149,10 +172,18 @@ abbrev PolyVector.zero (m : ℕ) (k : K) : PolyVector m k := Lattice.PolyVec.zer
 
 /-- A `k × k` matrix of polynomials as a vector of rows (see the provenance notes). -/
 abbrev PolyMatrix (m : ℕ) (k : K) := Lattice.PolyMat m 256 k
-abbrev PolyMatrix.zero (m : ℕ) (k : K) : PolyMatrix m k := Lattice.PolyMat.zero
-/-- `Mᵀ`, the transpose used by K-PKE.Encrypt (Algorithm 14, step 19). -/
-abbrev PolyMatrix.transpose {m : ℕ} {k : K} (M : PolyMatrix m k) : PolyMatrix m k :=
-  Lattice.PolyMat.transpose M
+abbrev PolyMatrix.zero (m : ℕ) (k : K) : PolyMatrix m k := Lattice.Mat.zero
+
+/-- Vectors and matrices over `T_q` (§2.4.7–§2.4.8). -/
+abbrev NTTVector (k : K) := Vector NTTPolynomial k
+abbrev NTTVector.zero (k : K) : NTTVector k := Vector.replicate k 0
+abbrev NTTMatrix (k : K) := Lattice.Mat NTTPolynomial k
+abbrev NTTMatrix.zero (k : K) : NTTMatrix k := Lattice.Mat.zero
+/-- `Âᵀ`, the transpose used by K-PKE.Encrypt (Algorithm 14, step 19). -/
+abbrev NTTMatrix.transpose {k : K} (M : NTTMatrix k) : NTTMatrix k := Lattice.Mat.transpose M
+
+instance {k : K} : Add (NTTVector k) where
+  add v w := Vector.ofFn fun i => v[i] + w[i]
 
 /-! ## §4.1 Cryptographic Functions (Eq. 4.1–4.5)
 
@@ -160,18 +191,18 @@ Defined in terms of the SHA-3 specification from `Wychelean.Hashes.SHA3` (byte-l
 wrappers) and its incremental sponge API (`XOF`). -/
 
 /-- H(s) := SHA3-256(s) — Eq. (4.4). -/
-def H {n} (s : 𝔹 n) : 𝔹 32 := SHA3.sha3_256 s
+def H {n} (s : ByteVec n) : ByteVec 32 := SHA3.sha3_256 s
 
 /-- J(s) := SHAKE256(s, 32) — Eq. (4.4). -/
-def J {n} (s : 𝔹 n) : 𝔹 32 := SHA3.shake256 s 32
+def J {n} (s : ByteVec n) : ByteVec 32 := SHA3.shake256 s 32
 
 /-- G(c) := SHA3-512(c), split into two 32-byte outputs — Eq. (4.5). -/
-def G {n} (s : 𝔹 n) : 𝔹 32 × 𝔹 32 :=
+def G {n} (s : ByteVec n) : ByteVec 32 × ByteVec 32 :=
   let hash := SHA3.sha3_512 s
   (slice hash 0 32, slice hash 32 32)
 
 /-- PRF_η(s,b) := SHAKE256(s‖b, 8·64·η) — Eq. (4.3). -/
-def PRF (η : Η) (s : 𝔹 32) (b : Byte) : 𝔹 (64 * η) :=
+def PRF (η : Η) (s : ByteVec 32) (b : Byte) : ByteVec (64 * η) :=
   SHA3.shake256 (s ‖ #v[b]) (64 * η)
 
 /-! ### eXtendable-Output Function (XOF) — §4.1, Eq. (4.1)–(4.2)
@@ -181,7 +212,7 @@ incremental squeezing as required by SampleNTT (Algorithm 7). -/
 
 def XOF.Init := SHA3.SHAKE128.init
 
-def XOF.Absorb s (B : 𝔹 ℓ) := SHA3.SHAKE128.absorb s B
+def XOF.Absorb s (B : ByteVec ℓ) := SHA3.SHAKE128.absorb s B
 
 def XOF.Squeeze s ℓ := SHA3.SHAKE128.squeeze s ℓ
 
@@ -220,7 +251,7 @@ def PolyVector.Decompress {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ 
 /-! ## §4.2.1 Algorithm 5 — ByteEncode_d(F)
 
 Encodes an array of `d`-bit integers into a byte array, for `1 ≤ d ≤ 12`. -/
-def ByteEncode (d : ℕ) (F : Polynomial (m d)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : 𝔹 (32 * d) := Id.run do
+def ByteEncode (d : ℕ) (F : Polynomial (m d)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : ByteVec (32 * d) := Id.run do
   let mut b := Vector.replicate (256 * d) 0
   for hi: i in [0:256] do
     have := byte_encode_idx_le i d
@@ -234,7 +265,7 @@ def ByteEncode (d : ℕ) (F : Polynomial (m d)) (_ : 1 ≤ d ∧ d ≤ 12 := by 
 /-! ## §4.2.1 Algorithm 6 — ByteDecode_d(B)
 
 Decodes a byte array into an array of `d`-bit integers, for `1 ≤ d ≤ 12`. -/
-def ByteDecode {d : ℕ} (B : 𝔹 (32 * d)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : Polynomial (m d) := Id.run do
+def ByteDecode {d : ℕ} (B : ByteVec (32 * d)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : Polynomial (m d) := Id.run do
   let b := BytesToBits B
   let mut F := Polynomial.zero (m d)
   for hi: i in [0:256] do
@@ -242,19 +273,29 @@ def ByteDecode {d : ℕ} (B : 𝔹 (32 * d)) (_ : 1 ≤ d ∧ d ≤ 12 := by gri
     F := F.set i (∑ (j : Fin d), b[i * d + j].toNat * 2^j.val)
   pure F
 
-def PolyVector.ByteEncode {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : 𝔹 (k * (32 * d)) :=
+def PolyVector.ByteEncode {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : ByteVec (k * (32 * d)) :=
   (v.map (MLKEM.ByteEncode d)).flatten
 
-def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : 𝔹 (32 * d * k)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : PolyVector (m d) k :=
+def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : ByteVec (32 * d * k)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : PolyVector (m d) k :=
   Vector.ofFn fun i =>
     have := poly_vec_decode_idx_le d i i.isLt
     MLKEM.ByteDecode (slice bytes (32 * d * i) (32 * d) (by grind))
+
+/-! ### `ByteEncode₁₂`/`ByteDecode₁₂` on the NTT domain (§4.2.1), encoding the residues -/
+
+def NTTPolynomial.ByteEncode («f̂» : NTTPolynomial) : ByteVec (32 * 12) :=
+  MLKEM.ByteEncode 12 «f̂».residues
+def NTTPolynomial.ByteDecode (B : ByteVec (32 * 12)) : NTTPolynomial := ⟨MLKEM.ByteDecode B⟩
+def NTTVector.ByteEncode {k : K} (v : NTTVector k) : ByteVec (vecLen' k) :=
+  ((v.map NTTPolynomial.ByteEncode).flatten).cast (by simp only [vecLen']; omega)
+def NTTVector.ByteDecode {k : K} (bytes : ByteVec (vecLen' k)) : NTTVector k :=
+  (PolyVector.ByteDecode (k := k) 12 (bytes.cast (by simp only [vecLen']))).map (⟨·⟩)
 
 /-! ## §4.2.2 Algorithm 7 — SampleNTT(B)
 
 Uses rejection sampling to deterministically generate an element of `T_q`
 from the XOF output stream of the 34-byte seed `B`. -/
-def SampleNTT (B : 𝔹 34) : Polynomial := Id.run do
+def SampleNTT (B : ByteVec 34) : NTTPolynomial := ⟨Id.run do
   let mut ctx := XOF.Init
   ctx := XOF.Absorb ctx B
   let mut «â» := Polynomial.zero
@@ -270,7 +311,7 @@ def SampleNTT (B : 𝔹 34) : Polynomial := Id.run do
     if h : d₂ < q ∧ j < 256 then
       «â» := «â».set j d₂
       j := j + 1
-  pure «â»
+  pure «â»⟩
 
 /-! ## §4.2.2 Algorithm 8 — SamplePolyCBD_η(B)
 
@@ -280,7 +321,7 @@ a polynomial in `R_q` from a `64·η`-byte array. -/
 theorem Η.val_le (η : Η) : η.val ≤ 3 := by
   have h := η.property; simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at h; omega
 
-def SamplePolyCBD {η : Η} (B : 𝔹 (64 * η)) : Polynomial := Id.run do
+def SamplePolyCBD {η : Η} (B : ByteVec (64 * η)) : Polynomial := Id.run do
   let b := BytesToBits B
   let mut f := Polynomial.zero
   for hi: i in [0:256] do
@@ -294,14 +335,14 @@ def SamplePolyCBD {η : Η} (B : 𝔹 (64 * η)) : Polynomial := Id.run do
 
 Computes the NTT representation `f̂ ∈ T_q` of a polynomial `f ∈ R_q`
 using Cooley–Tukey butterflies with the seven layers of `ζ = 17`. -/
-def NTT (f : Polynomial) : Polynomial := Lattice.NTT.ntt ζ 7 f
+def NTT (f : Polynomial) : NTTPolynomial := Lattice.NTT.ntt ζ 7 f
 
 /-! ## §4.3 Algorithm 10 — NTT⁻¹(f̂)
 
 Computes the polynomial `f ∈ R_q` corresponding to an NTT representation `f̂ ∈ T_q`
 using Gentleman–Sande butterflies; the final scaling by `128⁻¹ = 3303` is `(2^7)⁻¹` in the
 library. -/
-def NTTInv («f̂» : Polynomial) : Polynomial := Lattice.NTT.nttInv ζ 7 «f̂»
+def NTTInv («f̂» : NTTPolynomial) : Polynomial := Lattice.NTT.nttInv ζ 7 «f̂»
 
 /-! ## §4.3.1 Algorithm 12 — BaseCaseMultiply(a₀,a₁,b₀,b₁,γ)
 
@@ -316,31 +357,31 @@ def BaseCaseMultiply (a₀ a₁ b₀ b₁ γ : Zq) : Zq × Zq :=
 
 Computes the product (in the NTT domain) of two NTT representations,
 via 128 base-case multiplications in the factor rings of `T_q`. -/
-def MultiplyNTTs («f̂» «ĝ» : Polynomial) : Polynomial := Id.run do
+def MultiplyNTTs («f̂» «ĝ» : NTTPolynomial) : NTTPolynomial := ⟨Id.run do
   let mut «ĥ» := Polynomial.zero
   for h: i in [0:128] do
     let (c₀, c₁) := BaseCaseMultiply «f̂»[2*i] «f̂»[2*i+1] «ĝ»[2*i] «ĝ»[2*i+1] (ζ^(2 * bitRev 7 i + 1))
     «ĥ» := «ĥ».set (2*i) c₀
     «ĥ» := «ĥ».set (2*i+1) c₁
-  pure «ĥ»
+  pure «ĥ»⟩
 
 /-! ### Linear algebra over T_q (§2.4.7–§2.4.8) -/
 
-def PolyVector.NTT {k : K} (v : PolyVector q k) : PolyVector q k := v.map MLKEM.NTT
-def PolyVector.NTTInv {k : K} (v : PolyVector q k) : PolyVector q k := v.map MLKEM.NTTInv
+def PolyVector.NTT {k : K} (v : PolyVector q k) : NTTVector k := v.map MLKEM.NTT
+def NTTVector.NTTInv {k : K} (v : NTTVector k) : PolyVector q k := v.map MLKEM.NTTInv
 
-def PolyMatrix.MulVectorNTT {k : K} (A : PolyMatrix q k) (v : PolyVector q k) : PolyVector q k := Id.run do
-  let mut w := PolyVector.zero q k
+def NTTMatrix.MulVectorNTT {k : K} (A : NTTMatrix k) (v : NTTVector k) : NTTVector k := Id.run do
+  let mut w := NTTVector.zero k
   for hi: i in [0:k] do
     for hj: j in [0:k] do
       w := w.set i (w[i] + MultiplyNTTs A[i][j] v[j])
   pure w
 
-instance {k} : HMul (PolyMatrix q k) (PolyVector q k) (PolyVector q k) where
-  hMul := PolyMatrix.MulVectorNTT
+instance {k} : HMul (NTTMatrix k) (NTTVector k) (NTTVector k) where
+  hMul := NTTMatrix.MulVectorNTT
 
-def PolyVector.innerProductNTT {k : K} (v w : PolyVector q k) : Polynomial := Id.run do
-  let mut a := Polynomial.zero
+def NTTVector.innerProductNTT {k : K} (v w : NTTVector k) : NTTPolynomial := Id.run do
+  let mut a : NTTPolynomial := 0
   for hi: i in [0:k] do
     a := a + MultiplyNTTs v[i] w[i]
   pure a
@@ -349,10 +390,10 @@ def PolyVector.innerProductNTT {k : K} (v w : PolyVector q k) : Polynomial := Id
 
 Uses a 32-byte seed `d` to deterministically generate an encryption key
 and a corresponding decryption key for the K-PKE scheme. -/
-def K_PKE.KeyGen (p : ParameterSet) (d : 𝔹 32) : 𝔹 (384 * k p + 32) × 𝔹 (384 * k p) := Id.run do
+def K_PKE.KeyGen (p : ParameterSet) (d : ByteVec 32) : ByteVec (ekPKELen p) × ByteVec (dkPKELen p) := Id.run do
   let (ρ, σ) := G (d ‖ #v[(k p : Byte)])                                 -- Alg. 13, step 1
   let mut N := 0                                                        -- Alg. 13, step 2
-  let mut «Â» := PolyMatrix.zero q (k p)                                       -- Alg. 13, steps 3–7
+  let mut «Â» := NTTMatrix.zero (k p)                                          -- Alg. 13, steps 3–7
   for hi: i in [0:k p] do
     for hj: j in [0:k p] do
       «Â» := «Â».update i j (SampleNTT (ρ ‖ #v[(j : Byte)] ‖ #v[(i : Byte)]))
@@ -367,22 +408,22 @@ def K_PKE.KeyGen (p : ParameterSet) (d : 𝔹 32) : 𝔹 (384 * k p + 32) × �
   let «ŝ» := PolyVector.NTT s                                                  -- Alg. 13, step 16
   let «ê» := PolyVector.NTT e                                                  -- Alg. 13, step 17
   let «t̂» := «Â» * «ŝ» + «ê»                             -- Alg. 13, step 18
-  let ekPKE := (PolyVector.ByteEncode 12 «t̂» ‖ ρ).cast (by cases p <;> simp)  -- Alg. 13, step 19
-  let dkPKE := (PolyVector.ByteEncode 12 «ŝ»).cast (by cases p <;> simp)      -- Alg. 13, step 20
+  let ekPKE := NTTVector.ByteEncode «t̂» ‖ ρ                                    -- Alg. 13, step 19
+  let dkPKE := NTTVector.ByteEncode «ŝ»                                        -- Alg. 13, step 20
   pure (ekPKE, dkPKE)
 
 /-! ## §5.2 Algorithm 14 — K-PKE.Encrypt(ekPKE, m, r)
 
 Uses the encryption key to encrypt a plaintext message using the randomness `r`.
 
-*Mechanization note*: the noise vector is `y` (its NTT `ŷ`), as in FIPS 203 Algorithm 14;
-the randomness parameter is `r : 𝔹 32`. -/
-def K_PKE.Encrypt (p : ParameterSet) (ekPKE : 𝔹 (384 * k p + 32)) (m : 𝔹 32) (r : 𝔹 32) :
-    𝔹 (32 * (dᵤ p * k p + dᵥ p)) := Id.run do
+The noise vector is `y` (its NTT `ŷ`), as in FIPS 203 Algorithm 14; the randomness parameter
+is `r : ByteVec 32`. -/
+def K_PKE.Encrypt (p : ParameterSet) (ekPKE : ByteVec (ekPKELen p)) (m : ByteVec 32) (r : ByteVec 32) :
+    ByteVec (ctLen p) := Id.run do
   let mut N := 0                                                               -- Alg. 14, step 1
-  let «t̂» := PolyVector.ByteDecode 12 (slice ekPKE 0 (384 * k p))              -- Alg. 14, step 2
-  let ρ := slice ekPKE (384 * k p) 32                                          -- Alg. 14, step 3
-  let mut «Â» := PolyMatrix.zero q (k p)                                       -- Alg. 14, steps 4–8
+  let «t̂» := NTTVector.ByteDecode (slice ekPKE 0 (vecLen p))                   -- Alg. 14, step 2
+  let ρ := slice ekPKE (vecLen p) 32                                           -- Alg. 14, step 3
+  let mut «Â» := NTTMatrix.zero (k p)                                          -- Alg. 14, steps 4–8
   for hi: i in [0:k p] do
     for hj: j in [0:k p] do
       «Â» := «Â».update i j (SampleNTT (ρ ‖ #v[(j : Byte)] ‖ #v[(i : Byte)]))
@@ -396,24 +437,24 @@ def K_PKE.Encrypt (p : ParameterSet) (ekPKE : 𝔹 (384 * k p + 32)) (m : 𝔹 3
     N := N + 1
   let e₂ := SamplePolyCBD (PRF η₂ r N)                                         -- Alg. 14, step 17
   let «ŷ» := PolyVector.NTT y                                                  -- Alg. 14, step 18
-  let u := PolyVector.NTTInv (PolyMatrix.transpose «Â» * «ŷ») + e₁             -- Alg. 14, step 19
+  let u := NTTVector.NTTInv (NTTMatrix.transpose «Â» * «ŷ») + e₁               -- Alg. 14, step 19
   let μ := Polynomial.Decompress 1 (ByteDecode (m.cast (by grind)))          -- Alg. 14, step 20
-  let v := NTTInv (PolyVector.innerProductNTT «t̂» «ŷ») + e₂ + μ                -- Alg. 14, step 21
+  let v := NTTInv (NTTVector.innerProductNTT «t̂» «ŷ») + e₂ + μ                 -- Alg. 14, step 21
   let c₁ := PolyVector.ByteEncode (dᵤ p) (PolyVector.Compress (dᵤ p) u)        -- Alg. 14, step 22
   let c₂ := ByteEncode (dᵥ p) (Polynomial.Compress (dᵥ p) v)                   -- Alg. 14, step 23
-  (c₁ ‖ c₂).cast (by cases p <;> simp [dᵤ, dᵥ])                               -- Alg. 14, step 24
+  (c₁ ‖ c₂).cast (by simp only [ctLen, c₁Len, c₂Len]; ring)                   -- Alg. 14, step 24
 
 /-! ## §5.3 Algorithm 15 — K-PKE.Decrypt(dkPKE, c)
 
 Uses the decryption key to decrypt a ciphertext. -/
-def K_PKE.Decrypt (p : ParameterSet) (dkPKE : 𝔹 (384 * k p)) (c : 𝔹 (32 * (dᵤ p * k p + dᵥ p))) :
-    𝔹 32 :=
-  let c₁ := slice c 0 (32 * dᵤ p * k p)                                       -- Alg. 15, step 1
-  let c₂ := slice c (32 * dᵤ p * k p) (32 * dᵥ p)                             -- Alg. 15, step 2
+def K_PKE.Decrypt (p : ParameterSet) (dkPKE : ByteVec (dkPKELen p)) (c : ByteVec (ctLen p)) :
+    ByteVec 32 :=
+  let c₁ := slice c 0 (c₁Len p)                                               -- Alg. 15, step 1
+  let c₂ := slice c (c₁Len p) (c₂Len p)                                       -- Alg. 15, step 2
   let u' := PolyVector.Decompress (dᵤ p) (PolyVector.ByteDecode (k := k p) (dᵤ p) c₁) -- Alg. 15, step 3
   let v' := Polynomial.Decompress (dᵥ p) (ByteDecode c₂)                             -- Alg. 15, step 4
-  let «ŝ» := PolyVector.ByteDecode (k := k p) 12 (dkPKE.cast (by grind))          -- Alg. 15, step 5
-  let w := v' - NTTInv (PolyVector.innerProductNTT «ŝ» (PolyVector.NTT u'))      -- Alg. 15, step 6
+  let «ŝ» := NTTVector.ByteDecode dkPKE                                        -- Alg. 15, step 5
+  let w := v' - NTTInv (NTTVector.innerProductNTT «ŝ» (PolyVector.NTT u'))       -- Alg. 15, step 6
   let m := ByteEncode 1 (Polynomial.Compress 1 w)                              -- Alg. 15, step 7
   m.cast (by grind)
 
@@ -421,19 +462,27 @@ def K_PKE.Decrypt (p : ParameterSet) (dkPKE : 𝔹 (384 * k p)) (c : 𝔹 (32 * 
 
 Uses seeds `d` and `z` to deterministically generate an encapsulation key
 and a corresponding decapsulation key. -/
-def KeyGen_internal (p : ParameterSet) (d z : 𝔹 32) :
-    𝔹 (384 * k p + 32) × 𝔹 (768 * k p + 96) :=
+def KeyGen_internal (p : ParameterSet) (d z : ByteVec 32) : ByteVec (ekLen p) × ByteVec (dkLen p) :=
   let (ekPKE, dkPKE) := K_PKE.KeyGen p d                                       -- Alg. 16, step 1
   let ek := ekPKE                                                              -- Alg. 16, step 2
   let dk := dkPKE ‖ ek ‖ H ek ‖ z                                              -- Alg. 16, step 3
-  (ek, dk.cast (by grind))
+  (ek, dk)
+
+/-- The layout of a decapsulation key, `dk = dkPKE ‖ ek ‖ H(ek) ‖ z` (Algorithm 16, step 3), read
+back as in Algorithm 18, steps 1–4 and Eq. (7.2). -/
+def dkParts (p : ParameterSet) (dk : ByteVec (dkLen p)) :
+    ByteVec (dkPKELen p) × ByteVec (ekLen p) × ByteVec 32 × ByteVec 32 :=
+  (slice dk 0 (dkPKELen p),
+   slice dk (dkPKELen p) (ekLen p),
+   slice dk (dkPKELen p + ekLen p) 32,
+   slice dk (dkPKELen p + ekLen p + 32) 32)
 
 /-! ## §6.2 Algorithm 17 — ML-KEM.Encaps_internal(ek, m)
 
 Uses the encapsulation key and a 32-byte message to deterministically
 generate a shared key and an associated ciphertext. -/
-def Encaps_internal (p : ParameterSet) (ek : 𝔹 (384 * k p + 32)) (m : 𝔹 32) :
-    𝔹 32 × 𝔹 (32 * (dᵤ p * k p + dᵥ p)) :=
+def Encaps_internal (p : ParameterSet) (ek : ByteVec (ekLen p)) (m : ByteVec 32) :
+    ByteVec 32 × ByteVec (ctLen p) :=
   let (K, r) := G (m ‖ H ek)                                                -- Alg. 17, step 1
   let c := K_PKE.Encrypt p ek m r                                            -- Alg. 17, step 2
   (K, c)
@@ -442,13 +491,9 @@ def Encaps_internal (p : ParameterSet) (ek : 𝔹 (384 * k p + 32)) (m : 𝔹 32
 
 Uses the decapsulation key to produce a shared key from a ciphertext.
 Uses implicit rejection via the seed `z` embedded in `dk`. -/
-def Decaps_internal (p : ParameterSet)
-    (dk : 𝔹 (768 * k p + 96))
-    (c : 𝔹 (32 * (dᵤ p * k p + dᵥ p))) : 𝔹 32 :=
-  let dkPKE := slice dk 0 (384 * k p)                       -- Alg. 18, step 1
-  let ekPKE := slice dk (384 * k p) (384 * k p + 32)       -- Alg. 18, step 2
-  let h := slice dk (768 * k p + 32) 32                    -- Alg. 18, step 3
-  let z := slice dk (768 * k p + 64) 32                   -- Alg. 18, step 4
+def Decaps_internal (p : ParameterSet) (dk : ByteVec (dkLen p)) (c : ByteVec (ctLen p)) :
+    ByteVec 32 :=
+  let (dkPKE, ekPKE, h, z) := dkParts p dk                                    -- Alg. 18, steps 1–4
   let m' := K_PKE.Decrypt p dkPKE c                                           -- Alg. 18, step 5
   let (K', r') := G (m' ‖ h)                                                 -- Alg. 18, step 6
   let «K̄» := J (z ‖ c)                                                       -- Alg. 18, step 7
@@ -463,7 +508,7 @@ The top-level API wraps the `_internal` functions with a `RandomTape` for random
     This models the RBG (Random Bit Generator) of §3.3. -/
 def RandomTape := ℕ → Byte
 
-def RandomTape.readBytes (tape : RandomTape) (n : ℕ) : 𝔹 n × RandomTape :=
+def RandomTape.readBytes (tape : RandomTape) (n : ℕ) : ByteVec n × RandomTape :=
   (Vector.ofFn (fun i => tape i), fun i => tape (n + i))
 
 /-! ### Input validation checks (§7.2–§7.3)
@@ -478,7 +523,7 @@ and the hash check detects decapsulation key corruption before use. -/
 
 Generates an encapsulation key and a corresponding decapsulation key. -/
 def KeyGen (p : ParameterSet) (tape : RandomTape) :
-    𝔹 (384 * k p + 32) × 𝔹 (768 * k p + 96) × RandomTape :=
+    ByteVec (ekLen p) × ByteVec (dkLen p) × RandomTape :=
   -- Steps 3–5: RBG failure check.
   -- Trivially succeeds with `RandomTape` (no RBG failure mode).
   let (d, tape) := tape.readBytes 32
@@ -489,20 +534,20 @@ def KeyGen (p : ParameterSet) (tape : RandomTape) :
 /-- Encapsulation Key Modulus Check (§7.2, Eq. 7.1).
     Verifies `ByteEncode₁₂(ByteDecode₁₂(ekPKE)) = ekPKE`, i.e., all encoded
     coefficients are reduced modulo q. Returns `true` if valid. -/
-def Encaps.KeyCheck (p : ParameterSet) (ek : 𝔹 (384 * k p + 32)) : Bool :=
-  let ekPKE := slice ek 0 (384 * k p)
-  let decoded := PolyVector.ByteDecode (k := k p) 12 ekPKE
-  let recoded := PolyVector.ByteEncode 12 decoded
-  recoded = ekPKE.cast (by grind)
+def Encaps.KeyCheck (p : ParameterSet) (ek : ByteVec (ekLen p)) : Bool :=
+  let ekPKE := slice ek 0 (vecLen p)
+  let decoded := NTTVector.ByteDecode ekPKE
+  let recoded := NTTVector.ByteEncode decoded
+  recoded = ekPKE
 
 /-! ## §7.2 Algorithm 20 — ML-KEM.Encaps(ek)
 
 Uses the encapsulation key to generate a shared key and an associated ciphertext.
 Returns `none` if the encapsulation key fails validation. -/
-def Encaps (p : ParameterSet) (ek : 𝔹 (384 * k p + 32)) (tape : RandomTape) :
-    Option (𝔹 32 × 𝔹 (32 * (dᵤ p * k p + dᵥ p)) × RandomTape) :=
+def Encaps (p : ParameterSet) (ek : ByteVec (ekLen p)) (tape : RandomTape) :
+    Option (ByteVec 32 × ByteVec (ctLen p) × RandomTape) :=
   -- Steps 1–2: Encapsulation Key type check (length).
-  -- Trivially enforced by `ek : 𝔹 (384 * k p + 32)`.
+  -- Trivially enforced by `ek : ByteVec (ekLen p)`.
   -- Steps 3–4: RBG failure check.
   -- Trivially succeeds with `RandomTape` (no RBG failure mode).
   let (m, tape) := tape.readBytes 32
@@ -515,9 +560,8 @@ def Encaps (p : ParameterSet) (ek : 𝔹 (384 * k p + 32)) (tape : RandomTape) :
     Computes `H(dk[384k : 768k+32])` and compares to `dk[768k+32 : 768k+64]`.
     Verifies integrity of the embedded ekPKE against the stored hash.
     Returns `true` if valid. -/
-def Decaps.KeyCheck (p : ParameterSet) (dk : 𝔹 (768 * k p + 96)) : Bool :=
-  let ek := slice dk (384 * k p) (384 * k p + 32)
-  let h := slice dk (768 * k p + 32) 32
+def Decaps.KeyCheck (p : ParameterSet) (dk : ByteVec (dkLen p)) : Bool :=
+  let (_, ek, h, _) := dkParts p dk
   H ek = h                                                      -- Eq. (7.2)
 
 
@@ -525,12 +569,12 @@ def Decaps.KeyCheck (p : ParameterSet) (dk : 𝔹 (768 * k p + 96)) : Bool :=
 
 Uses the decapsulation key to produce a shared key from a ciphertext.
 Returns `none` if the decapsulation key fails validation. -/
-def Decaps (p : ParameterSet) (dk : 𝔹 (768 * k p + 96))
-    (c : 𝔹 (32 * (dᵤ p * k p + dᵥ p))) : Option (𝔹 32) :=
+def Decaps (p : ParameterSet) (dk : ByteVec (dkLen p)) (c : ByteVec (ctLen p)) :
+    Option (ByteVec 32) :=
   -- Step 1: Decapsulation Key type check (length).
-  -- Trivially enforced by `dk : 𝔹 (768 * k p + 96)`.
+  -- Trivially enforced by `dk : ByteVec (dkLen p)`.
   -- Step 2: Ciphertext type check (length).
-  -- Trivially enforced by `c : 𝔹 (32 * (dᵤ p * k p + dᵥ p))`.
+  -- Trivially enforced by `c : ByteVec (ctLen p)`.
   if Decaps.KeyCheck p dk then some (Decaps_internal p dk c)                      -- Alg. 21, steps 1–2
   else none
 
