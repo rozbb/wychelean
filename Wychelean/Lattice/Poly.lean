@@ -52,6 +52,26 @@ instance : Sub (Poly q n) where sub := sub
 instance : Mul (Poly q n) where mul := mul
 instance : SMul (ZMod q) (Poly q n) where smul c f := scalarMul f c
 
+@[simp] theorem getElem_zero (i : ℕ) (hi : i < n) : (zero : Poly q n)[i] = 0 := by
+  simp [zero]
+
+@[simp] theorem getElem_add (f g : Poly q n) (i : ℕ) (hi : i < n) : (f + g)[i] = f[i] + g[i] :=
+  Vector.getElem_zipWith hi
+
+@[simp] theorem getElem_sub (f g : Poly q n) (i : ℕ) (hi : i < n) : (f - g)[i] = f[i] - g[i] :=
+  Vector.getElem_zipWith hi
+
+@[simp] theorem getElem_smul (c : ZMod q) (f : Poly q n) (i : ℕ) (hi : i < n) :
+    (c • f)[i] = f[i] * c :=
+  Vector.getElem_map ..
+
+theorem getElem_mul (f g : Poly q n) (k : ℕ) (hk : k < n) :
+    (f * g)[k] = ∑ i : Fin n, ∑ j : Fin n,
+      if i.val + j.val = k then f[i] * g[j]
+      else if i.val + j.val = k + n then -(f[i] * g[j])
+      else 0 :=
+  Vector.getElem_ofFn ..
+
 end Poly
 
 /-- A vector of `k` polynomials (FIPS 203 §2.4.4). -/
