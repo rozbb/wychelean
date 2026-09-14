@@ -84,7 +84,7 @@ abbrev Zq := ZMod q
 
 /-- Polynomial ring element: `ℤ_m[X] / (X^256 + 1)`, represented as `Vector (ZMod m) 256`
 (`Lattice.Poly`). When `d = 12`, `m = q`; when `d < 12`, `m = 2^d` (§4.2.1). -/
-abbrev Polynomial (m : ℕ := q) := Lattice.Poly m 256
+abbrev Polynomial (m : ℕ := q) := Lattice.Poly (ZMod m) 256
 
 abbrev Polynomial.zero (m : ℕ := q) : Polynomial m := Lattice.Poly.zero
 
@@ -167,11 +167,11 @@ abbrev ctLen (p : ParameterSet) : ℕ := c₁Len p + c₂Len p
 
 /-! ## Vectors and Matrices of Polynomials (§2.4.4–§2.4.8) -/
 
-abbrev PolyVector (m : ℕ) (k : K) := Lattice.PolyVec m 256 k
+abbrev PolyVector (m : ℕ) (k : K) := Lattice.PolyVec (ZMod m) 256 k
 abbrev PolyVector.zero (m : ℕ) (k : K) : PolyVector m k := Lattice.PolyVec.zero
 
 /-- A `k × k` matrix of polynomials as a vector of rows (see the provenance notes). -/
-abbrev PolyMatrix (m : ℕ) (k : K) := Lattice.PolyMat m 256 k
+abbrev PolyMatrix (m : ℕ) (k : K) := Lattice.PolyMat (ZMod m) 256 k
 abbrev PolyMatrix.zero (m : ℕ) (k : K) : PolyMatrix m k := Lattice.Mat.zero
 
 /-- Vectors and matrices over `T_q` (§2.4.7–§2.4.8). -/

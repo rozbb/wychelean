@@ -88,13 +88,13 @@ namespace NTT
 variable {q : ℕ}
 
 /-- `f mod (X^d - γ)` for `d = blockSize levels`: coefficient `r` collects `f[r + d·t] γ^t`. -/
-def modBinomial (levels : ℕ) (hL : levels ≤ 8) (f : Poly q 256) (γ : ZMod q) :
-    Poly q (blockSize levels) :=
+def modBinomial (levels : ℕ) (hL : levels ≤ 8) (f : Poly (ZMod q) 256) (γ : ZMod q) :
+    Poly (ZMod q) (blockSize levels) :=
   Vector.ofFn fun r => ∑ t : Fin (2 ^ levels),
     f[r.val + blockSize levels * t.val]'(block_idx_lt hL r.isLt t.isLt) * γ ^ t.val
 
 /-- The transform: block `i` is `f mod (X^d - point i)`. -/
-def nttSpec (ζ : ZMod q) (levels : ℕ) (f : Poly q 256) (hL : levels ≤ 8 := by decide) :
+def nttSpec (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256) (hL : levels ≤ 8 := by decide) :
     Tq q ζ levels :=
   ⟨Vector.ofFn fun idx =>
     let block := modBinomial levels hL f (point ζ levels (idx.val / blockSize levels))
@@ -105,12 +105,12 @@ theorem div_blockSize_lt {levels idx : ℕ} (hL : levels ≤ 8) (h : idx < 256) 
   (Nat.div_lt_iff_lt_mul (blockSize_pos levels)).2 (by rw [Nat.mul_comm, blockSize_mul_pow hL]; exact h)
 
 /-- Block `i` of an element of the NTT domain: the residue at `point i`. -/
-def block (hL : levels ≤ 8) (a : Tq q ζ levels) (i : Fin (2 ^ levels)) : Poly q (blockSize levels) :=
+def block (hL : levels ≤ 8) (a : Tq q ζ levels) (i : Fin (2 ^ levels)) : Poly (ZMod q) (blockSize levels) :=
   Vector.ofFn fun r => a[r.val + blockSize levels * i.val]'(block_idx_lt hL r.isLt i.isLt)
 
 /-- The inverse transform: `f[r + d·t] = 2^(-levels) ∑ᵢ (block i)[r] · (point i)^(-t)`. -/
 def nttInvSpec (ζ : ZMod q) (levels : ℕ) («f̂» : Tq q ζ levels) (hL : levels ≤ 8 := by decide) :
-    Poly q 256 :=
+    Poly (ZMod q) 256 :=
   Vector.ofFn fun k =>
     (2 ^ levels : ZMod q)⁻¹ * ∑ i : Fin (2 ^ levels),
       (block hL «f̂» i)[k.val % blockSize levels]'(Nat.mod_lt _ (blockSize_pos levels)) *
@@ -131,13 +131,13 @@ instance (ζ : ZMod q) (levels : ℕ) [h : Fact (levels ≤ 8)] : Mul (Tq q ζ l
 
 /-! ### Coefficient lemmas, the interface the proofs use -/
 
-theorem getElem_modBinomial (hL : levels ≤ 8) (f : Poly q 256) (γ : ZMod q) (r : ℕ)
+theorem getElem_modBinomial (hL : levels ≤ 8) (f : Poly (ZMod q) 256) (γ : ZMod q) (r : ℕ)
     (hr : r < blockSize levels) :
     (modBinomial levels hL f γ)[r] = ∑ t : Fin (2 ^ levels),
       f[r + blockSize levels * t.val]'(block_idx_lt hL hr t.isLt) * γ ^ t.val :=
   Vector.getElem_ofFn ..
 
-theorem getElem_nttSpec (ζ : ZMod q) (hL : levels ≤ 8) (f : Poly q 256) (k : ℕ) (hk : k < 256) :
+theorem getElem_nttSpec (ζ : ZMod q) (hL : levels ≤ 8) (f : Poly (ZMod q) 256) (k : ℕ) (hk : k < 256) :
     (nttSpec ζ levels f hL)[k] =
       (modBinomial levels hL f (point ζ levels (k / blockSize levels)))[k % blockSize levels]'(
         Nat.mod_lt _ (blockSize_pos levels)) :=

@@ -17,7 +17,7 @@ namespace Wychelean.Lattice.Tests
 
 open RunTests Wychelean.KEM.MLKEM
 
-private abbrev P := Poly 3329 256
+private abbrev P := Poly (ZMod 3329) 256
 
 private def monomial (i : Fin 256) : P := Vector.ofFn fun j => if j = i then 1 else 0
 

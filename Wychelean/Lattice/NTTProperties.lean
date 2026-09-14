@@ -1,6 +1,7 @@
 import Wychelean.Lattice.NTTSpec
 import Wychelean.Lattice.Quotient
 import Mathlib.Algebra.Field.GeomSum
+import Mathlib.Algebra.Field.ZMod
 import Mathlib.GroupTheory.OrderOfElement
 
 /-!
@@ -24,7 +25,7 @@ variable {q levels : ℕ}
 
 /-- The quotient map onto `ℤ_q[X]/(X^d - γ)`, defined because `X^d - γ` divides `X^256 + 1`. -/
 def reduce (hL : levels ≤ 8) (γ : ZMod q) (hγ : γ ^ 2 ^ levels = -1) :
-    R q 256 (-1) →+* R q (blockSize levels) γ :=
+    R (ZMod q) 256 (-1) →+* R (ZMod q) (blockSize levels) γ :=
   AdjoinRoot.lift (AdjoinRoot.of _) R.root (by
     simp only [eval₂_sub, eval₂_pow, eval₂_X, eval₂_C]
     rw [← blockSize_mul_pow hL, pow_mul, R.root_pow_n, ← map_pow, hγ, map_neg, map_one,
@@ -46,12 +47,12 @@ theorem blockIndex_apply (hL : levels ≤ 8) (t : Fin (2 ^ levels)) (r : Fin (bl
     (blockIndex hL (t, r)).val = r.val + blockSize levels * t.val := rfl
 
 /-- The residue of `f` is the image of `f` under the quotient map. -/
-theorem toR_modBinomial (hL : levels ≤ 8) (f : Poly q 256) (γ : ZMod q)
+theorem toR_modBinomial (hL : levels ≤ 8) (f : Poly (ZMod q) 256) (γ : ZMod q)
     (hγ : γ ^ 2 ^ levels = -1) :
     Poly.toR γ (modBinomial levels hL f γ) = reduce hL γ hγ (Poly.toR (-1) f) := by
   simp only [Poly.toR, map_sum, map_mul, map_pow, reduce_of, reduce_root]
   rw [← Fintype.sum_equiv (blockIndex hL) (fun p => AdjoinRoot.of _ f[(blockIndex hL p).val] *
-      (R.root : R q (blockSize levels) γ) ^ (blockIndex hL p).val) _ (fun _ => rfl)]
+      (R.root : R (ZMod q) (blockSize levels) γ) ^ (blockIndex hL p).val) _ (fun _ => rfl)]
   rw [Fintype.sum_prod_type]
   simp only [modBinomial, Fin.getElem_fin, Vector.getElem_ofFn, map_sum, map_mul, map_pow,
     Finset.sum_mul, blockIndex_apply]
@@ -61,7 +62,7 @@ theorem toR_modBinomial (hL : levels ≤ 8) (f : Poly q 256) (γ : ZMod q)
   ring
 
 /-- Residues of a product are products of residues (`q` prime). -/
-theorem modBinomial_mul [Fact q.Prime] (hL : levels ≤ 8) (f g : Poly q 256) (γ : ZMod q)
+theorem modBinomial_mul [Fact q.Prime] (hL : levels ≤ 8) (f g : Poly (ZMod q) 256) (γ : ZMod q)
     (hγ : γ ^ 2 ^ levels = -1) :
     modBinomial levels hL (f * g) γ =
       Poly.mulBinomial γ (modBinomial levels hL f γ) (modBinomial levels hL g γ) := by
@@ -70,7 +71,7 @@ theorem modBinomial_mul [Fact q.Prime] (hL : levels ≤ 8) (f g : Poly q 256) (�
     toR_modBinomial hL _ _ hγ, Poly.mul_eq, Poly.toR_mulBinomial, map_mul]
 
 /-- Block `i` of the transform is the residue at `point i`. -/
-theorem block_nttSpec (ζ : ZMod q) (hL : levels ≤ 8) (f : Poly q 256) (i : Fin (2 ^ levels)) :
+theorem block_nttSpec (ζ : ZMod q) (hL : levels ≤ 8) (f : Poly (ZMod q) 256) (i : Fin (2 ^ levels)) :
     block hL (nttSpec ζ levels f hL) i = modBinomial levels hL f (point ζ levels i) := by
   apply Vector.ext
   intro r hr
@@ -90,7 +91,7 @@ theorem point_pow (ζ : ZMod q) (hζ : ζ ^ 2 ^ levels = -1) (i : ℕ) :
 /-- The transform of a product is the blockwise product of the transforms (`q` prime,
 `ζ^(2^levels) = -1`). -/
 theorem nttSpec_mul [Fact q.Prime] (ζ : ZMod q) (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
-    (f g : Poly q 256) :
+    (f g : Poly (ZMod q) 256) :
     nttSpec ζ levels (f * g) hL = mulNTT ζ levels (nttSpec ζ levels f hL) (nttSpec ζ levels g hL) hL := by
   apply Tq.ext
   intro idx hidx
@@ -182,7 +183,7 @@ theorem not_dvd_of_ne {t t0 : ℕ} (ht : t < 2 ^ levels) (ht0 : t0 < 2 ^ levels)
 
 /-- The inverse transform undoes the transform. -/
 theorem nttInvSpec_nttSpec [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
-    (f : Poly q 256) : nttInvSpec ζ levels (nttSpec ζ levels f hL) hL = f := by
+    (f : Poly (ZMod q) 256) : nttInvSpec ζ levels (nttSpec ζ levels f hL) hL = f := by
   apply Vector.ext
   intro k hk
   have ht0 : k / blockSize levels < 2 ^ levels := div_blockSize_lt hL hk
@@ -216,7 +217,7 @@ theorem nttInvSpec_nttSpec [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ le
 
 /-- Multiplying in the NTT domain computes the product in `ℤ_q[X]/(X^256 + 1)`. -/
 theorem nttInvSpec_mulNTT [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
-    (f g : Poly q 256) :
+    (f g : Poly (ZMod q) 256) :
     nttInvSpec ζ levels (mulNTT ζ levels (nttSpec ζ levels f hL) (nttSpec ζ levels g hL) hL) hL =
       f * g := by
   rw [← nttSpec_mul ζ hL hζ, nttInvSpec_nttSpec ζ hL hζ]

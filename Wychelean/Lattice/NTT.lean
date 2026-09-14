@@ -67,7 +67,7 @@ open Bounds
 
 /-- Forward transform, FIPS 203 Algorithm 9 / FIPS 204 Algorithm 41: Cooley–Tukey butterflies
 with twiddles `ζ^BitRev(i)`. -/
-def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly q 256) (hL : levels ≤ 8 := by decide) :
+def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256) (hL : levels ≤ 8 := by decide) :
     Tq q ζ levels := ⟨Id.run do
   let mut «f̂» := f
   let mut i := 1
@@ -86,7 +86,7 @@ def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly q 256) (hL : levels ≤ 8 := by d
 /-- Inverse transform, FIPS 203 Algorithm 10 / FIPS 204 Algorithm 42: Gentleman–Sande
 butterflies followed by division by `2^levels`. -/
 def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : Tq q ζ levels) (hL : levels ≤ 8 := by decide) :
-    Poly q 256 := Id.run do
+    Poly (ZMod q) 256 := Id.run do
   let mut f := «f̂».residues
   let mut i := 2 ^ levels - 1
   for h0: len in (lens levels).reverse do
@@ -106,13 +106,13 @@ def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : Tq q ζ levels) (hL : levels 
 end NTT
 
 /-- `f.ntt : Tq q ζ levels`, the transform with the parameters of the target type. -/
-abbrev Poly.ntt {q : ℕ} (f : Poly q 256) {ζ : ZMod q} {levels : ℕ} [h : Fact (levels ≤ 8)] :
+abbrev Poly.ntt {q : ℕ} (f : Poly (ZMod q) 256) {ζ : ZMod q} {levels : ℕ} [h : Fact (levels ≤ 8)] :
     Tq q ζ levels :=
   NTT.ntt ζ levels f h.out
 
-/-- `f̂.nttInv : Poly q 256`, the inverse transform. -/
+/-- `f̂.nttInv : Poly (ZMod q) 256`, the inverse transform. -/
 abbrev Tq.nttInv {q levels : ℕ} {ζ : ZMod q} [h : Fact (levels ≤ 8)] («f̂» : Tq q ζ levels) :
-    Poly q 256 :=
+    Poly (ZMod q) 256 :=
   NTT.nttInv ζ levels «f̂» h.out
 
 end Wychelean.Lattice
