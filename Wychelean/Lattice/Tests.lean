@@ -9,7 +9,8 @@ Executable checks of the ring and transform, instantiated with ML-KEM's paramete
 (`q = 3329`, `ζ = 17`, seven layers): the inverse transform undoes the forward one, and the
 product computed through the NTT (`NTT⁻¹(MultiplyNTTs(NTT f, NTT g))`) equals the negacyclic
 product `f * g` of `Lattice.Poly`, on monomials (where `X^i · X^j = ±X^(i+j)` is known in
-closed form) and on dense polynomials.
+closed form) and on dense polynomials; and the loops agree with the residue closed forms
+`nttSpec`/`nttInvSpec` of `Lattice.NTTSpec`.
 -/
 
 namespace Wychelean.Lattice.Tests
@@ -42,7 +43,10 @@ def suite : Suite where
     (pairs.map fun (i, j) =>
       check s!"X^{i} * X^{j} via NTT" (monomial i * monomial j) (viaNTT (monomial i) (monomial j))) ++
     ((polys.zip polys.reverse).map fun (f, g) =>
-      check s!"f * g via NTT (dense)" (f * g) (viaNTT f g))
+      check s!"f * g via NTT (dense)" (f * g) (viaNTT f g)) ++
+    (polys.map fun f => check "ntt loops = nttSpec" (NTT.nttSpec ζ 7 f) (NTT f)) ++
+    (polys.map fun f => check "nttInv loops = nttInvSpec" (NTT.nttInvSpec ζ 7 f) (NTTInv f)) ++
+    (polys.map fun f => check "nttInvSpec (nttSpec f) = f" f (NTT.nttInvSpec ζ 7 (NTT.nttSpec ζ 7 f)))
 
 def suites : List Suite := [suite]
 
