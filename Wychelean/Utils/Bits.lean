@@ -79,6 +79,51 @@ def bitRev (n : Nat) (i : Nat) : Nat :=
 #guard List.map (bitRev 2) [0, 1, 2, 3] = [0, 2, 1, 3]
 #guard List.map (bitRev 3) [0, 1, 2, 3, 4, 5, 6, 7] = [0, 4, 2, 6, 1, 5, 3, 7]
 
+theorem Nat.ofBitsList_lt (bits : List Bool) : Nat.ofBitsList bits < 2 ^ bits.length := by
+  induction bits with
+  | nil => simp [Nat.ofBitsList]
+  | cons b bits ih =>
+    simp only [Nat.ofBitsList, List.foldr_cons, List.length_cons, Nat.pow_succ]
+    have : b.toNat ≤ 1 := Bool.toNat_le b
+    simp only [Nat.ofBitsList] at ih
+    omega
+
+theorem Nat.testBit_ofBitsList (bits : List Bool) (j : ℕ) :
+    (Nat.ofBitsList bits).testBit j = bits.getD j false := by
+  induction bits generalizing j with
+  | nil => simp [Nat.ofBitsList]
+  | cons b bits ih =>
+    simp only [Nat.ofBitsList, List.foldr_cons]
+    cases j with
+    | zero => cases b <;> simp [Nat.testBit_zero]
+    | succ j =>
+      rw [List.getD_cons_succ, ← ih]
+      simp only [Nat.ofBitsList]
+      rw [Nat.testBit_succ, show 2 * List.foldr (fun b acc => 2 * acc + b.toNat) 0 bits + b.toNat =
+        b.toNat + 2 * List.foldr (fun b acc => 2 * acc + b.toNat) 0 bits by omega,
+        Nat.add_mul_div_left _ _ (by decide), Nat.div_eq_of_lt (by cases b <;> decide), Nat.zero_add]
+
+theorem bitRev_lt (n i : ℕ) : bitRev n i < 2 ^ n := by
+  have := Nat.ofBitsList_lt (List.reverse (i.bitsn n).toList)
+  simpa [bitRev] using this
+
+theorem testBit_bitRev (n i j : ℕ) (hj : j < n) :
+    (bitRev n i).testBit j = i.testBit (n - 1 - j) := by
+  simp only [bitRev, Nat.testBit_ofBitsList, Nat.bitsn, List.getD_eq_getElem?_getD]
+  rw [List.getElem?_eq_getElem (by simp; omega), List.getElem_reverse]
+  simp
+
+/-- Reversing the low `n` bits twice gives the number back (for numbers below `2^n`). -/
+theorem bitRev_bitRev (n i : ℕ) (hi : i < 2 ^ n) : bitRev n (bitRev n i) = i := by
+  apply Nat.eq_of_testBit_eq
+  intro j
+  by_cases hj : j < n
+  · rw [testBit_bitRev _ _ _ hj, testBit_bitRev _ _ _ (by omega)]
+    congr 1
+    omega
+  · rw [Nat.testBit_lt_two_pow (Nat.lt_of_lt_of_le (bitRev_lt n _) (Nat.pow_le_pow_right (by decide) (by omega))),
+      Nat.testBit_lt_two_pow (Nat.lt_of_lt_of_le hi (Nat.pow_le_pow_right (by decide) (by omega)))]
+
 end Wychelean
 
 /-- The bit-vector rotation agrees with the index-level rotation of Boolean vectors. -/
