@@ -39,13 +39,16 @@ def sub (f g : Poly q n) : Poly q n := Vector.zipWith (· - ·) f g
 /-- Multiplication by a scalar. -/
 def scalarMul (f : Poly q n) (c : ZMod q) : Poly q n := f.map fun v => v * c
 
-/-- The product in `ℤ_q[X] / (X^n + 1)`: the convolution of the coefficients, with the terms of
-degree `n` or more wrapped around with a sign change since `X^n = -1`. -/
-def mul (f g : Poly q n) : Poly q n :=
+/-- The product in `ℤ_q[X] / (X^n - c)`: the convolution of the coefficients, with the terms of
+degree `n` or more wrapped around and multiplied by `c` since `X^n = c`. -/
+def mulBinomial (c : ZMod q) (f g : Poly q n) : Poly q n :=
   Vector.ofFn fun k => ∑ i : Fin n, ∑ j : Fin n,
     if i.val + j.val = k.val then f[i] * g[j]
-    else if i.val + j.val = k.val + n then -(f[i] * g[j])
+    else if i.val + j.val = k.val + n then c * (f[i] * g[j])
     else 0
+
+/-- The product in `ℤ_q[X] / (X^n + 1)`, the case `c = -1`. -/
+def mul (f g : Poly q n) : Poly q n := mulBinomial (-1) f g
 
 instance : Add (Poly q n) where add := add
 instance : Sub (Poly q n) where sub := sub
@@ -65,12 +68,14 @@ instance : SMul (ZMod q) (Poly q n) where smul c f := scalarMul f c
     (c • f)[i] = f[i] * c :=
   Vector.getElem_map ..
 
-theorem getElem_mul (f g : Poly q n) (k : ℕ) (hk : k < n) :
-    (f * g)[k] = ∑ i : Fin n, ∑ j : Fin n,
+theorem getElem_mulBinomial (c : ZMod q) (f g : Poly q n) (k : ℕ) (hk : k < n) :
+    (mulBinomial c f g)[k] = ∑ i : Fin n, ∑ j : Fin n,
       if i.val + j.val = k then f[i] * g[j]
-      else if i.val + j.val = k + n then -(f[i] * g[j])
+      else if i.val + j.val = k + n then c * (f[i] * g[j])
       else 0 :=
   Vector.getElem_ofFn ..
+
+theorem mul_eq (f g : Poly q n) : f * g = mulBinomial (-1) f g := rfl
 
 end Poly
 
