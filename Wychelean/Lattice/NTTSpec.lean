@@ -56,4 +56,21 @@ def nttInvSpec (ζ : ZMod q) (levels : ℕ) («f̂» : Poly q 256) (hL : levels 
       «f̂»[k.val % blockSize levels + blockSize levels * i.val]'(block_idx_lt hL (Nat.mod_lt _ (blockSize_pos levels)) i.isLt) *
         (point ζ levels i.val)⁻¹ ^ (k.val / blockSize levels)
 
+theorem div_blockSize_lt {levels idx : ℕ} (hL : levels ≤ 8) (h : idx < 256) :
+    idx / blockSize levels < 2 ^ levels :=
+  (Nat.div_lt_iff_lt_mul (blockSize_pos levels)).2 (by rw [Nat.mul_comm, blockSize_mul_pow hL]; exact h)
+
+/-- Block `i` of a transformed polynomial. -/
+def block (hL : levels ≤ 8) (a : Poly q 256) (i : Fin (2 ^ levels)) : Poly q (blockSize levels) :=
+  Vector.ofFn fun r => a[r.val + blockSize levels * i.val]'(block_idx_lt hL r.isLt i.isLt)
+
+/-- Multiplication in the NTT domain: block by block in `ℤ_q[X]/(X^d - point i)`
+(FIPS 203 Algorithms 11–12 for `d = 2`, pointwise for `d = 1`). -/
+def mulNTT (ζ : ZMod q) (levels : ℕ) (a b : Poly q 256) (hL : levels ≤ 8 := by decide) :
+    Poly q 256 :=
+  Vector.ofFn fun idx =>
+    let i : Fin (2 ^ levels) := ⟨idx.val / blockSize levels, div_blockSize_lt hL idx.isLt⟩
+    let p := Poly.mulBinomial (point ζ levels i) (block hL a i) (block hL b i)
+    p[idx.val % blockSize levels]'(Nat.mod_lt _ (blockSize_pos levels))
+
 end Wychelean.Lattice.NTT

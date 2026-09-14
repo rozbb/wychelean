@@ -65,6 +65,35 @@ theorem modBinomial_mul [Fact q.Prime] (hL : levels ≤ 8) (f g : Poly q 256) (�
   rw [Poly.toR_mulBinomial, toR_modBinomial hL _ _ hγ, toR_modBinomial hL _ _ hγ,
     toR_modBinomial hL _ _ hγ, Poly.mul_eq, Poly.toR_mulBinomial, map_mul]
 
+/-- Block `i` of the transform is the residue at `point i`. -/
+theorem block_nttSpec (ζ : ZMod q) (hL : levels ≤ 8) (f : Poly q 256) (i : Fin (2 ^ levels)) :
+    block hL (nttSpec ζ levels f hL) i = modBinomial levels hL f (point ζ levels i) := by
+  apply Vector.ext
+  intro r hr
+  simp only [block, nttSpec, Vector.getElem_ofFn]
+  have hd := blockSize_pos levels
+  have h1 : (r + blockSize levels * i.val) / blockSize levels = i.val := by
+    rw [Nat.add_mul_div_left _ _ hd, Nat.div_eq_of_lt hr, Nat.zero_add]
+  have h2 : (r + blockSize levels * i.val) % blockSize levels = r := by
+    rw [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hr]
+  simp only [h1, h2]
+
+theorem point_pow (ζ : ZMod q) (hζ : ζ ^ 2 ^ levels = -1) (i : ℕ) :
+    point ζ levels i ^ 2 ^ levels = -1 := by
+  rw [point, ← pow_mul, Nat.mul_comm, pow_mul, hζ]
+  exact Odd.neg_one_pow ⟨bitRev levels i, rfl⟩
+
+/-- The transform of a product is the blockwise product of the transforms (`q` prime,
+`ζ^(2^levels) = -1`). -/
+theorem nttSpec_mul [Fact q.Prime] (ζ : ZMod q) (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
+    (f g : Poly q 256) :
+    nttSpec ζ levels (f * g) hL = mulNTT ζ levels (nttSpec ζ levels f hL) (nttSpec ζ levels g hL) hL := by
+  apply Vector.ext
+  intro idx hidx
+  simp only [mulNTT, Vector.getElem_ofFn, block_nttSpec]
+  simp only [nttSpec, Vector.getElem_ofFn]
+  rw [modBinomial_mul hL f g _ (point_pow ζ hζ _)]
+
 end
 
 end Wychelean.Lattice.NTT
