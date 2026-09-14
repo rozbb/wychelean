@@ -19,14 +19,11 @@ namespace Wychelean.KEM.MLKEM.Tests
 #guard Decompress 1 (0 : ZMod (m 1)) = (0 : Zq)
 #guard Compress 4 (Decompress 4 (7 : ZMod (m 4))) = (7 : ZMod (m 4))
 
-#guard BaseCaseMultiply 1 0 1 0 (ζ : Zq) = ((1 : Zq), (0 : Zq))
-#guard BaseCaseMultiply 0 1 0 1 (ζ : Zq) = (ζ, (0 : Zq))
-
 #guard ByteDecode (ByteEncode 1 (Vector.replicate 256 (0 : ZMod (m 1)))) = Vector.replicate 256 0
 
-#guard NTT Polynomial.zero = 0
-#guard NTTInv 0 = Polynomial.zero
-#guard NTTInv (NTT Polynomial.zero) = Polynomial.zero
+#guard (Polynomial.zero.ntt : NTTPolynomial) = 0
+#guard (0 : NTTPolynomial).nttInv = Polynomial.zero
+#guard (Polynomial.zero.ntt : NTTPolynomial).nttInv = Polynomial.zero
 
 -- Appendix A spot checks: ζ^{BitRev7(i)} mod q
 #guard (ζ ^ (bitRev 7 0) : Zq).val = 1

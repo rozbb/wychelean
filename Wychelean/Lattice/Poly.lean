@@ -1,5 +1,7 @@
 import Mathlib.Data.ZMod.Basic
 import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Tactic.IntervalCases
+import Mathlib.Tactic.Ring
 
 /-!
 # Polynomials modulo X^n + 1
@@ -121,6 +123,18 @@ theorem getElem_mulBinomial (c : A) (f g : Poly A n) (k : ℕ) (hk : k < n) :
 
 theorem mul_eq (f g : Poly A n) : f * g = mulBinomial (-1) f g := rfl
 
+/-- In degree two, `(a₀ + a₁X)(b₀ + b₁X) = (a₀b₀ + a₁b₁c) + (a₀b₁ + a₁b₀)X` modulo `X² - c`
+(FIPS 203 Algorithm 12, BaseCaseMultiply). -/
+theorem mulBinomial_two (c : A) (f g : Poly A 2) :
+    mulBinomial c f g = #v[f[0] * g[0] + f[1] * g[1] * c, f[0] * g[1] + f[1] * g[0]] := by
+  apply Vector.ext
+  intro k hk
+  rw [getElem_mulBinomial]
+  interval_cases k
+  · simp +decide [Fin.sum_univ_two]
+    ring
+  · simp +decide [Fin.sum_univ_two]
+
 end Poly
 
 /-- A vector of `k` polynomials (FIPS 203 §2.4.4). -/
@@ -137,9 +151,18 @@ def set (v : PolyVec A n k) (i : ℕ) (f : Poly A n) (_ : i < k := by get_elem_t
   Vector.set v i f
 
 instance : Add (PolyVec A n k) where
-  add v w := Vector.ofFn fun i => v[i] + w[i]
+  add v w := Vector.zipWith (· + ·) v w
 
 end PolyVec
+
+/-! ### Inner products and matrix-vector products over any coefficient type with `+`, `*`, `0` -/
+
+/-- `∑ᵢ v[i] * w[i]`. -/
+def innerProduct {α : Type} {k : ℕ} [Mul α] [Add α] [Zero α] (v w : Vector α k) : α :=
+  (Vector.zipWith (· * ·) v w).foldl (· + ·) 0
+
+@[inherit_doc innerProduct]
+scoped notation:max "⟪" v ", " w "⟫" => innerProduct v w
 
 /-- A `k × k` matrix as a vector of rows (FIPS 203 §2.4.5), stored rather than represented as a
 function so that entries are computed once. -/
@@ -159,6 +182,13 @@ def update (M : Mat α k) (i j : ℕ) (val : α)
 /-- `Mᵀ`. -/
 def transpose (M : Mat α k) : Mat α k :=
   Vector.ofFn fun i => Vector.ofFn fun j => M[j][i]
+
+/-- `M · v`, row `i` giving `∑ⱼ M[i][j] * v[j]`. -/
+def mulVec [Mul α] [Add α] [Zero α] (M : Mat α k) (v : Vector α k) : Vector α k :=
+  M.map fun row => innerProduct row v
+
+instance [Mul α] [Add α] [Zero α] : HMul (Mat α k) (Vector α k) (Vector α k) where
+  hMul := mulVec
 
 end Mat
 

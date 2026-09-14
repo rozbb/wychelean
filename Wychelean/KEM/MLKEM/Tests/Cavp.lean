@@ -46,11 +46,10 @@ def appendixAAndRoundTrips : Suite where
     let F : Polynomial (m 12) := Vector.ofFn fun i => (i.val : ZMod (m 12))
     check "ByteDecode (ByteEncode 12 F) = F" true (ByteDecode (ByteEncode 12 F) == F),
     let f : Polynomial := Vector.ofFn fun i => ((i.val + 1 : ℕ) : Zq)
-    check "NTTInv (NTT f) = f" true (NTTInv (NTT f) == f),
+    check "nttInv (ntt f) = f" true ((f.ntt : NTTPolynomial).nttInv == f),
     let one : Polynomial := (Polynomial.zero).set 0 1
     let f : Polynomial := Vector.ofFn fun i => ((i.val * 7 + 3 : ℕ) : Zq)
-    check "NTTInv (MultiplyNTTs (NTT f) (NTT one)) = f" true
-      (NTTInv (MultiplyNTTs (NTT f) (NTT one)) == f) ]
+    check "nttInv (ntt f * ntt one) = f" true ((f.ntt * one.ntt : NTTPolynomial).nttInv == f) ]
 
 private def vectorFile : System.FilePath := "Wychelean/KEM/MLKEM/TestVectors/symcrypt_acvp.rsp"
 
