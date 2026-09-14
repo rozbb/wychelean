@@ -13,7 +13,7 @@ namespace Wychelean.KEM.MLKEM.Tests
   let b : Vector Bool (8 * 2) :=
     ⟨⟨[false, true, false, true, false, false, false, false,
       true, false, false, false, false, false, false, false]⟩, by simp⟩
-  BytesToBits (BitsToBytes b) = b
+  bytesToBits (bitsToBytes b) = b
 
 #guard Compress 1 (0 : Zq) = (0 : ZMod (m 1))
 #guard Decompress 1 (0 : ZMod (m 1)) = (0 : Zq)

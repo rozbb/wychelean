@@ -21,8 +21,7 @@ All four file kinds drive the internal API of FIPS 203 (§6) with explicit seeds
 A case marked `invalid` must be rejected, which here means a length that does not fit the
 parameter set, or `Encaps`/`Decaps` returning `none`. A `valid` case must be accepted and give
 the expected answer. Malformed expected values are reported as fixture problems, never as a
-pass, and the random tapes returned by `KeyGen` and `Encaps` are checked to have advanced by
-exactly the bytes those algorithms read.
+pass.
 -/
 
 namespace Wychelean.KEM.MLKEM.Tests
@@ -36,12 +35,6 @@ private def parameterSet : String → Except String ParameterSet
   | "ML-KEM-768" => .ok .ML_KEM_768
   | "ML-KEM-1024" => .ok .ML_KEM_1024
   | other => .error s!"unknown parameter set {other}"
-
-/-- A random tape that replays `bytes`, as the RBG of §3.3 would deliver them. -/
-private def tapeOf (bytes : Array UInt8) : RandomTape := fun i => bytes[i]?.getD 0
-
-/-- Bytes of a tape, to check how far a call advanced it. -/
-private def tapeBytes (tape : RandomTape) (n : Nat) : Vector UInt8 n := Vector.ofFn fun i => tape i
 
 /-- What the specification did with a case's inputs. -/
 private inductive Outcome where
@@ -89,12 +82,11 @@ private def KeyGenCase.ofJson (j : Lean.Json) : Except String KeyGenCase := do
 
 private def KeyGenCase.run (p : ParameterSet) (c : KeyGenCase) : Except Outcome Unit := do
   let seed ← input 64 c.seed
-  let (ek', dk', tape) := KeyGen p (tapeOf (seed.toArray ++ #[0xa5, 0x5a]))
+  let (ek', dk') := KeyGen p (slice seed 0 seedLen) (slice seed seedLen seedLen)
   accept do
     let ek ← toFixed (ekLen p) c.ek
     let dk ← toFixed (dkLen p) c.dk
-    return [check "ek" ek ek', check "dk" dk dk',
-            check "tape advanced by 64 bytes" #v[0xa5, 0x5a] (tapeBytes tape 2)]
+    return [check "ek" ek ek', check "dk" dk dk']
 
 private structure KemCase where
   seed : Array UInt8
@@ -131,13 +123,12 @@ private def EncapsCase.ofJson (j : Lean.Json) : Except String EncapsCase := do
 private def EncapsCase.run (p : ParameterSet) (c : EncapsCase) : Except Outcome Unit := do
   let m ← input 32 c.m
   let ek ← input (ekLen p) c.ek
-  let some (K', c', tape) := Encaps p ek (tapeOf (m.toArray ++ #[0xa5, 0x5a]))
+  let some (K', c') := Encaps p ek m
     | throw (.rejected "encapsulation key failed the modulus check")
   accept do
     let K ← toFixed 32 c.K
     let ct ← toFixed (ctLen p) c.c
-    return [check "K" K K', check "c" ct c',
-            check "tape advanced by 32 bytes" #v[0xa5, 0x5a] (tapeBytes tape 2)]
+    return [check "K" K K', check "c" ct c']
 
 private structure DecapsCase where
   dk : Array UInt8
