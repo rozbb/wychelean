@@ -167,14 +167,54 @@ theorem toR_nsmul (k : ℕ) (f : Poly A n) : toR c (k • f) = k • toR c f := 
 theorem toR_zsmul (k : ℤ) (f : Poly A n) : toR c (k • f) = k • toR c f := by
   rw [show k • f = (k : A) • f from rfl, toR_smul, map_intCast, zsmul_eq_mul]
 
-/-- The ring structure of `A[X] / (X^n + 1)` on coefficient vectors, transported along the
-injective `toR (-1)` (`A` a domain, `n ≥ 1`). -/
-instance instCommRing [IsDomain A] [NeZero n] : CommRing (Poly A n) :=
-  Function.Injective.commRing (toR (-1)) toR_injective toR_zero toR_one toR_add toR_mul toR_neg
-    toR_sub toR_nsmul toR_zsmul toR_pow toR_natCast toR_intCast
+end Poly
+
+end
+
+namespace Poly
+
+variable {A : Type} [CommRing A] {n : ℕ}
+
+/-- Discharge a ring law on `Poly A n` by mapping both sides into the quotient ring. -/
+local macro "poly_law" : tactic =>
+  `(tactic| (apply toR_injective (c := -1); simp only [toR_add, toR_mul, toR_neg, toR_sub,
+      toR_zero, toR_one, toR_nsmul, toR_zsmul, toR_natCast, toR_intCast, toR_pow, Int.cast_negSucc,
+      Nat.cast_succ, Int.cast_natCast]; all_goals ring))
+
+/-- The ring structure of `A[X] / (X^n + 1)` on coefficient vectors (`A` a domain, `n ≥ 1`). The
+operations are the computable ones above; the laws are those of the quotient ring, transported
+along the injective `toR (-1)`. -/
+instance instCommRing [IsDomain A] [NeZero n] : CommRing (Poly A n) where
+  add_assoc _ _ _ := by poly_law
+  zero_add _ := by poly_law
+  add_zero _ := by poly_law
+  add_comm _ _ := by poly_law
+  nsmul_zero _ := by poly_law
+  nsmul_succ _ _ := by poly_law
+  neg_add_cancel _ := by poly_law
+  zsmul_zero' _ := by poly_law
+  zsmul_succ' _ _ := by poly_law
+  zsmul_neg' k x := toR_injective (c := -1) (by
+    rw [toR_zsmul, toR_neg, toR_zsmul]
+    exact SubNegMonoid.zsmul_neg' k _)
+  sub_eq_add_neg _ _ := by poly_law
+  left_distrib _ _ _ := by poly_law
+  right_distrib _ _ _ := by poly_law
+  zero_mul _ := by poly_law
+  mul_zero _ := by poly_law
+  mul_assoc _ _ _ := by poly_law
+  one_mul _ := by poly_law
+  mul_one _ := by poly_law
+  mul_comm _ _ := by poly_law
+  npow_zero _ := by poly_law
+  npow_succ _ _ := by poly_law
+  natCast_zero := by poly_law
+  natCast_succ _ := by poly_law
+  intCast_ofNat _ := by poly_law
+  intCast_negSucc _ := by poly_law
 
 /-- `toR (-1)` as a ring homomorphism. -/
-def toRingHom [IsDomain A] [NeZero n] : Poly A n →+* R A n (-1) where
+noncomputable def toRingHom [IsDomain A] [NeZero n] : Poly A n →+* R A n (-1) where
   toFun := toR (-1)
   map_one' := toR_one
   map_mul' := toR_mul
@@ -182,7 +222,5 @@ def toRingHom [IsDomain A] [NeZero n] : Poly A n →+* R A n (-1) where
   map_add' := toR_add
 
 end Poly
-
-end
 
 end Wychelean.Lattice
