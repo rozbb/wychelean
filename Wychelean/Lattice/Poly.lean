@@ -144,12 +144,6 @@ namespace PolyVec
 
 variable {A : Type} [CommRing A] {n k : ℕ}
 
-def zero : PolyVec A n k := Vector.replicate k Poly.zero
-
-def set (v : PolyVec A n k) (i : ℕ) (f : Poly A n) (_ : i < k := by get_elem_tactic) :
-    PolyVec A n k :=
-  Vector.set v i f
-
 instance : Add (PolyVec A n k) where
   add v w := Vector.zipWith (· + ·) v w
 
@@ -171,13 +165,6 @@ abbrev Mat (α : Type) (k : ℕ) := Vector (Vector α k) k
 namespace Mat
 
 variable {α : Type} {k : ℕ}
-
-def zero [Zero α] : Mat α k := Vector.replicate k (Vector.replicate k 0)
-
-/-- `M.update i j val` sets entry `(i, j)` to `val`. -/
-def update (M : Mat α k) (i j : ℕ) (val : α)
-    (hi : i < k := by get_elem_tactic) (_ : j < k := by get_elem_tactic) : Mat α k :=
-  M.set i (M[i].set j val)
 
 /-- `Mᵀ`. -/
 def transpose (M : Mat α k) : Mat α k :=
