@@ -3,7 +3,7 @@ import Wychelean.DH.X25519.Tests
 import Wychelean.Hashes.SHA256.Tests
 import Wychelean.Hashes.SHA3.Tests
 import Wychelean.KEM.MLKEM.Tests
-import Wychelean.Lattice.Tests
+import Wychelean.PolyRing.Tests
 import Wychelean.Permutations.Keccak.Tests
 import Wychelean.Utils.Tests
 
@@ -27,17 +27,24 @@ def suites (full := false): List Suite :=
     Hashes.SHA3.Tests.suites full,
     Hashes.SHA3.Tests.shakeSuites full,
     KEM.MLKEM.Tests.suites full,
-    Lattice.Tests.suites,
+    PolyRing.Tests.suites,
     Permutations.Keccak.Tests.suites ].flatten
 
 end RunTests
 
 def main (args : List String): IO UInt32 := do
-  unless args.isEmpty || args == ["--full"] do
-    IO.eprintln "usage: lake test [-- --full]"
+  let full := args.contains "--full"
+  let only := match args with
+    | ["--only", pat] | ["--full", "--only", pat] | ["--only", pat, "--full"] => some pat
+    | _ => none
+  unless args.isEmpty || args == ["--full"] || only.isSome do
+    IO.eprintln "usage: lake test [-- --full] [-- --only <suite name substring>]"
     return 1
   try
-    RunTests.runSuites (RunTests.suites (args == ["--full"]))
+    let suites := RunTests.suites full
+    RunTests.runSuites (match only with
+      | some pat => suites.filter fun s => (s.name.splitOn pat).length > 1
+      | none => suites)
   catch e =>
     IO.eprintln s!"test setup failed: {e}"
     return 1
