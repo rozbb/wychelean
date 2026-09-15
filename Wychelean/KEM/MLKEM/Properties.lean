@@ -1,5 +1,5 @@
 import Wychelean.KEM.MLKEM.Basic
-import Wychelean.Lattice.NTTProperties
+import Wychelean.PolyRing.NTTProperties
 import Mathlib.Tactic.NormNum.Prime
 
 /-!
@@ -8,13 +8,13 @@ import Mathlib.Tactic.NormNum.Prime
 The facts about ML-KEM's parameters that the library theorems need (`q = 3329` is an odd prime
 and `ζ = 17` satisfies `ζ^128 = -1`), and the resulting statement that multiplying in the NTT
 domain computes the product in `R_q = ℤ_q[X]/(X^256 + 1)`, for the residue forms of the
-transform. The butterfly loops `ntt`/`nttInv` of `Lattice.NTT` are checked
-against those forms by the Lattice test suite; proving them equal is future work.
+transform. The butterfly loops `ntt`/`nttInv` of `PolyRing.NTT` are checked
+against those forms by the PolyRing test suite; proving them equal is future work.
 -/
 
 namespace Wychelean.KEM.MLKEM
 
-open Wychelean.Lattice
+open Wychelean.PolyRing
 
 instance : Fact (Nat.Prime q) := ⟨by norm_num⟩
 
@@ -31,9 +31,13 @@ theorem nttInvSpec_mul (f g : Polynomial) :
 
 /-- FIPS 203 Algorithms 11–12: residue `i` of `f̂ · ĝ` is the base-case product at
 `γ = ζ^(2·BitRev₇(i) + 1)`. -/
-theorem mul_residue («f̂» «ĝ» : NTTPolynomial) (i : ℕ) (hi : i < 128) :
-    («f̂» * «ĝ»)[i] = #v[«f̂»[i][0] * «ĝ»[i][0] + «f̂»[i][1] * «ĝ»[i][1] * ζ ^ (2 * bitRev 7 i + 1),
-                       «f̂»[i][0] * «ĝ»[i][1] + «f̂»[i][1] * «ĝ»[i][0]] :=
-  Residues.getElem_mul_two «f̂» «ĝ» i hi
+theorem mul_residue («f̂» «ĝ» : Tq) (i : Fin 128) :
+    («f̂» * «ĝ») i = ⟨#v[(«f̂» i)[0] * («ĝ» i)[0] + («f̂» i)[1] * («ĝ» i)[1] * ζ ^ (2 * bitRev 7 i + 1),
+                       («f̂» i)[0] * («ĝ» i)[1] + («f̂» i)[1] * («ĝ» i)[0]]⟩ :=
+  Residues.mul_two «f̂» «ĝ» i
+
+/-- The recursive transform and the closed form agree for ML-KEM's parameters. -/
+theorem nttRec_eq (f : Polynomial) : NTT.nttRec ζ 7 (by decide) f = NTT.nttSpec ζ 7 f :=
+  NTT.nttRec_eq_nttSpec ζ (by decide) ζ_pow_128 f
 
 end Wychelean.KEM.MLKEM

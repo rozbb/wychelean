@@ -1,19 +1,14 @@
-import Wychelean.Lattice.NTTSpec
+import Wychelean.PolyRing.NTTSpec
 import Mathlib.Tactic.IntervalCases
 
 /-!
-# Number-theoretic transform over ℤ_q[X] / (X^256 + 1)
-
-The in-place Cooley–Tukey transform and its Gentleman–Sande inverse, as written in FIPS 203
-Algorithms 9–10 (ML-KEM: `ζ = 17`, seven layers) and FIPS 204 Algorithms 41–42 (ML-DSA:
-`ζ = 1753`, eight layers). `ζ` is a primitive `2^(levels + 1)`-th root of unity, and layer `l`
-splits each factor `X^(2·len) - ζ^(2m)` into `(X^len - ζ^m)(X^len + ζ^m)` with
-`len = 128 / 2^l`. The loops are adapted from Microsoft SymCrypt (MIT; see
+The in-place butterflies of FIPS 203 Algorithms 9–10 (`ζ = 17`, seven layers) and FIPS 204
+Algorithms 41–42 (`ζ = 1753`, eight layers), adapted from Microsoft SymCrypt (MIT; see
 Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/MLKEM/Spec.lean
 -/
 
-namespace Wychelean.Lattice
+namespace Wychelean.PolyRing
 
 open Wychelean
 open scoped Wychelean.Notations
@@ -67,10 +62,10 @@ open Bounds
 
 /-- Forward transform, FIPS 203 Algorithm 9 / FIPS 204 Algorithm 41: Cooley–Tukey butterflies
 with twiddles `ζ^BitRev(i)`. -/
-def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256) (hL : levels ≤ 8 := by decide) :
+def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256 (-1)) (hL : levels ≤ 8 := by decide) :
     NTTDomain ζ levels :=
-  Residues.ofFlat <| Vector.cast (pow_mul_blockSize hL).symm <| Id.run do
-  let mut «f̂» := f
+  ⟨Vector.cast (pow_mul_blockSize hL).symm <| Id.run do
+  let mut «f̂» := f.coeffs
   let mut i := 1
   for h0: len in lens levels do
     have hlen := len_pos hL h0
@@ -82,13 +77,13 @@ def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256) (hL : levels ≤ 8 
         let t := zeta * «f̂»[j + len]
         «f̂» := «f̂».set (j + len) («f̂»[j] - t)
         «f̂» := «f̂».set j         («f̂»[j] + t)
-  pure «f̂»
+  pure «f̂»⟩
 
 /-- Inverse transform, FIPS 203 Algorithm 10 / FIPS 204 Algorithm 42: Gentleman–Sande
 butterflies followed by division by `2^levels`. -/
 def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : NTTDomain ζ levels) (hL : levels ≤ 8 := by decide) :
-    Poly (ZMod q) 256 := Id.run do
-  let mut f := «f̂».flatten.cast (pow_mul_blockSize hL)
+    Poly (ZMod q) 256 (-1) := Id.run do
+  let mut f := «f̂».flat.cast (pow_mul_blockSize hL)
   let mut i := 2 ^ levels - 1
   for h0: len in (lens levels).reverse do
     have h0' := List.mem_reverse.mp h0
@@ -101,19 +96,18 @@ def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : NTTDomain ζ levels) (hL : le
         let t := f[j]
         f := f.set j (t + f[j + len])
         f := f.set (j + len) (zeta * (f[j + len] - t))
-  f := ((2 ^ levels : ZMod q)⁻¹) • f
-  pure f
+  pure ((2 ^ levels : ZMod q)⁻¹ • (⟨f⟩ : Poly (ZMod q) 256 (-1)))
 
 end NTT
 
 /-- `f.ntt`, the transform with the parameters of the target type. -/
-abbrev Poly.ntt {q : ℕ} (f : Poly (ZMod q) 256) {ζ : ZMod q} {levels : ℕ} [h : Fact (levels ≤ 8)] :
+abbrev Poly.ntt {q : ℕ} (f : Poly (ZMod q) 256 (-1)) {ζ : ZMod q} {levels : ℕ} [h : Fact (levels ≤ 8)] :
     NTTDomain ζ levels :=
   NTT.ntt ζ levels f h.out
 
 /-- `f̂.nttInv : Poly (ZMod q) 256`, the inverse transform. -/
 abbrev NTTDomain.nttInv {q levels : ℕ} {ζ : ZMod q} [h : Fact (levels ≤ 8)]
-    («f̂» : NTTDomain ζ levels) : Poly (ZMod q) 256 :=
+    («f̂» : NTTDomain ζ levels) : Poly (ZMod q) 256 (-1) :=
   NTT.nttInv ζ levels «f̂» h.out
 
 /-- A vector of `k` NTT-domain elements (FIPS 203 §2.4.7). -/
@@ -123,12 +117,12 @@ instance {q k levels : ℕ} {ζ : ZMod q} : Add (NTTVec ζ levels k) where
   add v w := Vector.zipWith (· + ·) v w
 
 /-- The transform of every entry. -/
-def PolyVec.ntt {q k : ℕ} (v : PolyVec (ZMod q) 256 k) {ζ : ZMod q} {levels : ℕ} [Fact (levels ≤ 8)] :
+def PolyVec.ntt {q k : ℕ} (v : PolyVec (ZMod q) 256 (-1) k) {ζ : ZMod q} {levels : ℕ} [Fact (levels ≤ 8)] :
     NTTVec ζ levels k :=
   v.map (·.ntt)
 
 def NTTVec.nttInv {q k levels : ℕ} {ζ : ZMod q} [Fact (levels ≤ 8)] (v : NTTVec ζ levels k) :
-    PolyVec (ZMod q) 256 k :=
+    PolyVec (ZMod q) 256 (-1) k :=
   v.map (·.nttInv)
 
-end Wychelean.Lattice
+end Wychelean.PolyRing

@@ -1,5 +1,6 @@
-import Wychelean.Lattice.Poly
-import Wychelean.Lattice.NTTSpec
-import Wychelean.Lattice.NTT
-import Wychelean.Lattice.Quotient
-import Wychelean.Lattice.NTTProperties
+import Wychelean.PolyRing.Poly
+import Wychelean.PolyRing.Quotient
+import Wychelean.PolyRing.Residues
+import Wychelean.PolyRing.NTTSpec
+import Wychelean.PolyRing.NTT
+import Wychelean.PolyRing.NTTProperties

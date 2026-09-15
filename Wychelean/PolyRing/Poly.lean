@@ -4,132 +4,93 @@ import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Ring
 
 /-!
-# Polynomials modulo X^n + 1
-
-Elements of `A[X] / (X^n + 1)` over a commutative coefficient ring `A` (`ℤ`, or `ℤ_q`) as
-coefficient vectors, with the pointwise operations and the negacyclic product, shared by the
-module-lattice schemes (FIPS 203 §2.4, FIPS 204 §2.3).
-The pointwise definitions are adapted from Microsoft SymCrypt (MIT; see
-Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
+Adapted from Microsoft SymCrypt (MIT; see Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/MLKEM/Spec.lean
 -/
 
-namespace Wychelean.Lattice
+namespace Wychelean.PolyRing
 
-/-- A polynomial of degree below `n` with coefficients in `A`, coefficient `i` at index `i`;
-read modulo `X^n + 1`. -/
-abbrev Poly (A : Type) (n : ℕ) := Vector A n
+/-- `A[X]/(X^n - c)`: the coefficient vector of the representative of degree below `n`. -/
+structure Poly (A : Type) (n : ℕ) (c : A) where
+  coeffs : Vector A n
+deriving DecidableEq
 
 namespace Poly
 
-variable {A : Type} [CommRing A] {n : ℕ}
+variable {A : Type} {n : ℕ} {c : A}
 
-def zero : Poly A n := Vector.replicate n 0
+def ofFn (f : Fin n → A) : Poly A n c := ⟨Vector.ofFn f⟩
 
-/-- Pointwise addition.
+instance : GetElem (Poly A n c) ℕ A fun _ i => i < n where
+  getElem f i h := f.coeffs[i]
 
-The body uses `Vector.zipWith` rather than the seemingly-equivalent
-`Vector.ofFn (fun i => f[i] + g[i])`. This is a *grind workaround*: the latter shape causes
-`grind`'s `whnf` to descend through `Vector.ofFn`'s lambda and infinitely unfold `Add` on the
-element type, blowing `maxRecDepth` on any goal containing `_ + _ : Poly A n`. `Vector.zipWith`
-avoids it because its body is a non-recursive `Array.zipWith` wrapper that `whnf` does not
-recurse into. -/
-def add (f g : Poly A n) : Poly A n := Vector.zipWith (· + ·) f g
+@[simp] theorem getElem_mk (v : Vector A n) (i : ℕ) (hi : i < n) : (⟨v⟩ : Poly A n c)[i] = v[i] := rfl
 
-/-- Pointwise subtraction. See `add` for the `zipWith` rationale. -/
-def sub (f g : Poly A n) : Poly A n := Vector.zipWith (· - ·) f g
+@[simp] theorem coeffs_getElem (f : Poly A n c) (i : ℕ) (hi : i < n) : f.coeffs[i] = f[i] := rfl
 
-/-- Multiplication by a scalar. -/
-def scalarMul (f : Poly A n) (c : A) : Poly A n := f.map fun v => v * c
+@[simp] theorem getElem_ofFn (f : Fin n → A) (i : ℕ) (hi : i < n) :
+    (ofFn f : Poly A n c)[i] = f ⟨i, hi⟩ :=
+  Vector.getElem_ofFn ..
 
-/-- The product in `ℤ_q[X] / (X^n - c)`: the convolution of the coefficients, with the terms of
-degree `n` or more wrapped around and multiplied by `c` since `X^n = c`. -/
-def mulBinomial (c : A) (f g : Poly A n) : Poly A n :=
-  Vector.ofFn fun k => ∑ i : Fin n, ∑ j : Fin n,
+@[ext] theorem ext {f g : Poly A n c} (h : ∀ (i : ℕ) (hi : i < n), f[i] = g[i]) : f = g := by
+  cases f; cases g
+  congr 1
+  exact Vector.ext h
+
+variable [CommRing A]
+
+/-- The constant polynomial `a`. -/
+def const (a : A) : Poly A n c := ofFn fun i => if i.val = 0 then a else 0
+
+instance : Zero (Poly A n c) where zero := ⟨Vector.replicate n 0⟩
+instance : One (Poly A n c) where one := const 1
+instance : Add (Poly A n c) where add f g := ⟨Vector.zipWith (· + ·) f.coeffs g.coeffs⟩
+instance : Sub (Poly A n c) where sub f g := ⟨Vector.zipWith (· - ·) f.coeffs g.coeffs⟩
+instance : Neg (Poly A n c) where neg f := ⟨f.coeffs.map (- ·)⟩
+instance : SMul A (Poly A n c) where smul a f := ⟨f.coeffs.map (· * a)⟩
+
+/-- The convolution, terms of degree `n` or more wrapped around with `X^n = c`. -/
+instance : Mul (Poly A n c) where
+  mul f g := ofFn fun k => ∑ i : Fin n, ∑ j : Fin n,
     if i.val + j.val = k.val then f[i] * g[j]
     else if i.val + j.val = k.val + n then c * (f[i] * g[j])
     else 0
 
-/-- The product in `ℤ_q[X] / (X^n + 1)`, the case `c = -1`. -/
-def mul (f g : Poly A n) : Poly A n := mulBinomial (-1) f g
-
-/-- The constant polynomial `c`. -/
-def const (c : A) : Poly A n := Vector.ofFn fun i => if i.val = 0 then c else 0
-
-/-- Pointwise negation. -/
-def neg (f : Poly A n) : Poly A n := f.map (- ·)
-
-instance : Zero (Poly A n) where zero := zero
-instance : One (Poly A n) where one := const 1
-instance : Add (Poly A n) where add := add
-instance : Sub (Poly A n) where sub := sub
-instance : Neg (Poly A n) where neg := neg
-instance : Mul (Poly A n) where mul := mul
-instance : SMul A (Poly A n) where smul c f := scalarMul f c
-instance : NatCast (Poly A n) where natCast k := const k
-instance : IntCast (Poly A n) where intCast k := const k
-instance : SMul ℕ (Poly A n) where smul k f := scalarMul f k
-instance : SMul ℤ (Poly A n) where smul k f := scalarMul f k
-instance : Pow (Poly A n) ℕ where pow f k := npowRec k f
-
-@[simp] theorem getElem_zero (i : ℕ) (hi : i < n) : (0 : Poly A n)[i] = 0 :=
+@[simp] theorem getElem_zero (i : ℕ) (hi : i < n) : (0 : Poly A n c)[i] = 0 :=
   Vector.getElem_replicate ..
 
-@[simp] theorem getElem_const (c : A) (i : ℕ) (hi : i < n) :
-    (const c : Poly A n)[i] = if i = 0 then c else 0 :=
+@[simp] theorem getElem_const (a : A) (i : ℕ) (hi : i < n) :
+    (const a : Poly A n c)[i] = if i = 0 then a else 0 :=
   Vector.getElem_ofFn ..
 
-@[simp] theorem getElem_one (i : ℕ) (hi : i < n) : (1 : Poly A n)[i] = if i = 0 then 1 else 0 :=
+@[simp] theorem getElem_one (i : ℕ) (hi : i < n) : (1 : Poly A n c)[i] = if i = 0 then 1 else 0 :=
   Vector.getElem_ofFn ..
 
-@[simp] theorem getElem_natCast (k : ℕ) (i : ℕ) (hi : i < n) :
-    ((k : ℕ) : Poly A n)[i] = if i = 0 then (k : A) else 0 :=
-  Vector.getElem_ofFn ..
-
-@[simp] theorem getElem_intCast (k : ℤ) (i : ℕ) (hi : i < n) :
-    ((k : ℤ) : Poly A n)[i] = if i = 0 then (k : A) else 0 :=
-  Vector.getElem_ofFn ..
-
-@[simp] theorem getElem_neg (f : Poly A n) (i : ℕ) (hi : i < n) : (-f)[i] = -f[i] :=
-  Vector.getElem_map ..
-
-@[simp] theorem getElem_add (f g : Poly A n) (i : ℕ) (hi : i < n) : (f + g)[i] = f[i] + g[i] :=
+@[simp] theorem getElem_add (f g : Poly A n c) (i : ℕ) (hi : i < n) : (f + g)[i] = f[i] + g[i] :=
   Vector.getElem_zipWith hi
 
-@[simp] theorem getElem_sub (f g : Poly A n) (i : ℕ) (hi : i < n) : (f - g)[i] = f[i] - g[i] :=
+@[simp] theorem getElem_sub (f g : Poly A n c) (i : ℕ) (hi : i < n) : (f - g)[i] = f[i] - g[i] :=
   Vector.getElem_zipWith hi
 
-@[simp] theorem getElem_smul (c : A) (f : Poly A n) (i : ℕ) (hi : i < n) :
-    (c • f)[i] = f[i] * c :=
+@[simp] theorem getElem_neg (f : Poly A n c) (i : ℕ) (hi : i < n) : (-f)[i] = -f[i] :=
   Vector.getElem_map ..
 
-@[simp] theorem getElem_nsmul (k : ℕ) (f : Poly A n) (i : ℕ) (hi : i < n) :
-    (k • f)[i] = f[i] * k :=
+@[simp] theorem getElem_smul (a : A) (f : Poly A n c) (i : ℕ) (hi : i < n) : (a • f)[i] = f[i] * a :=
   Vector.getElem_map ..
 
-@[simp] theorem getElem_zsmul (k : ℤ) (f : Poly A n) (i : ℕ) (hi : i < n) :
-    (k • f)[i] = f[i] * k :=
-  Vector.getElem_map ..
-
-theorem pow_zero' (f : Poly A n) : f ^ 0 = 1 := rfl
-theorem pow_succ' (f : Poly A n) (k : ℕ) : f ^ (k + 1) = f ^ k * f := rfl
-
-theorem getElem_mulBinomial (c : A) (f g : Poly A n) (k : ℕ) (hk : k < n) :
-    (mulBinomial c f g)[k] = ∑ i : Fin n, ∑ j : Fin n,
+theorem getElem_mul (f g : Poly A n c) (k : ℕ) (hk : k < n) :
+    (f * g)[k] = ∑ i : Fin n, ∑ j : Fin n,
       if i.val + j.val = k then f[i] * g[j]
       else if i.val + j.val = k + n then c * (f[i] * g[j])
       else 0 :=
   Vector.getElem_ofFn ..
 
-theorem mul_eq (f g : Poly A n) : f * g = mulBinomial (-1) f g := rfl
-
-/-- In degree two, `(a₀ + a₁X)(b₀ + b₁X) = (a₀b₀ + a₁b₁c) + (a₀b₁ + a₁b₀)X` modulo `X² - c`
-(FIPS 203 Algorithm 12, BaseCaseMultiply). -/
-theorem mulBinomial_two (c : A) (f g : Poly A 2) :
-    mulBinomial c f g = #v[f[0] * g[0] + f[1] * g[1] * c, f[0] * g[1] + f[1] * g[0]] := by
-  apply Vector.ext
-  intro k hk
-  rw [getElem_mulBinomial]
+/-- Degree two: `(a₀ + a₁X)(b₀ + b₁X) = (a₀b₀ + a₁b₁c) + (a₀b₁ + a₁b₀)X`
+(FIPS 203 Algorithm 12). -/
+theorem mul_two (f g : Poly A 2 c) :
+    f * g = ⟨#v[f[0] * g[0] + f[1] * g[1] * c, f[0] * g[1] + f[1] * g[0]]⟩ := by
+  ext k hk
+  rw [getElem_mul]
   interval_cases k
   · simp +decide [Fin.sum_univ_two]
     ring
@@ -137,19 +98,11 @@ theorem mulBinomial_two (c : A) (f g : Poly A 2) :
 
 end Poly
 
-/-- A vector of `k` polynomials (FIPS 203 §2.4.4). -/
-abbrev PolyVec (A : Type) (n k : ℕ) := Vector (Poly A n) k
+/-- Vectors of `k` ring elements (FIPS 203 §2.4.4). -/
+abbrev PolyVec (A : Type) (n : ℕ) (c : A) (k : ℕ) := Vector (Poly A n c) k
 
-namespace PolyVec
-
-variable {A : Type} [CommRing A] {n k : ℕ}
-
-instance : Add (PolyVec A n k) where
+instance {A : Type} [CommRing A] {n : ℕ} {c : A} {k : ℕ} : Add (PolyVec A n c k) where
   add v w := Vector.zipWith (· + ·) v w
-
-end PolyVec
-
-/-! ### Inner products and matrix-vector products over any coefficient type with `+`, `*`, `0` -/
 
 /-- `∑ᵢ v[i] * w[i]`. -/
 def innerProduct {α : Type} {k : ℕ} [Mul α] [Add α] [Zero α] (v w : Vector α k) : α :=
@@ -158,19 +111,17 @@ def innerProduct {α : Type} {k : ℕ} [Mul α] [Add α] [Zero α] (v w : Vector
 @[inherit_doc innerProduct]
 scoped notation:max "⟪" v ", " w "⟫" => innerProduct v w
 
-/-- A `k × k` matrix as a vector of rows (FIPS 203 §2.4.5), stored rather than represented as a
-function so that entries are computed once. -/
+/-- `k × k` matrices as vectors of rows (FIPS 203 §2.4.5). -/
 abbrev Mat (α : Type) (k : ℕ) := Vector (Vector α k) k
 
 namespace Mat
 
 variable {α : Type} {k : ℕ}
 
-/-- `Mᵀ`. -/
 def transpose (M : Mat α k) : Mat α k :=
   Vector.ofFn fun i => Vector.ofFn fun j => M[j][i]
 
-/-- `M · v`, row `i` giving `∑ⱼ M[i][j] * v[j]`. -/
+/-- `M · v`. -/
 def mulVec [Mul α] [Add α] [Zero α] (M : Mat α k) (v : Vector α k) : Vector α k :=
   M.map fun row => innerProduct row v
 
@@ -179,7 +130,4 @@ instance [Mul α] [Add α] [Zero α] : HMul (Mat α k) (Vector α k) (Vector α 
 
 end Mat
 
-/-- A `k × k` matrix of polynomials. -/
-abbrev PolyMat (A : Type) (n k : ℕ) := Mat (Poly A n) k
-
-end Wychelean.Lattice
+end Wychelean.PolyRing

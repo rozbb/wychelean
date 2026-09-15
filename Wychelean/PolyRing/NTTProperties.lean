@@ -1,23 +1,19 @@
-import Wychelean.Lattice.NTTSpec
-import Wychelean.Lattice.Quotient
+import Wychelean.PolyRing.NTTSpec
+import Wychelean.PolyRing.Quotient
 import Mathlib.Algebra.Field.GeomSum
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.GroupTheory.OrderOfElement
 
 /-!
-# Correctness of the transform
-
-The residue map `modBinomial` is the quotient homomorphism `ℤ_q[X]/(X^256+1) → ℤ_q[X]/(X^d - γ)`
-whenever `γ^(2^levels) = -1`, i.e. whenever `X^d - γ` divides `X^256 + 1`. Hence residues of a
-product are products of residues, which is what multiplying in the NTT domain block by block
-computes (FIPS 203 Algorithms 11–12). The inverse transform recovers `f` because the evaluation
-points are the odd powers of a primitive `2^(levels+1)`-th root of unity, whose power sums vanish
-except at multiples of the block count (`q` an odd prime).
+`modBinomial` is the quotient map `ℤ_q[X]/(X^256+1) → ℤ_q[X]/(X^d - γ)` when `γ^(2^levels) = -1`,
+so the transform is multiplicative; it is invertible because the points are the odd powers of a
+primitive `2^(levels+1)`-th root of unity (`q` an odd prime); and the recursive transform agrees
+with the closed form.
 -/
 
-namespace Wychelean.Lattice.NTT
+namespace Wychelean.PolyRing.NTT
 
-open Polynomial Wychelean.Lattice
+open Polynomial Wychelean.PolyRing
 
 noncomputable section
 
@@ -39,50 +35,45 @@ theorem reduce_root (hL : levels ≤ 8) (γ : ZMod q) (hγ : γ ^ 2 ^ levels = -
     reduce hL γ hγ R.root = R.root :=
   AdjoinRoot.lift_root _
 
-/-- Coefficient index `r + d·t` of `Fin 256` from the block coordinates. -/
+/-- Coefficient index `r + d·t` from the block coordinates. -/
 def blockIndex (hL : levels ≤ 8) : Fin (2 ^ levels) × Fin (blockSize levels) ≃ Fin 256 :=
   finProdFinEquiv.trans (finCongr (by rw [Nat.mul_comm]; exact blockSize_mul_pow hL))
 
 theorem blockIndex_apply (hL : levels ≤ 8) (t : Fin (2 ^ levels)) (r : Fin (blockSize levels)) :
     (blockIndex hL (t, r)).val = r.val + blockSize levels * t.val := rfl
 
-/-- The residue of `f` is the image of `f` under the quotient map. -/
-theorem toR_modBinomial (hL : levels ≤ 8) (f : Poly (ZMod q) 256) (γ : ZMod q)
+theorem toR_modBinomial (hL : levels ≤ 8) (f : Poly (ZMod q) 256 (-1)) (γ : ZMod q)
     (hγ : γ ^ 2 ^ levels = -1) :
-    Poly.toR γ (modBinomial levels hL f γ) = reduce hL γ hγ (Poly.toR (-1) f) := by
+    (modBinomial levels hL f γ).toR = reduce hL γ hγ f.toR := by
   simp only [Poly.toR, map_sum, map_mul, map_pow, reduce_of, reduce_root]
   rw [← Fintype.sum_equiv (blockIndex hL) (fun p => AdjoinRoot.of _ f[(blockIndex hL p).val] *
       (R.root : R (ZMod q) (blockSize levels) γ) ^ (blockIndex hL p).val) _ (fun _ => rfl)]
   rw [Fintype.sum_prod_type]
-  simp only [modBinomial, Fin.getElem_fin, Vector.getElem_ofFn, map_sum, map_mul, map_pow,
+  simp only [modBinomial, Fin.getElem_fin, Poly.getElem_ofFn, map_sum, map_mul, map_pow,
     Finset.sum_mul, blockIndex_apply]
   rw [Finset.sum_comm]
   refine Finset.sum_congr rfl fun r _ => Finset.sum_congr rfl fun t _ => ?_
   rw [pow_add, pow_mul, R.root_pow_n]
   ring
 
-/-- Residues of a product are products of residues (`q` prime). -/
-theorem modBinomial_mul [Fact q.Prime] (hL : levels ≤ 8) (f g : Poly (ZMod q) 256) (γ : ZMod q)
+theorem modBinomial_mul [Fact q.Prime] (hL : levels ≤ 8) (f g : Poly (ZMod q) 256 (-1)) (γ : ZMod q)
     (hγ : γ ^ 2 ^ levels = -1) :
-    modBinomial levels hL (f * g) γ =
-      Poly.mulBinomial γ (modBinomial levels hL f γ) (modBinomial levels hL g γ) := by
-  apply Poly.toR_injective (c := γ)
-  rw [Poly.toR_mulBinomial, toR_modBinomial hL _ _ hγ, toR_modBinomial hL _ _ hγ,
-    toR_modBinomial hL _ _ hγ, Poly.mul_eq, Poly.toR_mulBinomial, map_mul]
+    modBinomial levels hL (f * g) γ = modBinomial levels hL f γ * modBinomial levels hL g γ := by
+  apply Poly.toR_injective
+  rw [Poly.toR_mul, toR_modBinomial hL _ _ hγ, toR_modBinomial hL _ _ hγ,
+    toR_modBinomial hL _ _ hγ, Poly.toR_mul, map_mul]
 
 theorem point_pow (ζ : ZMod q) (hζ : ζ ^ 2 ^ levels = -1) (i : ℕ) :
     point ζ levels i ^ 2 ^ levels = -1 := by
   rw [point, ← pow_mul, Nat.mul_comm, pow_mul, hζ]
   exact Odd.neg_one_pow ⟨bitRev levels i, rfl⟩
 
-/-- The transform of a product is the blockwise product of the transforms (`q` prime,
-`ζ^(2^levels) = -1`). -/
+/-- The transform is multiplicative (`q` prime, `ζ^(2^levels) = -1`). -/
 theorem nttSpec_mul [Fact q.Prime] (ζ : ZMod q) (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
-    (f g : Poly (ZMod q) 256) :
+    (f g : Poly (ZMod q) 256 (-1)) :
     nttSpec ζ levels (f * g) hL = nttSpec ζ levels f hL * nttSpec ζ levels g hL := by
-  apply Residues.ext
-  intro i hi
-  rw [Residues.getElem_mul, getElem_nttSpec, getElem_nttSpec, getElem_nttSpec]
+  refine Residues.ext fun i => ?_
+  rw [Residues.mul_apply, nttSpec_apply, nttSpec_apply, nttSpec_apply]
   exact modBinomial_mul hL f g _ (point_pow ζ hζ _)
 
 /-! ### The inverse transform -/
@@ -106,7 +97,6 @@ theorem zeta_pow_succ (hζ : ζ ^ 2 ^ levels = -1) : ζ ^ 2 ^ (levels + 1) = 1 :
 theorem orderOf_zeta [Fact (2 < q)] (hζ : ζ ^ 2 ^ levels = -1) : orderOf ζ = 2 ^ (levels + 1) :=
   orderOf_eq_prime_pow (by rw [hζ]; exact ZMod.neg_one_ne_one) (zeta_pow_succ ζ hζ)
 
-/-- `ζ^(2m) = 1` exactly when the block count divides `m`. -/
 theorem zeta_pow_two_mul_eq_one_iff [Fact (2 < q)] (hζ : ζ ^ 2 ^ levels = -1) (m : ℕ) :
     ζ ^ (2 * m) = 1 ↔ 2 ^ levels ∣ m := by
   rw [← orderOf_dvd_iff_pow_eq_one, orderOf_zeta ζ hζ, pow_succ, Nat.mul_comm (2 ^ levels) 2]
@@ -122,7 +112,6 @@ theorem point_pow_succ (hζ : ζ ^ 2 ^ levels = -1) (i : ℕ) :
     point ζ levels i ^ 2 ^ (levels + 1) = 1 := by
   rw [pow_succ, pow_mul, point_pow ζ hζ, neg_one_sq]
 
-/-- Summing over bit-reversed indices is summing over all indices. -/
 theorem sum_bitRev (g : ℕ → ZMod q) :
     ∑ i : Fin (2 ^ levels), g (bitRev levels i) = ∑ i : Fin (2 ^ levels), g i :=
   Fintype.sum_bijective (fun i : Fin (2 ^ levels) => (⟨bitRev levels i, bitRev_lt _ _⟩ : Fin (2 ^ levels)))
@@ -167,23 +156,21 @@ theorem not_dvd_of_ne {t t0 : ℕ} (ht : t < 2 ^ levels) (ht0 : t0 < 2 ^ levels)
   subst hc2
   omega
 
-/-- The inverse transform undoes the transform. -/
 theorem nttInvSpec_nttSpec [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
-    (f : Poly (ZMod q) 256) : nttInvSpec ζ levels (nttSpec ζ levels f hL) = f := by
-  apply Vector.ext
-  intro k hk
+    (f : Poly (ZMod q) 256 (-1)) : nttInvSpec ζ levels (nttSpec ζ levels f hL) = f := by
+  ext k hk
   have ht0 : k / blockSize levels < 2 ^ levels := div_blockSize_lt hL hk
   have hle : k / blockSize levels ≤ 2 ^ (levels + 1) :=
     le_of_lt (lt_of_lt_of_le ht0 (Nat.pow_le_pow_right (by decide) (Nat.le_succ _)))
   rw [getElem_nttInvSpec]
   have hsum : ∀ i : Fin (2 ^ levels),
-      (nttSpec ζ levels f hL)[i][k % blockSize levels]'(Nat.mod_lt _ (blockSize_pos levels)) *
+      (nttSpec ζ levels f hL i)[k % blockSize levels]'(Nat.mod_lt _ (blockSize_pos levels)) *
           (point ζ levels i.val)⁻¹ ^ (k / blockSize levels) =
         ∑ t : Fin (2 ^ levels),
           f[k % blockSize levels + blockSize levels * t.val]'(block_idx_lt hL (Nat.mod_lt _ (blockSize_pos levels)) t.isLt) *
             point ζ levels i.val ^ (t.val + (2 ^ (levels + 1) - k / blockSize levels)) := by
     intro i
-    rw [Fin.getElem_fin, getElem_nttSpec, getElem_modBinomial, inv_pow_point ζ hζ _ _ hle, Finset.sum_mul]
+    rw [nttSpec_apply, getElem_modBinomial, inv_pow_point ζ hζ _ _ hle, Finset.sum_mul]
     refine Finset.sum_congr rfl fun t _ => ?_
     rw [mul_assoc, ← pow_add]
   simp only [hsum]
@@ -203,12 +190,66 @@ theorem nttInvSpec_nttSpec [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ le
 
 /-- Multiplying in the NTT domain computes the product in `ℤ_q[X]/(X^256 + 1)`. -/
 theorem nttInvSpec_mul [Fact (2 < q)] (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
-    (f g : Poly (ZMod q) 256) :
+    (f g : Poly (ZMod q) 256 (-1)) :
     nttInvSpec ζ levels (nttSpec ζ levels f hL * nttSpec ζ levels g hL) = f * g := by
   rw [← nttSpec_mul ζ hL hζ, nttInvSpec_nttSpec ζ hL hζ]
 
 end Inverse
 
+/-! ### The recursive transform -/
+
+section Recursive
+
+/-- Reducing modulo `X^(2d) - γ'^2` and then `X^d - γ'` is reducing modulo `X^d - γ'`:
+coefficient `r` is `lo[r] + γ' · hi[r]`. -/
+theorem getElem_modBinomial_succ (hL : levels + 1 ≤ 8) (f : Poly (ZMod q) 256 (-1)) {γ γ' : ZMod q}
+    (hγ : γ' ^ 2 = γ) (r : ℕ) (hr : r < blockSize (levels + 1)) :
+    (modBinomial (levels + 1) hL f γ')[r] =
+      (modBinomial levels (by omega) f γ)[r]'(by rw [blockSize_succ hL]; omega) +
+        γ' * (modBinomial levels (by omega) f γ)[r + blockSize (levels + 1)]'(by rw [blockSize_succ hL]; omega) := by
+  subst hγ
+  simp only [getElem_modBinomial]
+  rw [Finset.mul_sum, ← Finset.sum_add_distrib]
+  refine ((Fintype.sum_equiv finProdFinEquiv _ _ fun _ => rfl).symm).trans ?_
+  rw [Fintype.sum_prod_type]
+  refine Finset.sum_congr rfl fun t _ => ?_
+  simp only [Fin.sum_univ_two, finProdFinEquiv_apply_val, Fin.val_zero, Fin.val_one]
+  have hd := blockSize_succ hL
+  have h0 : r + blockSize (levels + 1) * (0 + 2 * t.val) = r + blockSize levels * t.val := by
+    rw [hd]; ring
+  have h1 : r + blockSize (levels + 1) * (1 + 2 * t.val) =
+      r + blockSize (levels + 1) + blockSize levels * t.val := by
+    rw [hd]; ring
+  simp only [h0, h1]
+  simp only [Nat.zero_add, pow_mul, pow_add, pow_one]
+  ring
+
+theorem point_succ_sq (ζ : ZMod q) (hζ : ζ ^ 2 ^ (levels + 1) = -1) (j : ℕ) :
+    point ζ (levels + 1) j ^ 2 = point (ζ ^ 2) levels (j / 2) := by
+  have h1 : ζ ^ 2 ^ (levels + 2) = 1 := by rw [pow_succ, pow_mul, hζ, neg_one_sq]
+  simp only [point, ← pow_mul, bitRev_succ]
+  rcases Nat.mod_two_eq_zero_or_one j with h | h
+  · rw [h]
+    congr 1
+    ring
+  · rw [h, show (2 * (bitRev levels (j / 2) + 2 ^ levels * 1) + 1) * 2 =
+      2 * (2 * bitRev levels (j / 2) + 1) + 2 ^ (levels + 2) by ring, pow_add, h1, mul_one]
+
+/-- The recursive transform is the closed form. -/
+theorem nttRec_eq_nttSpec (ζ : ZMod q) (hL : levels ≤ 8) (hζ : ζ ^ 2 ^ levels = -1)
+    (f : Poly (ZMod q) 256 (-1)) : nttRec ζ levels hL f = nttSpec ζ levels f hL := by
+  induction levels generalizing ζ with
+  | zero =>
+    ext i r hr
+    simp [nttRec, nttSpec_apply, getElem_modBinomial]
+  | succ l ih =>
+    have hζ' : (ζ ^ 2) ^ 2 ^ l = -1 := by rw [← pow_mul, ← pow_succ']; exact hζ
+    ext j r hr
+    rw [nttRec, ih (ζ ^ 2) (by omega) hζ', Residues.getElem_split, nttSpec_apply, nttSpec_apply,
+      getElem_modBinomial_succ hL f (point_succ_sq ζ hζ j)]
+
+end Recursive
+
 end
 
-end Wychelean.Lattice.NTT
+end Wychelean.PolyRing.NTT

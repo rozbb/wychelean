@@ -56,6 +56,11 @@ def Bits.ofNatLE {n : Nat} (val : Nat) : Vector Bit n :=
 def slice {n : ℕ} (v : Vector α n) (off len : ℕ) (h : off + len ≤ n := by grind) : Vector α len :=
   Vector.ofFn fun i => v[off + i]
 
+/-- The prefix of length `a` and the suffix of length `b`; the inverse of `‖`. -/
+def split {n : ℕ} (v : Vector α n) (a b : ℕ) (h : n = a + b := by first | rfl | omega) :
+    Vector α a × Vector α b :=
+  (slice v 0 a (by omega), slice v a b (by omega))
+
 /-! ## Bit reversal
 
 `bitRev n i` reverses the `n` least-significant bits of `i` (FIPS 203 §2.3, BitRev₇).
@@ -112,6 +117,23 @@ theorem testBit_bitRev (n i j : ℕ) (hj : j < n) :
   simp only [bitRev, Nat.testBit_ofBitsList, Nat.bitsn, List.getD_eq_getElem?_getD]
   rw [List.getElem?_eq_getElem (by simp; omega), List.getElem_reverse]
   simp
+
+theorem Nat.ofBitsList_append (xs ys : List Bool) :
+    Nat.ofBitsList (xs ++ ys) = Nat.ofBitsList xs + 2 ^ xs.length * Nat.ofBitsList ys := by
+  induction xs with
+  | nil => simp [Nat.ofBitsList]
+  | cons b xs ih =>
+    simp only [List.cons_append, List.length_cons, Nat.pow_succ]
+    simp only [Nat.ofBitsList, List.foldr_cons] at ih ⊢
+    rw [ih, Nat.mul_add, Nat.mul_comm (2 ^ xs.length) 2, Nat.mul_assoc]
+    omega
+
+/-- The low bit of `i` becomes the top bit of its reversal. -/
+theorem bitRev_succ (n i : ℕ) : bitRev (n + 1) i = bitRev n (i / 2) + 2 ^ n * (i % 2) := by
+  simp only [bitRev, Nat.bitsn, Vector.toList_ofFn, List.ofFn_succ, Fin.val_zero, Fin.val_succ,
+    Nat.testBit_succ, List.reverse_cons, Nat.ofBitsList_append, List.length_reverse, List.length_ofFn]
+  congr 2
+  rcases Nat.mod_two_eq_zero_or_one i with h | h <;> simp [Nat.ofBitsList, Nat.testBit_zero, h]
 
 /-- Reversing the low `n` bits twice gives the number back (for numbers below `2^n`). -/
 theorem bitRev_bitRev (n i : ℕ) (hi : i < 2 ^ n) : bitRev n (bitRev n i) = i := by
