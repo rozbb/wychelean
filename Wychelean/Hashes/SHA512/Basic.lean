@@ -22,7 +22,7 @@ abbrev lengthBits : Nat := 128
 /-- Size of the digest in bits (FIPS 180-4, section 6.4). -/
 abbrev digestBits : Nat := 512
 /-- Size of the digest in bytes. -/
-abbrev digestSize : Nat := 64
+abbrev digestBytes : Nat := 64
 
 /-- Round constants: (FIPS 180-4, section 4.2.3). -/
 def K : Vector UInt64 numRounds := #v[
@@ -136,7 +136,7 @@ def sha512_bits {n : Nat} (msg : BitVec n) (_ : n < 2 ^ 128) : BitVec digestBits
   ((parse (padded msg) (padded_aligned n)).foldl compress H0).toBitVec
 
 /-- SHA-512 of a byte string; byte zero is most significant (FIPS 180-4, section 3.1). -/
-def sha512 {len : Nat} (msg : ByteVec len) (h : 8 * len < 2 ^ 128) : ByteVec digestSize :=
+def sha512 {len : Nat} (msg : ByteVec len) (h : 8 * len < 2 ^ 128) : ByteVec digestBytes :=
   (sha512_bits (BitVec.ofBytesBE msg) h).toBytesBE
 
 end Wychelean.Hashes.SHA512

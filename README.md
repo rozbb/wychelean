@@ -25,11 +25,6 @@ Every primitive contains its own tests in `Tests.lean`. Suites are registered in
 `RunTests/Main.lean`; each suite loads its test vectors and evaluates its checks when it runs.
 The ordinary `lake build` target does not import the test suites.
 
-SHA256 and SHA512 load checked-in NIST CAVP files from their `TestVectors/` directories.
-`lake test -- --full` adds the SHA256 byte-oriented Monte Carlo suite, the SHA256 and
-SHA512 bit-oriented Monte Carlo suites, and the SHA3 long-message vectors. The SHA512
-byte-oriented Monte Carlo suite runs by default.
-
 # Docs
 
 To build docs:

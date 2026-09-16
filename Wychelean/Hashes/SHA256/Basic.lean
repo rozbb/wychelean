@@ -22,7 +22,7 @@ abbrev lengthBits : Nat := 64
 /-- Size of the digest in bits (FIPS 180-4, section 6.2). -/
 abbrev digestBits : Nat := 256
 /-- Size of the digest in bytes. -/
-abbrev digestSize : Nat := 32
+abbrev digestBytes : Nat := 32
 
 /-- Round constants: (FIPS 180-4, section 4.2.2). -/
 def K : Vector UInt32 numRounds := #v[
@@ -132,7 +132,7 @@ def sha256_bits {n : Nat} (msg : BitVec n) (_ : n < 2 ^ 64) : BitVec digestBits 
   ((parse (padded msg) (padded_aligned n)).foldl compress H0).toBitVec
 
 /-- SHA-256 of a byte string; byte zero is most significant (FIPS 180-4, section 3.1). -/
-def sha256 {len : Nat} (msg : ByteVec len) (h : 8 * len < 2 ^ 64) : ByteVec digestSize :=
+def sha256 {len : Nat} (msg : ByteVec len) (h : 8 * len < 2 ^ 64) : ByteVec digestBytes :=
   (sha256_bits (BitVec.ofBytesBE msg) h).toBytesBE
 
 end Wychelean.Hashes.SHA256

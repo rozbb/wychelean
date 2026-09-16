@@ -15,15 +15,15 @@ private def vectorDir : System.FilePath := "Wychelean/Hashes/SHA256/TestVectors"
 private def digestKey : String := "MD"
 private def countKey : String := "COUNT"
 private def seedKey : String := "Seed"
-private def sectionHeader : String := s!"L = {digestSize}"
+private def sectionHeader : String := s!"L = {digestBytes}"
 
-abbrev Digest := ByteVec digestSize
+abbrev Digest := ByteVec digestBytes
 
 structure HashVector where
   msg : BitString
   digest : Digest
 
-private def parseDigest : Parser Digest := field digestKey (readHexVec digestSize)
+private def parseDigest : Parser Digest := field digestKey (readHexVec digestBytes)
 
 /-- Known-answer records; messages may have any bit length (SHAVS, sections 6.2 and 6.3). -/
 def parseKat : Parser (List HashVector) := responseFile do
@@ -33,7 +33,7 @@ def parseKat : Parser (List HashVector) := responseFile do
 /-- Seed and checkpoint digests; `COUNT` must run `0, 1, …` in order (SHAVS, section 6.4). -/
 def parseMonte : Parser (Digest × List Digest) := responseFile do
   header sectionHeader
-  let seed ← field seedKey (readHexVec digestSize)
+  let seed ← field seedKey (readHexVec digestBytes)
   let checkpoints ← many1 do return (← field countKey digits, ← parseDigest)
   for ((count, _), i) in checkpoints.zipIdx do
     unless count == i do fail s!"{countKey} = {count} where {i} was expected"
