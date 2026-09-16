@@ -175,7 +175,7 @@ abbrev PolyVector (m : ℕ) (k : K) := PolyRing.PolyVec (ZMod m) 256 (-1) k
 
 /-- Vectors and matrices over `T_q` (§2.4.7–§2.4.8). -/
 abbrev NTTVector (k : K) := PolyRing.NTTVec ζ 7 k
-abbrev NTTMatrix (k : K) := PolyRing.Mat Tq k
+abbrev NTTMatrix (k : K) := PolyRing.Mat Tq k k
 
 /-! ## §4.1 Cryptographic Functions (Eq. 4.1–4.5)
 

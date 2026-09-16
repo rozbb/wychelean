@@ -113,14 +113,6 @@ abbrev NTTDomain.nttInv {q levels : ℕ} {ζ : ZMod q} [h : Fact (levels ≤ 8)]
 /-- A vector of `k` NTT-domain elements (FIPS 203 §2.4.7). -/
 abbrev NTTVec {q : ℕ} (ζ : ZMod q) (levels k : ℕ) := Vector (NTTDomain ζ levels) k
 
-instance {q k levels : ℕ} {ζ : ZMod q} : Add (NTTVec ζ levels k) where
-  add v w := Vector.zipWith (· + ·) v w
-
-@[default_instance]
-instance {q k levels : ℕ} {ζ : ZMod q} :
-    HMul (Mat (NTTDomain ζ levels) k) (NTTVec ζ levels k) (NTTVec ζ levels k) where
-  hMul := Mat.mulVec
-
 def NTTVec.nttInv {q k levels : ℕ} {ζ : ZMod q} [Fact (levels ≤ 8)] (v : NTTVec ζ levels k) :
     PolyVec (ZMod q) 256 (-1) k :=
   v.map (·.nttInv)
