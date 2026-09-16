@@ -29,7 +29,7 @@ def K_PKE.Encrypt (p : ParameterSet) (ek : EkPKE p) (m : Seed) (r : Seed) : Ciph
   let e₂ := SamplePolyCBD (PRF η₂ r ((2 * k p : ℕ) : Byte))                    -- Alg. 14, step 17
   let «ŷ» := y.ntt                                                             -- Alg. 14, step 18
   let u := («Â»ᵀ * «ŷ» : NTTVector (k p)).nttInv + e₁                          -- Alg. 14, step 19
-  let μ := Polynomial.Decompress 1 ⟨ByteDecode (m.cast (by grind))⟩            -- Alg. 14, step 20
+  let μ := Polynomial.Decompress 1 (PolyRing.PolyMod.ofCoeffs (ByteDecode (m.cast (by grind))))  -- Alg. 14, step 20
   let v := ⟪«t̂», «ŷ»⟫.nttInv + e₂ + μ                                         -- Alg. 14, step 21
   ⟨PolyVector.Compress (dᵤ p) u, Polynomial.Compress (dᵥ p) v⟩                 -- Alg. 14, steps 22–24
 

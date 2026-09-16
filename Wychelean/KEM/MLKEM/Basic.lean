@@ -2,6 +2,8 @@ import Mathlib.Data.ZMod.Basic
 import Mathlib.Data.Bool.Basic
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.IntervalCases
+import Mathlib.Tactic.NormNum.Prime
+import Mathlib.Algebra.Field.ZMod
 import Wychelean.Utils.Round
 import Wychelean.PolyRing
 import Wychelean.Hashes.SHA3.XOF
@@ -85,15 +87,18 @@ abbrev Zq := ZMod q
 
 /-- `ℤ_m[X] / (X^256 + 1)`: `R_q` for `m = q`, and the compressed coefficients for `m = 2^d`
 (§4.2.1). -/
-abbrev Polynomial (m : ℕ := q) := PolyRing.Poly (ZMod m) 256 (-1)
+abbrev Polynomial (m : ℕ := q) := PolyRing.PolyMod (ZMod m) 256 (-1)
 
-/-- ζ = 17 ∈ ℤ_q is a primitive 256-th root of unity modulo q (§4.3). -/
-def ζ : Zq := 17
+instance : Fact (Nat.Prime q) := ⟨by norm_num⟩
+
+/-- ζ = 17 ∈ ℤ_q is a primitive 256-th root of unity modulo q (§4.3), from `ζ^128 = -1`. -/
+def ζ : PolyRing.PrimitiveRoot Zq (2 ^ 8) :=
+  PolyRing.PrimitiveRoot.ofPowEqNegOne 17 (by decide +kernel) (by decide)
 
 /-- `T_q`, the NTT representation of `R_q` (§2.4.6). -/
-abbrev Tq := PolyRing.NTTDomain ζ 7
+abbrev Tq := PolyRing.NTTDomain 7 ζ 256
 
-instance : Fact (7 ≤ 8) := ⟨by decide⟩
+instance : Fact (2 ^ 7 ∣ 256) := ⟨by decide⟩
 
 /-- m(d) = 2^d if d < 12, q if d = 12 (§4.2.1). -/
 abbrev m (d : ℕ) := if d < 12 then 2^d else q
@@ -174,7 +179,7 @@ abbrev ctLen (p : ParameterSet) : ℕ := c₁Len p + c₂Len p
 abbrev PolyVector (m : ℕ) (k : K) := PolyRing.PolyVec (ZMod m) 256 (-1) k
 
 /-- Vectors and matrices over `T_q` (§2.4.7–§2.4.8). -/
-abbrev NTTVector (k : K) := PolyRing.NTTVec ζ 7 k
+abbrev NTTVector (k : K) := PolyRing.NTTVec 7 ζ 256 k
 abbrev NTTMatrix (k : K) := PolyRing.Mat Tq k k
 
 /-! ## §4.1 Cryptographic Functions (Eq. 4.1–4.5)
@@ -218,10 +223,10 @@ def Decompress (d : ℕ) (y : ZMod (m d)) (_ : 1 ≤ d ∧ d < 12 := by grind) :
   ⌈ ((q : ℚ) / (2^d : ℚ)) * y.val ⌋
 
 def Polynomial.Compress (d : ℕ) (f : Polynomial) (_ : 1 ≤ d ∧ d < 12 := by grind) : Polynomial (m d) :=
-  PolyRing.Poly.ofFn fun i => MLKEM.Compress d f[i]
+  PolyRing.PolyMod.ofFn fun i => MLKEM.Compress d f[i]
 
 def Polynomial.Decompress (d : ℕ) (f : Polynomial (m d)) (_ : 1 ≤ d ∧ d < 12 := by grind) : Polynomial :=
-  PolyRing.Poly.ofFn fun i => MLKEM.Decompress d f[i]
+  PolyRing.PolyMod.ofFn fun i => MLKEM.Decompress d f[i]
 
 def PolyVector.Compress {k : K} (d : ℕ) (v : PolyVector q k) (_ : 1 ≤ d ∧ d < 12 := by grind) : PolyVector (m d) k :=
   v.map (Polynomial.Compress d)
@@ -255,7 +260,7 @@ def PolyVector.ByteEncode {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ 
 def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : ByteVec (32 * d * k)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : PolyVector (m d) k :=
   Vector.ofFn fun i =>
     have := poly_vec_decode_idx_le d i i.isLt
-    ⟨MLKEM.ByteDecode (slice bytes (32 * d * i) (32 * d) (by grind))⟩
+    PolyRing.PolyMod.ofCoeffs (MLKEM.ByteDecode (slice bytes (32 * d * i) (32 * d) (by grind)))
 
 /-- `ByteEncode₁₂` of a vector over `T_q`, each entry by its residues in the order of §2.4.6. -/
 def ByteEncode₁₂ {k : K} (v : NTTVector k) : ByteVec (vecLen' k) :=
@@ -292,7 +297,7 @@ theorem Η.val_le (η : Η) : η.val ≤ 3 := by
 
 def SamplePolyCBD {η : Η} (B : ByteVec (64 * η)) : Polynomial :=
   let b := bytesToBits B
-  PolyRing.Poly.ofFn fun i =>
+  PolyRing.PolyMod.ofFn fun i =>
     have := sample_cbd_idx_le i η (by grind)
     let x := ∑ (j : Fin η), b[2 * i.val * η + j].toNat
     let y := ∑ (j : Fin η), b[2 * i.val * η + η + j].toNat

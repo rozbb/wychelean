@@ -26,9 +26,9 @@ namespace Wychelean.KEM.MLKEM.Tests
 #guard ((0 : Polynomial).ntt : Tq).nttInv = 0
 
 -- Appendix A spot checks: ζ^{BitRev7(i)} mod q
-#guard (ζ ^ (bitRev 7 0) : Zq).val = 1
-#guard (ζ ^ (bitRev 7 1) : Zq).val = 1729
-#guard (ζ ^ (bitRev 7 64) : Zq).val = 17
-#guard (ζ ^ (bitRev 7 127) : Zq).val = 2154
+#guard (ζ.val ^ (bitRev 7 0) : Zq).val = 1
+#guard (ζ.val ^ (bitRev 7 1) : Zq).val = 1729
+#guard (ζ.val ^ (bitRev 7 64) : Zq).val = 17
+#guard (ζ.val ^ (bitRev 7 127) : Zq).val = 2154
 
 end Wychelean.KEM.MLKEM.Tests

@@ -135,6 +135,24 @@ theorem bitRev_succ (n i : ℕ) : bitRev (n + 1) i = bitRev n (i / 2) + 2 ^ n * 
   congr 2
   rcases Nat.mod_two_eq_zero_or_one i with h | h <;> simp [Nat.ofBitsList, Nat.testBit_zero, h]
 
+theorem bitRev_zero (i : ℕ) : bitRev 0 i = 0 := rfl
+
+/-- The low `b` bits of `i` become the top `b` bits of its `(l + b)`-bit reversal, above the
+reversal of the next `l` bits. -/
+theorem bitRev_add (l b i : ℕ) :
+    bitRev (l + b) i = bitRev l (i / 2 ^ b) + 2 ^ l * bitRev b (i % 2 ^ b) := by
+  induction b generalizing i with
+  | zero => simp [bitRev_zero]
+  | succ b ih =>
+    rw [← Nat.add_assoc, bitRev_succ, ih, bitRev_succ, Nat.div_div_eq_div_mul, Nat.pow_succ',
+      Nat.mod_mul_right_div_self, Nat.mod_mod_of_dvd _ ⟨2 ^ b, rfl⟩, Nat.pow_add, Nat.mul_add,
+      Nat.add_assoc, Nat.mul_assoc]
+
+theorem bitRev_zero_right (n : ℕ) : bitRev n 0 = 0 := by
+  induction n with
+  | zero => rfl
+  | succ n ih => rw [bitRev_succ, Nat.zero_div, ih]; rfl
+
 /-- Reversing the low `n` bits twice gives the number back (for numbers below `2^n`). -/
 theorem bitRev_bitRev (n i : ℕ) (hi : i < 2 ^ n) : bitRev n (bitRev n i) = i := by
   apply Nat.eq_of_testBit_eq
