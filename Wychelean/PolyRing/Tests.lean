@@ -1,5 +1,4 @@
 import Wychelean.PolyRing
-import Wychelean.KEM.MLKEM.Basic
 import RunTests.Basic
 
 /-! Executable checks with ML-KEM's parameters (`q = 3329`, `ζ = 17`, seven layers): the butterfly
@@ -7,9 +6,14 @@ loops against the residue forms, and products through the NTT against `Poly` mul
 
 namespace Wychelean.PolyRing.Tests
 
-open RunTests Wychelean.KEM.MLKEM
+open RunTests
 
-private abbrev P := Poly (ZMod 3329) 256 (-1)
+private abbrev q : ℕ := 3329
+private def ζ : ZMod q := 17
+private instance : Fact (7 ≤ 8) := ⟨by decide⟩
+private abbrev Tq := NTTDomain ζ 7
+
+private abbrev P := Poly (ZMod q) 256 (-1)
 
 private def monomial (i : Fin 256) : P := Poly.ofFn fun j => if j = i then 1 else 0
 
@@ -19,7 +23,7 @@ private def monomialProduct (i j : Fin 256) : P :=
     if k.val = (i.val + j.val) % 256 then (if i.val + j.val < 256 then 1 else -1) else 0
 
 private def dense (a b c : ℕ) : P :=
-  Poly.ofFn fun i => ((a * i.val * i.val + b * i.val + c : ℕ) : ZMod 3329)
+  Poly.ofFn fun i => ((a * i.val * i.val + b * i.val + c : ℕ) : ZMod q)
 
 private def ntt (f : P) : Tq := f.ntt
 
