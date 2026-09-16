@@ -99,6 +99,27 @@ def dsaSuite : Suite where
 
 end Dsa
 
-def suites : List Suite := [kemSuite, dsaSuite]
+section Cyclic
+
+private abbrev C := PolyMod (ZMod 3329) 256 1
+
+private def denseC (a b c : ℕ) : C :=
+  PolyMod.ofFn fun i => ((a * i.val * i.val + b * i.val + c : ℕ) : ZMod 3329)
+
+/-- The complete split of `ℤ_q[X]/(X^256 - 1)` at the primitive 256-th root `17`. -/
+private def nttC (f : C) := NTT.Cyclic.ntt ζKem f (by decide)
+
+def cyclicSuite : Suite where
+  name := "PolyRing cyclic split (X^256 - 1)"
+  tests := IO.lazyPure fun _ =>
+    let polys := [denseC 1 0 0, denseC 7 3 1, denseC 0 1 3328]
+    (polys.map fun f =>
+      check "nttInv (ntt f) = f" f (NTT.Cyclic.nttInv ζKem (nttC f) (by decide))) ++
+    ((polys.zip polys.reverse).map fun (f, g) =>
+      check "f * g via the cyclic split" (f * g) (NTT.Cyclic.nttInv ζKem (nttC f * nttC g) (by decide)))
+
+end Cyclic
+
+def suites : List Suite := [kemSuite, dsaSuite, cyclicSuite]
 
 end Wychelean.PolyRing.Tests
