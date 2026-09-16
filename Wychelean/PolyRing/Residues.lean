@@ -4,13 +4,13 @@ namespace Wychelean.PolyRing
 
 /-- The product ring `∏ᵢ F[X]/(X^d - γᵢ)` for the evaluation points `γ`: residue `i`, read as
 `a i`, is the polynomial with coefficients `coeffs[i]` modulo `X^d - γᵢ`. -/
-structure Residues (F : Type) (d m : ℕ) (γ : Fin m → F) where
+structure Residues (F : Type*) (d m : ℕ) (γ : Fin m → F) where
   coeffs : Vector (Vector F d) m
 deriving DecidableEq
 
 namespace Residues
 
-variable {F : Type} {d m : ℕ} {γ : Fin m → F}
+variable {F : Type*} {d m : ℕ} {γ : Fin m → F}
 
 def residue (a : Residues F d m γ) (i : Fin m) : Poly F d (γ i) := ⟨a.coeffs[i]⟩
 

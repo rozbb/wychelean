@@ -13,11 +13,11 @@ open Polynomial
 noncomputable section
 
 /-- Mathlib's `A[X] / (X^n - c)`. -/
-abbrev R (A : Type) [CommRing A] (n : ℕ) (c : A) := AdjoinRoot ((X : A[X]) ^ n - C c)
+abbrev R (A : Type*) [CommRing A] (n : ℕ) (c : A) := AdjoinRoot ((X : A[X]) ^ n - C c)
 
 namespace R
 
-variable {A : Type} [CommRing A] {n : ℕ} {c : A}
+variable {A : Type*} [CommRing A] {n : ℕ} {c : A}
 
 abbrev root : R A n c := AdjoinRoot.root _
 
@@ -33,7 +33,7 @@ end R
 
 namespace Poly
 
-variable {A : Type} [CommRing A] {n : ℕ} {c : A}
+variable {A : Type*} [CommRing A] {n : ℕ} {c : A}
 
 /-- The element of `A[X] / (X^n - c)` with coefficients `f`. -/
 def toR (f : Poly A n c) : R A n c :=
@@ -143,7 +143,7 @@ end
 
 namespace Poly
 
-variable {A : Type} [CommRing A] {n : ℕ} {c : A}
+variable {A : Type*} [CommRing A] {n : ℕ} {c : A}
 
 /-- A ring law on `Poly A n c`, through the quotient ring. -/
 local macro "poly_law" : tactic =>

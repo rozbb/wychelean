@@ -11,13 +11,13 @@ https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b
 namespace Wychelean.PolyRing
 
 /-- `A[X]/(X^n - c)`: the coefficient vector of the representative of degree below `n`. -/
-structure Poly (A : Type) (n : ℕ) (c : A) where
+structure Poly (A : Type*) (n : ℕ) (c : A) where
   coeffs : Vector A n
 deriving DecidableEq
 
 namespace Poly
 
-variable {A : Type} {n : ℕ} {c : A}
+variable {A : Type*} {n : ℕ} {c : A}
 
 def ofFn (f : Fin n → A) : Poly A n c := ⟨Vector.ofFn f⟩
 
@@ -104,13 +104,13 @@ theorem mul_two (f g : Poly A 2 c) :
 end Poly
 
 /-- Vectors of `k` ring elements (FIPS 203 §2.4.4). -/
-abbrev PolyVec (A : Type) (n : ℕ) (c : A) (k : ℕ) := Vector (Poly A n c) k
+abbrev PolyVec (A : Type*) (n : ℕ) (c : A) (k : ℕ) := Vector (Poly A n c) k
 
 /-! ### Vectors and matrices over any ring of entries -/
 
 section Linear
 
-variable {α : Type} {k l : ℕ}
+variable {α : Type*} {k l : ℕ}
 
 scoped instance [Add α] : Add (Vector α k) where add v w := Vector.zipWith (· + ·) v w
 scoped instance [Sub α] : Sub (Vector α k) where sub v w := Vector.zipWith (· - ·) v w
@@ -125,7 +125,7 @@ def innerProduct [Mul α] [Add α] [Zero α] (v w : Vector α k) : α :=
 scoped notation:max "⟪" v ", " w "⟫" => innerProduct v w
 
 /-- `k × l` matrices as vectors of `k` rows of length `l` (FIPS 203 §2.4.5, FIPS 204 §2.3). -/
-abbrev Mat (α : Type) (k l : ℕ) := Vector (Vector α l) k
+abbrev Mat (α : Type*) (k l : ℕ) := Vector (Vector α l) k
 
 namespace Mat
 
