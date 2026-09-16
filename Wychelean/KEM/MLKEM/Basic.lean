@@ -259,15 +259,15 @@ def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : ByteVec (32 * d * k)) (_ : 
 
 /-- `ByteEncode₁₂` of a vector over `T_q`, each entry by its residues in the order of §2.4.6. -/
 def ByteEncode₁₂ {k : K} (v : NTTVector k) : ByteVec (vecLen' k) :=
-  ((v.map fun «f̂» => MLKEM.ByteEncode 12 «f̂».flat).flatten).cast (by simp only [vecLen']; omega)
+  (v.map fun «f̂» => MLKEM.ByteEncode 12 «f̂».flatten).flatten.cast (Nat.mul_comm _ _)
 
 def ByteDecode₁₂ {k : K} (bytes : ByteVec (vecLen' k)) : NTTVector k :=
   Vector.ofFn fun i =>
     have := poly_vec_decode_idx_le 12 i i.isLt
-    ⟨MLKEM.ByteDecode (slice bytes (32 * 12 * i) (32 * 12) (by grind))⟩
+    PolyRing.Residues.ofFlat (MLKEM.ByteDecode (slice bytes (32 * 12 * i) (32 * 12) (by grind)))
 
 /-! ## §4.2.2 Algorithm 7 — SampleNTT(B) -/
-def SampleNTT (B : ByteVec (seedLen + 2)) : Tq := ⟨Id.run do
+def SampleNTT (B : ByteVec (seedLen + 2)) : Tq := PolyRing.Residues.ofFlat <| Id.run do
   let mut ctx := XOF.Init
   ctx := XOF.Absorb ctx B
   let mut «â» : Vector Zq 256 := Vector.replicate 256 0
@@ -283,7 +283,7 @@ def SampleNTT (B : ByteVec (seedLen + 2)) : Tq := ⟨Id.run do
     if h : d₂ < q ∧ j < 256 then
       «â» := «â».set j d₂
       j := j + 1
-  pure «â»⟩
+  pure «â»
 
 /-! ## §4.2.2 Algorithm 8 — SamplePolyCBD_η(B) -/
 
@@ -304,7 +304,7 @@ def SampleMatrix {k : K} (ρ : Seed) : NTTMatrix k :=
 
 /-- `k` polynomials `SamplePolyCBD_η(PRF_η(s, N))` for `N = N₀, N₀ + 1, …`
 (the loops over `N` of Algorithms 13–14). -/
-def SampleVector {k : K} (η : Η) (s : Seed) (N₀ : ℕ) : PolyVector q k :=
+def SampleCBDVector {k : K} (η : Η) (s : Seed) (N₀ : ℕ) : PolyVector q k :=
   Vector.ofFn fun i => SamplePolyCBD (PRF η s ((N₀ + i : ℕ) : Byte))
 
 end Wychelean.KEM.MLKEM

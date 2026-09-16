@@ -126,10 +126,6 @@ def transpose (M : Mat α k) : Mat α k :=
 def mulVec [Mul α] [Add α] [Zero α] (M : Mat α k) (v : Vector α k) : Vector α k :=
   M.map fun row => innerProduct row v
 
-@[default_instance]
-instance [Mul α] [Add α] [Zero α] : HMul (Mat α k) (Vector α k) (Vector α k) where
-  hMul := mulVec
-
 end Mat
 
 @[inherit_doc Mat.transpose]

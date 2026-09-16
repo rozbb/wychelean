@@ -65,7 +65,7 @@ def nttSpec (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256 (-1)) (hL : leve
 
 /-- The transform as `levels` splitting layers. -/
 def nttRec (ζ : ZMod q) : (levels : ℕ) → levels ≤ 8 → Poly (ZMod q) 256 (-1) → NTTDomain ζ levels
-  | 0, _, f => ⟨f.coeffs⟩
+  | 0, _, f => ⟨#v[f.coeffs]⟩
   | l + 1, hL, f =>
     Residues.split (nttRec (ζ ^ 2) l (by omega) f) (points ζ (l + 1)) (blockSize_succ hL) (Nat.pow_succ ..)
 

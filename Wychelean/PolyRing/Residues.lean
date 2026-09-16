@@ -2,53 +2,37 @@ import Wychelean.PolyRing.Poly
 
 namespace Wychelean.PolyRing
 
-/-- The product ring `∏ᵢ ℤ_q[X]/(X^d - γᵢ)` for the evaluation points `γ`, stored as the residues'
-coefficients in sequence, residue `i` at `d·i, …, d·i + d - 1` (the order of FIPS 203 §2.4.6);
-`a i` reads residue `i`. -/
+/-- The product ring `∏ᵢ ℤ_q[X]/(X^d - γᵢ)` for the evaluation points `γ`: residue `i`, read as
+`a i`, is the polynomial with coefficients `coeffs[i]` modulo `X^d - γᵢ`. -/
 structure Residues (q d m : ℕ) (γ : Fin m → ZMod q) where
-  flat : Vector (ZMod q) (m * d)
+  coeffs : Vector (Vector (ZMod q) d) m
 deriving DecidableEq
 
 namespace Residues
 
 variable {q d m : ℕ} {γ : Fin m → ZMod q}
 
-theorem flat_idx_lt {r i : ℕ} (hr : r < d) (hi : i < m) : r + d * i < m * d := by
-  have := Nat.mul_le_mul_left d (Nat.succ_le_of_lt hi)
-  rw [Nat.mul_succ] at this
-  rw [Nat.mul_comm m d]
-  omega
-
-def residue (a : Residues q d m γ) (i : Fin m) : Poly (ZMod q) d (γ i) :=
-  Poly.ofFn fun r => a.flat[r.val + d * i.val]'(flat_idx_lt r.isLt i.isLt)
+def residue (a : Residues q d m γ) (i : Fin m) : Poly (ZMod q) d (γ i) := ⟨a.coeffs[i]⟩
 
 instance : CoeFun (Residues q d m γ) (fun _ => (i : Fin m) → Poly (ZMod q) d (γ i)) := ⟨residue⟩
 
 @[simp] theorem getElem_apply (a : Residues q d m γ) (i : Fin m) (r : ℕ) (hr : r < d) :
-    (a i)[r] = a.flat[r + d * i.val]'(flat_idx_lt hr i.isLt) :=
-  Poly.getElem_ofFn ..
+    (a i)[r] = a.coeffs[i][r] := rfl
 
 /-- The element with residues `f`. -/
 def ofFn (f : (i : Fin m) → Poly (ZMod q) d (γ i)) : Residues q d m γ :=
-  ⟨(Vector.ofFn fun i => (f i).coeffs).flatten⟩
+  ⟨Vector.ofFn fun i => (f i).coeffs⟩
 
 @[simp] theorem apply_ofFn (f : (i : Fin m) → Poly (ZMod q) d (γ i)) (i : Fin m) : ofFn f i = f i := by
   ext r hr
-  have h1 : (r + d * i.val) / d = i.val := by
-    rw [Nat.add_mul_div_left _ _ (by omega), Nat.div_eq_of_lt hr, Nat.zero_add]
-  have h2 : (r + d * i.val) % d = r := by
-    rw [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hr]
-  simp [ofFn, getElem_apply, Vector.getElem_flatten, h1, h2]
+  simp [ofFn, getElem_apply]
 
 @[ext] theorem ext {a b : Residues q d m γ} (h : ∀ i, a i = b i) : a = b := by
   cases a; cases b
   congr 1
   apply Vector.ext
-  intro k hk
-  have hd : 0 < d := Nat.pos_of_lt_mul_left hk
-  have := congrArg (fun p => p[k % d]'(Nat.mod_lt _ hd))
-    (h ⟨k / d, (Nat.div_lt_iff_lt_mul hd).2 hk⟩)
-  simpa [getElem_apply, Nat.mod_add_div] using this
+  intro i hi
+  simpa [residue] using h ⟨i, hi⟩
 
 instance : Zero (Residues q d m γ) where zero := ofFn fun _ => 0
 instance : Add (Residues q d m γ) where add a b := ofFn fun i => a i + b i
@@ -65,6 +49,18 @@ theorem mul_two {γ : Fin m → ZMod q} (a b : Residues q 2 m γ) (i : Fin m) :
     (a * b) i = ⟨#v[(a i)[0] * (b i)[0] + (a i)[1] * (b i)[1] * γ i,
                    (a i)[0] * (b i)[1] + (a i)[1] * (b i)[0]]⟩ := by
   rw [mul_apply, Poly.mul_two]
+
+/-- The coefficients in sequence, residue `i` at `d·i, …, d·i + d - 1` (FIPS 203 §2.4.6). -/
+def flatten (a : Residues q d m γ) : Vector (ZMod q) (m * d) := a.coeffs.flatten
+
+theorem flat_idx_lt {r i : ℕ} (hr : r < d) (hi : i < m) : r + d * i < m * d := by
+  have := Nat.mul_le_mul_left d (Nat.succ_le_of_lt hi)
+  rw [Nat.mul_succ] at this
+  rw [Nat.mul_comm m d]
+  omega
+
+def ofFlat (v : Vector (ZMod q) (m * d)) : Residues q d m γ :=
+  ⟨Vector.ofFn fun i => Vector.ofFn fun r => v[r.val + d * i.val]'(flat_idx_lt r.isLt i.isLt)⟩
 
 /-- One Cooley–Tukey layer. Residue `j` is `lo + γ' j · hi` for `a (j/2) = lo + X^d · hi`,
 which is `a (j/2) mod (X^d - γ' j)` when `(γ' j)^2 = γ (j/2)`. -/

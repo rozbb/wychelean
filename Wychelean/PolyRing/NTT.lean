@@ -64,7 +64,7 @@ open Bounds
 with twiddles `ζ^BitRev(i)`. -/
 def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256 (-1)) (hL : levels ≤ 8 := by decide) :
     NTTDomain ζ levels :=
-  ⟨Vector.cast (pow_mul_blockSize hL).symm <| Id.run do
+  Residues.ofFlat <| Vector.cast (pow_mul_blockSize hL).symm <| Id.run do
   let mut «f̂» := f.coeffs
   let mut i := 1
   for h0: len in lens levels do
@@ -77,13 +77,13 @@ def ntt (ζ : ZMod q) (levels : ℕ) (f : Poly (ZMod q) 256 (-1)) (hL : levels �
         let t := zeta * «f̂»[j + len]
         «f̂» := «f̂».set (j + len) («f̂»[j] - t)
         «f̂» := «f̂».set j         («f̂»[j] + t)
-  pure «f̂»⟩
+  pure «f̂»
 
 /-- Inverse transform, FIPS 203 Algorithm 10 / FIPS 204 Algorithm 42: Gentleman–Sande
 butterflies followed by division by `2^levels`. -/
 def nttInv (ζ : ZMod q) (levels : ℕ) («f̂» : NTTDomain ζ levels) (hL : levels ≤ 8 := by decide) :
     Poly (ZMod q) 256 (-1) := Id.run do
-  let mut f := «f̂».flat.cast (pow_mul_blockSize hL)
+  let mut f := «f̂».flatten.cast (pow_mul_blockSize hL)
   let mut i := 2 ^ levels - 1
   for h0: len in (lens levels).reverse do
     have h0' := List.mem_reverse.mp h0
@@ -115,6 +115,15 @@ abbrev NTTVec {q : ℕ} (ζ : ZMod q) (levels k : ℕ) := Vector (NTTDomain ζ l
 
 instance {q k levels : ℕ} {ζ : ZMod q} : Add (NTTVec ζ levels k) where
   add v w := Vector.zipWith (· + ·) v w
+
+@[default_instance]
+instance {q k levels : ℕ} {ζ : ZMod q} :
+    HMul (Mat (NTTDomain ζ levels) k) (NTTVec ζ levels k) (NTTVec ζ levels k) where
+  hMul := Mat.mulVec
+
+def NTTVec.nttInv {q k levels : ℕ} {ζ : ZMod q} [Fact (levels ≤ 8)] (v : NTTVec ζ levels k) :
+    PolyVec (ZMod q) 256 (-1) k :=
+  v.map (·.nttInv)
 
 /-- The transform of every entry. -/
 def PolyVec.ntt {q k : ℕ} (v : PolyVec (ZMod q) 256 (-1) k) {ζ : ZMod q} {levels : ℕ} [Fact (levels ≤ 8)] :

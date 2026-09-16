@@ -26,7 +26,7 @@ private def ntt (f : P) : Tq := f.ntt
 private def viaNTT (f g : P) : P := (ntt f * ntt g).nttInv
 
 private instance : ToString P := ⟨fun f => toString (f.coeffs.toList.map (·.val))⟩
-private instance : ToString Tq := ⟨fun f => toString (f.flat.toList.map (·.val))⟩
+private instance : ToString Tq := ⟨fun f => toString (f.flatten.toList.map (·.val))⟩
 
 def suite : Suite where
   name := "PolyRing and NTT (ML-KEM parameters)"
