@@ -118,6 +118,7 @@ namespace Mat
 
 variable {α : Type} {k : ℕ}
 
+/-- `Mᵀ`. -/
 def transpose (M : Mat α k) : Mat α k :=
   Vector.ofFn fun i => Vector.ofFn fun j => M[j][i]
 
@@ -125,9 +126,13 @@ def transpose (M : Mat α k) : Mat α k :=
 def mulVec [Mul α] [Add α] [Zero α] (M : Mat α k) (v : Vector α k) : Vector α k :=
   M.map fun row => innerProduct row v
 
+@[default_instance]
 instance [Mul α] [Add α] [Zero α] : HMul (Mat α k) (Vector α k) (Vector α k) where
   hMul := mulVec
 
 end Mat
+
+@[inherit_doc Mat.transpose]
+scoped postfix:max "ᵀ" => Mat.transpose
 
 end Wychelean.PolyRing

@@ -121,8 +121,5 @@ def PolyVec.ntt {q k : ℕ} (v : PolyVec (ZMod q) 256 (-1) k) {ζ : ZMod q} {lev
     NTTVec ζ levels k :=
   v.map (·.ntt)
 
-def NTTVec.nttInv {q k levels : ℕ} {ζ : ZMod q} [Fact (levels ≤ 8)] (v : NTTVec ζ levels k) :
-    PolyVec (ZMod q) 256 (-1) k :=
-  v.map (·.nttInv)
 
 end Wychelean.PolyRing

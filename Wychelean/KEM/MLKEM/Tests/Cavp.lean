@@ -11,8 +11,8 @@ checks. The vectors are in `TestVectors/symcrypt_acvp.rsp`, copied from
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/SpecTests/MLKEM/TestVectors.lean
 which attributes them to SymCrypt's `unittest/kat_kem.dat`, derived from NIST ACVP
 ML-KEM-keyGen-FIPS203 and ML-KEM-encapDecap-FIPS203. Each parameter set runs
-`KeyGen_internal` against the expected keys, `Encaps_internal` against the expected shared key
-and ciphertext, and a `KeyGen_internal → Encaps_internal → Decaps_internal`/`Decaps` round trip.
+`Internal.KeyGen` against the expected keys, `Internal.Encaps` against the expected shared key
+and ciphertext, and a `Internal.KeyGen → Internal.Encaps → Internal.Decaps`/`Decaps` round trip.
 -/
 
 namespace Wychelean.KEM.MLKEM.Tests
@@ -91,14 +91,14 @@ private def run (p : ParameterSet) (kat : Kat) : IO (List Test) := do
   let m ← IO.ofExcept (toFixed 32 kat.m)
   let encK ← IO.ofExcept (toFixed 32 kat.K)
   let encC ← IO.ofExcept (toFixed (ctLen p) kat.c)
-  let (ek, dk) := KeyGen_internal p d z
-  let (K, c) := Encaps_internal p encEk m
-  let (K2, c2) := Encaps_internal p ek m
+  let (ek, dk) := Internal.KeyGen p d z
+  let (K, c) := Internal.Encaps p encEk m
+  let (K2, c2) := Internal.Encaps p ek m
   return [ check "KeyGen ek" kgEk ek,
            check "KeyGen dk" kgDk dk,
            check "Encaps K" encK K,
            check "Encaps c" encC c,
-           check "Decaps_internal round trip" K2 (Decaps_internal p dk c2),
+           check "Internal.Decaps round trip" K2 (Internal.Decaps p dk c2),
            check "Decaps round trip" (some K2) (Decaps p dk c2) ]
 
 private def cavp (name : String) (p : ParameterSet) (pick : Kat × Kat × Kat → Kat) : Suite where

@@ -7,6 +7,13 @@ abbrev Bit := Bool
 abbrev Byte := UInt8
 abbrev ByteVec (n : Nat) := Vector Byte n
 
+/-- A fixed layout of `n` bytes: `pack` writes the parts in order, `unpack` reads them back. -/
+class ByteLayout (α : Type) (n : outParam Nat) where
+  pack : α → ByteVec n
+  unpack : ByteVec n → α
+
+export ByteLayout (pack unpack)
+
 end Wychelean
 
 namespace BitVec

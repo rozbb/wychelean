@@ -12,7 +12,7 @@ length, malleable ciphertexts, and ciphertexts that must take the implicit-rejec
 All four file kinds drive the internal API of FIPS 203 (§6) with explicit seeds and messages:
 
 - `mlkem_*_keygen_seed_test.json`: `KeyGen` from the seed `d ‖ z` must give the expected keys.
-- `mlkem_*_test.json`: `KeyGen_internal` from the seed, then `Decaps` of the given ciphertext
+- `mlkem_*_test.json`: `Internal.KeyGen` from the seed, then `Decaps` of the given ciphertext
   must give the expected shared key.
 - `mlkem_*_encaps_test.json`: `Encaps` with the given message must give the expected shared key
   and ciphertext, or reject the encapsulation key.
@@ -100,7 +100,7 @@ private def KemCase.ofJson (j : Lean.Json) : Except String KemCase := do
 
 private def KemCase.run (p : ParameterSet) (c : KemCase) : Except Outcome Unit := do
   let seed ← input 64 c.seed
-  let (ek', dk) := KeyGen_internal p (slice seed 0 32) (slice seed 32 32)
+  let (ek', dk) := Internal.KeyGen p (slice seed 0 32) (slice seed 32 32)
   let ct ← input (ctLen p) c.c
   let some K' := Decaps p dk ct | throw (.rejected "decapsulation key failed its hash check")
   accept do
@@ -148,7 +148,7 @@ private def DecapsCase.run (p : ParameterSet) (c : DecapsCase) : Except Outcome 
     let some K := c.K | throw "case gives no shared key"
     let K ← toFixed 32 K
     let ek ← toFixed (ekLen p) c.ek
-    return [check "K" K K', check "embedded ek" ek (dkParts p dk).2.1]
+    return [check "K" K K', check "embedded ek" ek (unpack dk : Dk p).ek]
 
 /-! ## Suites -/
 
