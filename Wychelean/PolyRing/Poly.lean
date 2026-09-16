@@ -85,6 +85,11 @@ theorem getElem_mul (f g : Poly A n c) (k : ℕ) (hk : k < n) :
       else 0 :=
   Vector.getElem_ofFn ..
 
+/-- Degree one: the ring is `A` itself, `(a₀)(b₀) = a₀b₀`. -/
+theorem getElem_mul_one (f g : Poly A 1 c) : (f * g)[0] = f[0] * g[0] := by
+  rw [getElem_mul]
+  simp
+
 /-- Degree two: `(a₀ + a₁X)(b₀ + b₁X) = (a₀b₀ + a₁b₁c) + (a₀b₁ + a₁b₀)X`
 (FIPS 203 Algorithm 12). -/
 theorem mul_two (f g : Poly A 2 c) :

@@ -46,7 +46,7 @@ end NTT
 /-- The NTT domain `T_q` after `levels` layers: residues of degree below `256 / 2^levels` at the
 points `ζ^(2·BitRev(i) + 1)` (FIPS 203 §2.4.6 with `levels = 7`, FIPS 204 §7.5 with `8`). -/
 abbrev NTTDomain (ζ : ZMod q) (levels : ℕ) :=
-  Residues q (NTT.blockSize levels) (2 ^ levels) (NTT.points ζ levels)
+  Residues (ZMod q) (NTT.blockSize levels) (2 ^ levels) (NTT.points ζ levels)
 
 namespace NTT
 
