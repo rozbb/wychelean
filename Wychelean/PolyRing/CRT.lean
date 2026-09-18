@@ -16,32 +16,6 @@ open Polynomial
 
 noncomputable section
 
-/-! ### Surjectivity of the representation -/
-
-namespace Poly
-
-variable {A : Type*} [CommRing A] {n : ℕ}
-
-/-- Every class in `A[X]/(X^n - c)` has a representative of degree below `n`. -/
-theorem toR_surjective [Nontrivial A] [NeZero n] (c : A) :
-    Function.Surjective (toR c : Poly A n → R A n c) := by
-  intro x
-  induction x using AdjoinRoot.induction_on with
-  | ih g =>
-    have hmonic : (X ^ n - C c : A[X]).Monic := monic_X_pow_sub_C c (NeZero.ne n)
-    refine ⟨⟨Vector.ofFn fun i => (g %ₘ (X ^ n - C c)).coeff i⟩, ?_⟩
-    rw [toR_eq_mk, AdjoinRoot.mk_eq_mk]
-    have : (⟨Vector.ofFn fun i => (g %ₘ (X ^ n - C c)).coeff i⟩ : Poly A n).toPoly =
-        g %ₘ (X ^ n - C c) := by
-      rw [toPoly]
-      simp only [Fin.getElem_fin, getElem_mk, Vector.getElem_ofFn, C_mul_X_pow_eq_monomial]
-      exact sum_modByMonic_coeff hmonic
-        (by rw [degree_X_pow_sub_C (Nat.pos_of_ne_zero (NeZero.ne n))])
-    rw [this]
-    exact dvd_modByMonic_sub g _
-
-end Poly
-
 namespace Residues
 
 variable {F : Type*} [CommRing F] {d m : ℕ}
@@ -95,14 +69,14 @@ section Hom
 variable {F : Type*} [CommRing F] {n d m : ℕ} {c : F} {γ : Fin m → F}
 
 /-- `F[X]/(X^n - c) → ∏ᵢ F[X]/(X^d - γᵢ)` when `n = m·d` and each `γᵢ` is an `m`-th root of `c`. -/
-def crtHom (hn : n = m * d) (h : LayerPoints m (fun _ : Fin 1 => c) γ (Nat.one_mul _).symm) :
-    R F n c →+* ∀ i, R F d (γ i) :=
-  RingHom.pi fun i => R.reduce m d hn (γ i) (h i)
+def crtHom [NeZero m] (hn : n = m * d) (h : LayerPoints m (fun _ : Fin 1 => c) γ (Nat.one_mul _).symm) :
+    R F n (Poly.binomial c) →+* ∀ i, R F d (Poly.binomial (γ i)) :=
+  RingHom.pi fun i => R.reduceBinomial m d hn (γ i) (h i)
 
 /-- The computable one-shot layer tracks the canonical map. -/
-theorem crtHom_toR (hn : n = m * d) (h : LayerPoints m (fun _ : Fin 1 => c) γ (Nat.one_mul _).symm)
-    (f : PolyMod F n c) :
-    crtHom hn h (Poly.toR c f.poly) = (split m f γ hn (Nat.one_mul _).symm).toR := by
+theorem crtHom_toR [NeZero m] (hn : n = m * d)
+    (h : LayerPoints m (fun _ : Fin 1 => c) γ (Nat.one_mul _).symm) (f : PolyMod F n c) :
+    crtHom hn h (Poly.toR (Poly.binomial c) f.poly) = (split m f γ hn (Nat.one_mul _).symm).toR := by
   funext i
   rw [crtHom, RingHom.pi_apply, toR, split_apply, PolyMod.apply_eq_poly, Poly.toR_modBinomial]
 
@@ -112,31 +86,32 @@ section Equiv
 
 variable {F : Type*} [Field F] {n d m : ℕ} {c : F} {γ : Fin m → F}
 
-theorem crtHom_bijective [NeZero n] [NeZero d] (hn : n = m * d) (hm : (m : F) ≠ 0)
+theorem crtHom_bijective [NeZero n] [NeZero d] [NeZero m] (hn : n = m * d) (hm : (m : F) ≠ 0)
     (h : SplitPoints m (fun _ : Fin 1 => c) γ (Nat.one_mul _).symm) :
     Function.Bijective (crtHom hn h.layerPoints) := by
   constructor
   · intro x y hxy
-    obtain ⟨f, rfl⟩ := Poly.toR_surjective c x
-    obtain ⟨g, rfl⟩ := Poly.toR_surjective c y
+    obtain ⟨f, rfl⟩ := Poly.toR_surjective (Poly.binomial c) x
+    obtain ⟨g, rfl⟩ := Poly.toR_surjective (Poly.binomial c) y
     rw [← PolyMod.poly_mk (c := c) f, ← PolyMod.poly_mk (c := c) g, crtHom_toR, crtHom_toR] at hxy
     have hmk : (PolyMod.mk f : PolyMod F n c) = PolyMod.mk g := by
       rw [← splitInv_split m hn _ h hm (PolyMod.mk f), toR_injective hxy,
         splitInv_split m hn _ h hm]
     rw [PolyMod.mk_injective hmk]
   · intro y
-    have hb : ∀ i, ∃ b : Poly F d, Poly.toR (γ i) b = y i := fun i => Poly.toR_surjective _ (y i)
+    have hb : ∀ i, ∃ b : Poly F d, Poly.toR (Poly.binomial (γ i)) b = y i :=
+      fun i => Poly.toR_surjective _ (y i)
     choose b hb using hb
-    refine ⟨Poly.toR c (PolyMod.poly (splitInv m (ofFn b : Residues F d m γ) (fun _ => c) hn
+    refine ⟨Poly.toR (Poly.binomial c) (PolyMod.poly (splitInv m (ofFn b : Residues F d m γ) (fun _ => c) hn
       (Nat.one_mul _).symm)), ?_⟩
     rw [crtHom_toR, split_splitInv m hn _ h hm]
     funext i
     rw [toR, apply_ofFn, hb]
 
 /-- The Chinese remainder isomorphism `F[X]/(X^n - c) ≃+* ∏ᵢ F[X]/(X^d - γᵢ)`. -/
-def crtEquiv [NeZero n] [NeZero d] (hn : n = m * d) (hm : (m : F) ≠ 0)
+def crtEquiv [NeZero n] [NeZero d] [NeZero m] (hn : n = m * d) (hm : (m : F) ≠ 0)
     (h : SplitPoints m (fun _ : Fin 1 => c) γ (Nat.one_mul _).symm) :
-    R F n c ≃+* ∀ i, R F d (γ i) :=
+    R F n (Poly.binomial c) ≃+* ∀ i, R F d (Poly.binomial (γ i)) :=
   RingEquiv.ofBijective _ (crtHom_bijective hn hm h)
 
 end Equiv

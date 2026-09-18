@@ -68,6 +68,8 @@ def ofPowEqNegOne (ζ : F) (h : ζ ^ 2 ^ l = -1) (h1 : (-1 : F) ≠ 1) :
 
 end PrimitiveRoot
 
+instance instNeZeroTwoPow (k : ℕ) : NeZero (2 ^ k) := ⟨(Nat.two_pow_pos k).ne'⟩
+
 namespace NTT
 
 variable {F : Type*} [CommRing F] {n levels : ℕ}

@@ -76,10 +76,12 @@ instance : SMul F (Residues F d m γ) where smul c a := ofFn fun i => c • a i
   apply_ofFn _ i
 
 /-- Residue `i` in Mathlib's `F[X]/(X^d - γ i)`. -/
-noncomputable def toR (a : Residues F d m γ) (i : Fin m) : R F d (γ i) := Poly.toR (γ i) (a i)
+noncomputable def toR (a : Residues F d m γ) (i : Fin m) : R F d (Poly.binomial (γ i)) :=
+  Poly.toR (Poly.binomial (γ i)) (a i)
 
-theorem toR_injective [IsDomain F] : Function.Injective (toR : Residues F d m γ → ∀ i, R F d (γ i)) :=
-  fun _ _ h => ext fun i => Poly.toR_injective (γ i) (congrFun h i)
+theorem toR_injective [Nontrivial F] :
+    Function.Injective (toR : Residues F d m γ → ∀ i, R F d (Poly.binomial (γ i))) :=
+  fun _ _ h => ext fun i => Poly.toR_injective _ (congrFun h i)
 
 /-- A ring law, residue by residue through the quotient rings. -/
 local macro "residue_law" : tactic =>
@@ -88,7 +90,7 @@ local macro "residue_law" : tactic =>
       Poly.toR_sub, Poly.toR_zero, Poly.toR_one]; ring))
 
 /-- The product ring structure (`F` a domain, `d ≥ 1`); the operations are the computable ones. -/
-instance instCommRing [IsDomain F] [NeZero d] : CommRing (Residues F d m γ) where
+instance instCommRing [Nontrivial F] [NeZero d] : CommRing (Residues F d m γ) where
   add_assoc _ _ _ := by residue_law
   zero_add _ := by residue_law
   add_zero _ := by residue_law

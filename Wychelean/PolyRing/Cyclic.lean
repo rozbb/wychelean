@@ -39,7 +39,7 @@ def ntt (ζ : PrimitiveRoot F (2 ^ levels)) (f : PolyMod F n 1) (hL : 2 ^ levels
     Residues F (n / 2 ^ levels) (2 ^ levels) (points ζ.val levels) :=
   Residues.split (2 ^ levels) f (points ζ.val levels) (blockSize_mul hL) (Nat.one_mul _).symm
 
-theorem ntt_mul [IsDomain F] (ζ : PrimitiveRoot F (2 ^ levels)) (f g : PolyMod F n 1)
+theorem ntt_mul [Nontrivial F] (ζ : PrimitiveRoot F (2 ^ levels)) (f g : PolyMod F n 1)
     (hL : 2 ^ levels ∣ n) : ntt ζ (f * g) hL = ntt ζ f hL * ntt ζ g hL :=
   Residues.split_mul (2 ^ levels) f (blockSize_mul hL) (Nat.one_mul _).symm (layerPoints ζ) g
 

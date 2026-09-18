@@ -216,8 +216,8 @@ theorem ntt_eq_iff' {d : ℕ} (hd : n / 2 ^ levels = d) (f : PolyMod F n (-1)) (
 /-- `a` is the transform of `f` iff residue `i` is the image of `f` in `F[X]/(X^d - pointᵢ)`. -/
 theorem ntt_eq_iff_toR [IsDomain F] (f : PolyMod F n (-1)) (hL : 2 ^ levels ∣ n) (a : NTTDomain levels ζ n) :
     ntt levels ζ f hL = a ↔ ∀ i, a.toR i =
-      R.reduce (2 ^ levels) (n / 2 ^ levels) (blockSize_mul hL) (point ζ.val levels i)
-        (root_layerPoints ζ i) (Poly.toR (-1) f.poly) := by
+      R.reduceBinomial (2 ^ levels) (n / 2 ^ levels) (blockSize_mul hL) (point ζ.val levels i)
+        (root_layerPoints ζ i) (Poly.toR (Poly.binomial (-1)) f.poly) := by
   rw [ntt_eq_nttSpec, nttSpec, split_eq_iff_toR _ _ _ _ (root_layerPoints ζ)]
   refine forall_congr' fun i => ?_
   simp only [Residues.toR, PolyMod.apply_eq_poly]

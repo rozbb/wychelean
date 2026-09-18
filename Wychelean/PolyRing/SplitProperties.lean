@@ -171,33 +171,34 @@ variable [CommRing F] (r : ℕ) (a : Residues F d' m γ) (hd : d' = r * d) (hm :
   (h : LayerPoints r γ γ' hm)
 
 include h in
-theorem split_mul [IsDomain F] (b : Residues F d' m γ) :
+theorem split_mul [Nontrivial F] [NeZero r] (b : Residues F d' m γ) :
     split r (a * b) γ' hd hm = split r a γ' hd hm * split r b γ' hd hm := by
   ext j
   rw [mul_apply, split_apply, split_apply, split_apply, mul_apply, Poly.modBinomial_mulMod _ _ _ (h j)]
 
 include h in
-theorem split_one [IsDomain F] [NeZero r] [NeZero d] : split r (1 : Residues F d' m γ) γ' hd hm = 1 := by
+theorem split_one [Nontrivial F] [NeZero r] [NeZero d] : split r (1 : Residues F d' m γ) γ' hd hm = 1 := by
   ext j
   rw [one_apply, split_apply, one_apply, Poly.modBinomial_one _ _ (h j)]
 
 include h in
 /-- Residue `j` of the layer is the image of residue `j / r` under the quotient map. -/
-theorem split_toR [IsDomain F] (j : Fin m') :
-    (split r a γ' hd hm).toR j = R.reduce r d hd (γ' j) (h j) (a.toR ⟨j / r, div_lt hm j.isLt⟩) := by
+theorem split_toR [Nontrivial F] [NeZero r] (j : Fin m') :
+    (split r a γ' hd hm).toR j =
+      R.reduceBinomial r d hd (γ' j) (h j) (a.toR ⟨j / r, div_lt hm j.isLt⟩) := by
   rw [toR, toR, split_apply, Poly.toR_modBinomial]
 
 include h in
-theorem split_eq_iff_toR [IsDomain F] (b : Residues F d m' γ') :
+theorem split_eq_iff_toR [Nontrivial F] [NeZero r] (b : Residues F d m' γ') :
     split r a γ' hd hm = b ↔
-      ∀ j, b.toR j = R.reduce r d hd (γ' j) (h j) (a.toR ⟨j / r, div_lt hm j.isLt⟩) := by
+      ∀ j, b.toR j = R.reduceBinomial r d hd (γ' j) (h j) (a.toR ⟨j / r, div_lt hm j.isLt⟩) := by
   rw [Residues.ext_iff]
   exact forall_congr' fun j => by rw [split_apply, toR, toR, Poly.modBinomial_eq_iff_toR _ _ _ (h j)]
 
 include h in
 /-- Residue `j` of the layer is the residue whose representative differs from that of `a (j / r)`
 by a multiple of `X^d - γ' j`. -/
-theorem split_eq_iff_dvd [Nontrivial F] [NeZero d] (b : Residues F d m' γ') :
+theorem split_eq_iff_dvd [Nontrivial F] [NeZero r] [NeZero d] (b : Residues F d m' γ') :
     split r a γ' hd hm = b ↔
       ∀ j, (X ^ d - C (γ' j) : F[X]) ∣ (a ⟨j / r, div_lt hm j.isLt⟩).toPoly - (b j).toPoly := by
   rw [Residues.ext_iff]
