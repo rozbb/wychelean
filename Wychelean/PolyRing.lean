@@ -5,6 +5,7 @@ import Wychelean.PolyRing.Reduce
 import Wychelean.PolyRing.Residues
 import Wychelean.PolyRing.ModBinomial
 import Wychelean.PolyRing.ModBinomialProperties
+import Wychelean.PolyRing.ModMonicProperties
 import Wychelean.PolyRing.Split
 import Wychelean.PolyRing.SplitProperties
 import Wychelean.PolyRing.NTT
