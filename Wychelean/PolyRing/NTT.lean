@@ -108,7 +108,7 @@ end NTT
 the points `ζ^(2·BitRev(i) + 1)` (FIPS 203 §2.4.6 with `levels = 7`, FIPS 204 §7.5 with `8`). -/
 abbrev NTTDomain {F : Type*} [CommRing F] (levels : ℕ) (ζ : PrimitiveRoot F (2 ^ (levels + 1)))
     (n : ℕ) :=
-  Residues F (n / 2 ^ levels) (2 ^ levels) (NTT.points ζ.val levels)
+  Residues.Binomial F (n / 2 ^ levels) (2 ^ levels) (NTT.points ζ.val levels)
 
 namespace NTT
 

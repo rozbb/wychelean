@@ -30,7 +30,7 @@ private instance {q n : ℕ} : ToString (Poly (ZMod q) n) :=
   ⟨fun f => toString (f.coeffs.toList.map (·.val))⟩
 private instance {q : ℕ} : ToString (PolyMod (ZMod q) 256 (-1)) :=
   ⟨fun f => toString (f.coeffs.toList.map (·.val))⟩
-private instance {q d m : ℕ} {γ : Fin m → ZMod q} : ToString (Residues (ZMod q) d m γ) :=
+private instance {q d m : ℕ} {μ : Fin m → Poly (ZMod q) d} : ToString (Residues (ZMod q) d m μ) :=
   ⟨fun a => toString (a.flatten.toList.map (·.val))⟩
 
 section Kem

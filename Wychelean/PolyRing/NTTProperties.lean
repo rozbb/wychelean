@@ -119,7 +119,7 @@ theorem nttSpec_apply {levels : ℕ} (ζ : PrimitiveRoot F (2 ^ (levels + 1))) (
     (hL : 2 ^ levels ∣ n) (i : Fin (2 ^ levels)) :
     nttSpec ζ f hL i =
       f.poly.modBinomial (2 ^ levels) (n / 2 ^ levels) (point ζ.val levels i) (blockSize_mul hL) := by
-  rw [nttSpec, split_apply, PolyMod.apply_eq_poly]
+  rw [nttSpec, split_apply, PolyQuot.apply_eq_poly]
 
 theorem getElem_nttSpec {levels : ℕ} (ζ : PrimitiveRoot F (2 ^ (levels + 1))) (f : PolyMod F n (-1))
     (hL : 2 ^ levels ∣ n) (i : Fin (2 ^ levels)) (x : ℕ) (hx : x < n / 2 ^ levels) :
@@ -220,7 +220,7 @@ theorem ntt_eq_iff_toR [IsDomain F] (f : PolyMod F n (-1)) (hL : 2 ^ levels ∣ 
         (root_layerPoints ζ i) (Poly.toR (Poly.binomial (-1)) f.poly) := by
   rw [ntt_eq_nttSpec, nttSpec, split_eq_iff_toR _ _ _ _ (root_layerPoints ζ)]
   refine forall_congr' fun i => ?_
-  simp only [Residues.toR, PolyMod.apply_eq_poly]
+  simp only [Residues.toR, PolyQuot.apply_eq_poly]
 
 /-- `a` is the transform of `f` iff the representative of residue `i` differs from that of `f`
 by a multiple of `X^d - pointᵢ`. -/
@@ -232,7 +232,7 @@ theorem ntt_eq_iff_dvd [IsDomain F] [NeZero n] (f : PolyMod F n (-1)) (hL : 2 ^ 
     (Nat.le_of_dvd (Nat.pos_of_ne_zero (NeZero.ne n)) hL) (Nat.two_pow_pos _))⟩
   rw [ntt_eq_nttSpec, nttSpec, split_eq_iff_dvd _ _ _ _ (root_layerPoints ζ)]
   refine forall_congr' fun i => ?_
-  rw [PolyMod.apply_eq_poly]
+  rw [PolyQuot.apply_eq_poly]
 
 /-- With a complete split (`n = 2^levels`), `a` is the transform of `f` iff residue `i` is the
 value of `f` at `pointᵢ`. -/

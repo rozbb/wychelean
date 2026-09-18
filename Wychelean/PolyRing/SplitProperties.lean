@@ -167,17 +167,18 @@ theorem block_div {r i k : ℕ} (hr : 0 < r) (hk : k < r) : (k + r * i) / r = i 
 
 section Quotient
 
-variable [CommRing F] (r : ℕ) (a : Residues F d' m γ) (hd : d' = r * d) (hm : m' = m * r)
+variable [CommRing F] (r : ℕ) (a : Residues.Binomial F d' m γ) (hd : d' = r * d) (hm : m' = m * r)
   (h : LayerPoints r γ γ' hm)
 
 include h in
-theorem split_mul [Nontrivial F] [NeZero r] (b : Residues F d' m γ) :
+theorem split_mul [Nontrivial F] [NeZero r] (b : Residues.Binomial F d' m γ) :
     split r (a * b) γ' hd hm = split r a γ' hd hm * split r b γ' hd hm := by
   ext j
-  rw [mul_apply, split_apply, split_apply, split_apply, mul_apply, Poly.modBinomial_mulMod _ _ _ (h j)]
+  rw [mul_apply_binomial, split_apply, split_apply, split_apply, mul_apply_binomial,
+    Poly.modBinomial_mulMod _ _ _ (h j)]
 
 include h in
-theorem split_one [Nontrivial F] [NeZero r] [NeZero d] : split r (1 : Residues F d' m γ) γ' hd hm = 1 := by
+theorem split_one [Nontrivial F] [NeZero r] [NeZero d] : split r (1 : Residues.Binomial F d' m γ) γ' hd hm = 1 := by
   ext j
   rw [one_apply, split_apply, one_apply, Poly.modBinomial_one _ _ (h j)]
 
@@ -189,7 +190,7 @@ theorem split_toR [Nontrivial F] [NeZero r] (j : Fin m') :
   rw [toR, toR, split_apply, Poly.toR_modBinomial]
 
 include h in
-theorem split_eq_iff_toR [Nontrivial F] [NeZero r] (b : Residues F d m' γ') :
+theorem split_eq_iff_toR [Nontrivial F] [NeZero r] (b : Residues.Binomial F d m' γ') :
     split r a γ' hd hm = b ↔
       ∀ j, b.toR j = R.reduceBinomial r d hd (γ' j) (h j) (a.toR ⟨j / r, div_lt hm j.isLt⟩) := by
   rw [Residues.ext_iff]
@@ -198,7 +199,7 @@ theorem split_eq_iff_toR [Nontrivial F] [NeZero r] (b : Residues F d m' γ') :
 include h in
 /-- Residue `j` of the layer is the residue whose representative differs from that of `a (j / r)`
 by a multiple of `X^d - γ' j`. -/
-theorem split_eq_iff_dvd [Nontrivial F] [NeZero r] [NeZero d] (b : Residues F d m' γ') :
+theorem split_eq_iff_dvd [Nontrivial F] [NeZero r] [NeZero d] (b : Residues.Binomial F d m' γ') :
     split r a γ' hd hm = b ↔
       ∀ j, (X ^ d - C (γ' j) : F[X]) ∣ (a ⟨j / r, div_lt hm j.isLt⟩).toPoly - (b j).toPoly := by
   rw [Residues.ext_iff]
@@ -212,7 +213,7 @@ variable [Field F] (r : ℕ) (hd : d' = r * d) (hm : m' = m * r) (h : SplitPoint
   (hr : (r : F) ≠ 0)
 
 include h hr in
-theorem splitInv_split (a : Residues F d' m γ) : splitInv r (split r a γ' hd hm) γ hd hm = a := by
+theorem splitInv_split (a : Residues.Binomial F d' m γ) : splitInv r (split r a γ' hd hm) γ hd hm = a := by
   have hr0 : 0 < r := Nat.pos_of_ne_zero fun h0 => hr (by simp [h0])
   refine Residues.ext fun i => ?_
   rw [splitInv_apply]
@@ -225,7 +226,7 @@ theorem splitInv_split (a : Residues F d' m γ) : splitInv r (split r a γ' hd h
   exact Poly.merge_modBinomial hd hr hγi hω σ hδ₀ _ hpts _
 
 include h hr in
-theorem split_splitInv (b : Residues F d m' γ') : split r (splitInv r b γ hd hm) γ' hd hm = b := by
+theorem split_splitInv (b : Residues.Binomial F d m' γ') : split r (splitInv r b γ hd hm) γ' hd hm = b := by
   have hr0 : 0 < r := Nat.pos_of_ne_zero fun h0 => hr (by simp [h0])
   refine Residues.ext fun j => ?_
   rw [split_apply, splitInv_apply]
@@ -238,12 +239,12 @@ theorem split_splitInv (b : Residues F d m' γ') : split r (splitInv r b γ hd h
   exact this
 
 include h hr in
-theorem splitInv_eq_iff (b : Residues F d m' γ') (a : Residues F d' m γ) :
+theorem splitInv_eq_iff (b : Residues.Binomial F d m' γ') (a : Residues.Binomial F d' m γ) :
     splitInv r b γ hd hm = a ↔ split r a γ' hd hm = b :=
   ⟨fun e => e ▸ split_splitInv r hd hm h hr b, fun e => e ▸ splitInv_split r hd hm h hr a⟩
 
 include h hr in
-theorem split_bijective : Function.Bijective (fun a : Residues F d' m γ => split r a γ' hd hm) :=
+theorem split_bijective : Function.Bijective (fun a : Residues.Binomial F d' m γ => split r a γ' hd hm) :=
   ⟨fun a b e => by
     have e' : split r a γ' hd hm = split r b γ' hd hm := e
     rw [← splitInv_split r hd hm h hr a, e', splitInv_split r hd hm h hr b],

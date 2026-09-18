@@ -36,7 +36,7 @@ theorem splitPoints [IsDomain F] (ζ : PrimitiveRoot F (2 ^ levels)) :
 /-- The residues of `f` modulo the `X - ζ^BitRev(i)` (`n = 2^levels`) or the
 `X^d - ζ^BitRev(i)` in general. -/
 def ntt (ζ : PrimitiveRoot F (2 ^ levels)) (f : PolyMod F n 1) (hL : 2 ^ levels ∣ n) :
-    Residues F (n / 2 ^ levels) (2 ^ levels) (points ζ.val levels) :=
+    Residues.Binomial F (n / 2 ^ levels) (2 ^ levels) (points ζ.val levels) :=
   Residues.split (2 ^ levels) f (points ζ.val levels) (blockSize_mul hL) (Nat.one_mul _).symm
 
 theorem ntt_mul [Nontrivial F] (ζ : PrimitiveRoot F (2 ^ levels)) (f g : PolyMod F n 1)
@@ -50,7 +50,7 @@ namespace Wychelean.PolyRing.NTT.Cyclic
 variable {F : Type*} [Field F] {n levels : ℕ}
 
 def nttInv (ζ : PrimitiveRoot F (2 ^ levels))
-    (a : Residues F (n / 2 ^ levels) (2 ^ levels) (points ζ.val levels)) (hL : 2 ^ levels ∣ n) :
+    (a : Residues.Binomial F (n / 2 ^ levels) (2 ^ levels) (points ζ.val levels)) (hL : 2 ^ levels ∣ n) :
     PolyMod F n 1 :=
   Residues.splitInv (2 ^ levels) a (fun _ => 1) (blockSize_mul hL) (Nat.one_mul _).symm
 
@@ -59,7 +59,7 @@ theorem nttInv_ntt (ζ : PrimitiveRoot F (2 ^ levels)) (h2 : ((2 ^ levels : ℕ)
   Residues.splitInv_split (2 ^ levels) (blockSize_mul hL) (Nat.one_mul _).symm (splitPoints ζ) h2 f
 
 theorem ntt_nttInv (ζ : PrimitiveRoot F (2 ^ levels)) (h2 : ((2 ^ levels : ℕ) : F) ≠ 0)
-    (a : Residues F (n / 2 ^ levels) (2 ^ levels) (points ζ.val levels)) (hL : 2 ^ levels ∣ n) :
+    (a : Residues.Binomial F (n / 2 ^ levels) (2 ^ levels) (points ζ.val levels)) (hL : 2 ^ levels ∣ n) :
     ntt ζ (nttInv ζ a hL) hL = a :=
   Residues.split_splitInv (2 ^ levels) (blockSize_mul hL) (Nat.one_mul _).symm (splitPoints ζ) h2 a
 

@@ -4,7 +4,7 @@ import Mathlib.FieldTheory.KummerExtension
 
 /-!
 The Chinese remainder reading of a layer. A component `(d, γᵢ)` is the ideal `(X^d - γᵢ)`; the
-modulus of `Residues F d m γ` is the product of its components, a layer refines the
+modulus of `Residues.Binomial F d m γ` is the product of its components, a layer refines the
 factorisation without changing the product (`modulus_split`), and the canonical map from the
 root ring to the product of the component quotients is a ring isomorphism (`crtEquiv`) tracked
 by the computable transform (`crtHom_toR`).
@@ -78,7 +78,7 @@ theorem crtHom_toR [NeZero m] (hn : n = m * d)
     (h : LayerPoints m (fun _ : Fin 1 => c) γ (Nat.one_mul _).symm) (f : PolyMod F n c) :
     crtHom hn h (Poly.toR (Poly.binomial c) f.poly) = (split m f γ hn (Nat.one_mul _).symm).toR := by
   funext i
-  rw [crtHom, RingHom.pi_apply, toR, split_apply, PolyMod.apply_eq_poly, Poly.toR_modBinomial]
+  rw [crtHom, RingHom.pi_apply, toR, split_apply, PolyQuot.apply_eq_poly, Poly.toR_modBinomial]
 
 end Hom
 
@@ -93,16 +93,16 @@ theorem crtHom_bijective [NeZero n] [NeZero d] [NeZero m] (hn : n = m * d) (hm :
   · intro x y hxy
     obtain ⟨f, rfl⟩ := Poly.toR_surjective (Poly.binomial c) x
     obtain ⟨g, rfl⟩ := Poly.toR_surjective (Poly.binomial c) y
-    rw [← PolyMod.poly_mk (c := c) f, ← PolyMod.poly_mk (c := c) g, crtHom_toR, crtHom_toR] at hxy
-    have hmk : (PolyMod.mk f : PolyMod F n c) = PolyMod.mk g := by
-      rw [← splitInv_split m hn _ h hm (PolyMod.mk f), toR_injective hxy,
+    rw [← PolyQuot.poly_mk (μ := Poly.binomial c) f, ← PolyQuot.poly_mk (μ := Poly.binomial c) g, crtHom_toR, crtHom_toR] at hxy
+    have hmk : (PolyQuot.mk f : PolyMod F n c) = PolyQuot.mk g := by
+      rw [← splitInv_split m hn _ h hm (PolyQuot.mk f), toR_injective hxy,
         splitInv_split m hn _ h hm]
-    rw [PolyMod.mk_injective hmk]
+    rw [PolyQuot.mk_injective hmk]
   · intro y
     have hb : ∀ i, ∃ b : Poly F d, Poly.toR (Poly.binomial (γ i)) b = y i :=
       fun i => Poly.toR_surjective _ (y i)
     choose b hb using hb
-    refine ⟨Poly.toR (Poly.binomial c) (PolyMod.poly (splitInv m (ofFn b : Residues F d m γ) (fun _ => c) hn
+    refine ⟨Poly.toR (Poly.binomial c) (PolyQuot.poly (splitInv m (ofFn b : Residues.Binomial F d m γ) (fun _ => c) hn
       (Nat.one_mul _).symm)), ?_⟩
     rw [crtHom_toR, split_splitInv m hn _ h hm]
     funext i

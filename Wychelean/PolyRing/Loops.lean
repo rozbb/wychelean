@@ -80,7 +80,7 @@ open Bounds
 /-- Forward transform, FIPS 203 Algorithm 9 / FIPS 204 Algorithm 41: Cooley–Tukey butterflies
 with twiddles `ζ^BitRev(i)`. -/
 def ntt [CommRing F] [NeZero n] (levels : ℕ) (ζ : F) (f : PolyMod F n (-1)) (hL : 2 ^ levels ∣ n) :
-    Residues F (n / 2 ^ levels) (2 ^ levels) (points ζ levels) :=
+    Residues.Binomial F (n / 2 ^ levels) (2 ^ levels) (points ζ levels) :=
   Residues.ofFlat <| Vector.cast (blockSize_mul hL) <| Id.run do
   let mut «f̂» := f.coeffs
   let mut i : ℕ := 1
@@ -99,7 +99,7 @@ def ntt [CommRing F] [NeZero n] (levels : ℕ) (ζ : F) (f : PolyMod F n (-1)) (
 /-- Inverse transform, FIPS 203 Algorithm 10 / FIPS 204 Algorithm 42: Gentleman–Sande
 butterflies followed by division by `2^levels`. -/
 def nttInv [Field F] [NeZero n] (levels : ℕ) (ζ : F)
-    («f̂» : Residues F (n / 2 ^ levels) (2 ^ levels) (points ζ levels)) (hL : 2 ^ levels ∣ n) :
+    («f̂» : Residues.Binomial F (n / 2 ^ levels) (2 ^ levels) (points ζ levels)) (hL : 2 ^ levels ∣ n) :
     PolyMod F n (-1) := Id.run do
   let mut f := «f̂».flatten.cast (blockSize_mul hL).symm
   let mut i : ℕ := 2 ^ levels - 1
@@ -114,6 +114,6 @@ def nttInv [Field F] [NeZero n] (levels : ℕ) (ζ : F)
         let t := f[j]
         f := f.set j (t + f[j + len])
         f := f.set (j + len) (zeta * (f[j + len] - t))
-  pure ((2 ^ levels : F)⁻¹ • PolyMod.ofCoeffs f)
+  pure ((2 ^ levels : F)⁻¹ • PolyQuot.ofCoeffs f)
 
 end Wychelean.PolyRing.NTT.Loops

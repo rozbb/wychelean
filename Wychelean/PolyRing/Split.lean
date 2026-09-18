@@ -49,11 +49,11 @@ section Split
 variable [CommRing F] {d' m' : ℕ}
 
 /-- One layer of radix `r`: residue `j` is `a (j / r) mod (X^d - γ' j)`. -/
-def split (r : ℕ) (a : Residues F d' m γ) (γ' : Fin m' → F) (hd : d' = r * d) (hm : m' = m * r) :
-    Residues F d m' γ' :=
+def split (r : ℕ) (a : Residues.Binomial F d' m γ) (γ' : Fin m' → F) (hd : d' = r * d) (hm : m' = m * r) :
+    Residues.Binomial F d m' γ' :=
   ofFn fun j => (a ⟨j / r, div_lt hm j.isLt⟩).modBinomial r d (γ' j) hd
 
-variable (r : ℕ) (a : Residues F d' m γ) (γ' : Fin m' → F) (hd : d' = r * d) (hm : m' = m * r)
+variable (r : ℕ) (a : Residues.Binomial F d' m γ) (γ' : Fin m' → F) (hd : d' = r * d) (hm : m' = m * r)
 
 theorem split_apply (j : Fin m') :
     split r a γ' hd hm j = (a ⟨j / r, div_lt hm j.isLt⟩).modBinomial r d (γ' j) hd :=
@@ -75,23 +75,23 @@ theorem getElem_split_two (h2d : d' = 2 * d) (h2m : m' = m * 2) (j : Fin m') (s 
           rw [h2d, two_mul]; exact Nat.add_lt_add_right hs d) := by
   rw [split_apply, Poly.getElem_modBinomial_two]
 
-theorem split_add (b : Residues F d' m γ) :
+theorem split_add (b : Residues.Binomial F d' m γ) :
     split r (a + b) γ' hd hm = split r a γ' hd hm + split r b γ' hd hm := by
   ext j
   simp [split_apply, Poly.modBinomial_add]
 
-theorem split_sub (b : Residues F d' m γ) :
+theorem split_sub (b : Residues.Binomial F d' m γ) :
     split r (a - b) γ' hd hm = split r a γ' hd hm - split r b γ' hd hm := by
   ext j
   simp [split_apply, Poly.modBinomial_sub]
 
-theorem split_zero : split r (0 : Residues F d' m γ) γ' hd hm = 0 := by
+theorem split_zero : split r (0 : Residues.Binomial F d' m γ) γ' hd hm = 0 := by
   ext j
   simp [split_apply, Poly.modBinomial_zero]
 
 /-- Two layers are one layer of the product radix when the second layer's points are roots of
 the first's (the tower of quotients). -/
-theorem split_split {d'' m₁ m₂ : ℕ} (r₁ r₂ : ℕ) (a : Residues F d'' m γ) (γ₁ : Fin m₁ → F)
+theorem split_split {d'' m₁ m₂ : ℕ} (r₁ r₂ : ℕ) (a : Residues.Binomial F d'' m γ) (γ₁ : Fin m₁ → F)
     (γ₂ : Fin m₂ → F) (hd₁ : d'' = r₁ * d') (hm₁ : m₁ = m * r₁) (hd₂ : d' = r₂ * d)
     (hm₂ : m₂ = m₁ * r₂) (h : LayerPoints r₂ γ₁ γ₂ hm₂) (hd : d'' = (r₁ * r₂) * d)
     (hm : m₂ = m * (r₁ * r₂)) :
@@ -102,7 +102,7 @@ theorem split_split {d'' m₁ m₂ : ℕ} (r₁ r₂ : ℕ) (a : Residues F d'' 
       from Fin.ext (show j / r₂ / r₁ = j / (r₁ * r₂) by rw [Nat.div_div_eq_div_mul, Nat.mul_comm])]
 
 /-- `split_split` with the product radix given by an equation. -/
-theorem split_split' {d'' m₁ m₂ : ℕ} (r₁ r₂ : ℕ) (a : Residues F d'' m γ) (γ₁ : Fin m₁ → F)
+theorem split_split' {d'' m₁ m₂ : ℕ} (r₁ r₂ : ℕ) (a : Residues.Binomial F d'' m γ) (γ₁ : Fin m₁ → F)
     (γ₂ : Fin m₂ → F) (hd₁ : d'' = r₁ * d') (hm₁ : m₁ = m * r₁) (hd₂ : d' = r₂ * d)
     (hm₂ : m₂ = m₁ * r₂) (h : LayerPoints r₂ γ₁ γ₂ hm₂) {r : ℕ} (hr : r = r₁ * r₂)
     (hd : d'' = r * d) (hm : m₂ = m * r) :
@@ -118,12 +118,12 @@ variable [Field F] {d' m' : ℕ}
 
 /-- The inverse layer: residue `i` is the polynomial with residues `b (k + r·i)` modulo
 `X^d - γ' (k + r·i)`. -/
-def splitInv (r : ℕ) (b : Residues F d m' γ') (γ : Fin m → F) (hd : d' = r * d) (hm : m' = m * r) :
-    Residues F d' m γ :=
+def splitInv (r : ℕ) (b : Residues.Binomial F d m' γ') (γ : Fin m → F) (hd : d' = r * d) (hm : m' = m * r) :
+    Residues.Binomial F d' m γ :=
   ofFn fun i => Poly.merge r d hd (fun k => γ' ⟨k + r * i, block_lt hm k.isLt i.isLt⟩)
     fun k => b ⟨k + r * i, block_lt hm k.isLt i.isLt⟩
 
-theorem splitInv_apply (r : ℕ) (b : Residues F d m' γ') (γ : Fin m → F) (hd : d' = r * d)
+theorem splitInv_apply (r : ℕ) (b : Residues.Binomial F d m' γ') (γ : Fin m → F) (hd : d' = r * d)
     (hm : m' = m * r) (i : Fin m) :
     splitInv r b γ hd hm i = Poly.merge r d hd
       (fun k => γ' ⟨k + r * i, block_lt hm k.isLt i.isLt⟩)

@@ -43,6 +43,9 @@ instance : GetElem (Poly A n) ℕ A fun _ i => i < n where
 instance [Subsingleton A] : Subsingleton (Poly A n) :=
   ⟨fun _ _ => ext fun _ _ => Subsingleton.elim _ _⟩
 
+instance : Subsingleton (Poly A 0) :=
+  ⟨fun _ _ => ext fun _ hi => absurd hi (Nat.not_lt_zero _)⟩
+
 section Zero
 
 variable [Zero A] {d : ℕ}
