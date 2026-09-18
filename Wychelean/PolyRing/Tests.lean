@@ -145,6 +145,29 @@ def monicSuite : Suite where
 
 end Monic
 
-def suites : List Suite := [kemSuite, dsaSuite, cyclicSuite, monicSuite]
+section Refine
+
+/-- `X⁴ + X² + 1 = (X² + X + 1)(X² - X + 1)` over `ℤ_7`. -/
+private def μ₄ : Poly (ZMod 7) 4 := ⟨#v[1, 0, 1, 0]⟩
+private def μ₂ : Fin 2 → Poly (ZMod 7) 2 := fun j => if j = 0 then ⟨#v[1, 1]⟩ else ⟨#v[1, 6]⟩
+
+private def q4 (a b c e : ℕ) : PolyQuot (ZMod 7) 4 μ₄ :=
+  PolyQuot.ofFn fun i => ((a * i.val ^ 3 + b * i.val ^ 2 + c * i.val + e : ℕ) : ZMod 7)
+
+private def refine₂ (f : PolyQuot (ZMod 7) 4 μ₄) : Residues (ZMod 7) 2 2 μ₂ :=
+  Residues.refine 2 f μ₂ rfl
+
+def refineSuite : Suite where
+  name := "PolyRing refinement of moduli"
+  tests := IO.lazyPure fun _ =>
+    let polys := [q4 1 0 0 0, q4 2 3 5 1, q4 0 1 0 6, q4 4 4 4 4]
+    [ check "X^2 + X + 1 and X^2 - X + 1 divide X^4 + X^2 + 1" true
+        (decide (Residues.LayerDvd 2 (fun _ : Fin 1 => μ₄) μ₂ rfl)) ] ++
+    ((polys.zip polys.reverse).map fun (f, g) =>
+      check "refine (f * g) = refine f * refine g" (refine₂ (f * g)) (refine₂ f * refine₂ g))
+
+end Refine
+
+def suites : List Suite := [kemSuite, dsaSuite, cyclicSuite, monicSuite, refineSuite]
 
 end Wychelean.PolyRing.Tests
