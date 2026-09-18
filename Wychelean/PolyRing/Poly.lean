@@ -40,6 +40,31 @@ instance : GetElem (Poly A n) ℕ A fun _ i => i < n where
   congr 1
   exact Vector.ext h
 
+instance [Subsingleton A] : Subsingleton (Poly A n) :=
+  ⟨fun _ _ => ext fun _ _ => Subsingleton.elim _ _⟩
+
+section Zero
+
+variable [Zero A] {d : ℕ}
+
+/-- `f` with `k` zero coefficients added on top. -/
+def pad (k : ℕ) (f : Poly A n) : Poly A (k + n) :=
+  ofFn fun i => if h : i.val < n then f[i.val] else 0
+
+@[simp] theorem getElem_pad (k : ℕ) (f : Poly A n) (i : ℕ) (hi : i < k + n) :
+    (pad k f)[i] = if h : i < n then f[i] else 0 :=
+  getElem_ofFn ..
+
+/-- `X^k · μ`. -/
+def shift (k : ℕ) (μ : Poly A d) : Poly A (d + k) :=
+  ofFn fun i => if h : k ≤ i.val then μ[i.val - k]'(by omega) else 0
+
+@[simp] theorem getElem_shift (k : ℕ) (μ : Poly A d) (i : ℕ) (hi : i < d + k) :
+    (shift k μ)[i] = if h : k ≤ i then μ[i - k]'(by omega) else 0 :=
+  getElem_ofFn ..
+
+end Zero
+
 variable [CommRing A]
 
 /-- The constant polynomial `a`. -/
@@ -51,6 +76,9 @@ instance : Add (Poly A n) where add f g := ⟨Vector.zipWith (· + ·) f.coeffs 
 instance : Sub (Poly A n) where sub f g := ⟨Vector.zipWith (· - ·) f.coeffs g.coeffs⟩
 instance : Neg (Poly A n) where neg f := ⟨f.coeffs.map (- ·)⟩
 instance : SMul A (Poly A n) where smul a f := ⟨f.coeffs.map (· * a)⟩
+
+/-- The lower coefficients of `X^d - c`. -/
+def binomial {d : ℕ} (c : A) : Poly A d := -const c
 
 /-- The product modulo `X^n - c`: the convolution, terms of degree `n` or more wrapped around
 with `X^n = c`. -/
@@ -81,6 +109,11 @@ def mulMod (c : A) (f g : Poly A n) : Poly A n :=
 
 @[simp] theorem getElem_smul (a : A) (f : Poly A n) (i : ℕ) (hi : i < n) : (a • f)[i] = f[i] * a :=
   Vector.getElem_map ..
+
+@[simp] theorem getElem_binomial {d : ℕ} (c : A) (i : ℕ) (hi : i < d) :
+    (binomial c : Poly A d)[i] = if i = 0 then -c else 0 := by
+  rw [binomial, getElem_neg, getElem_const]
+  split_ifs <;> simp
 
 theorem getElem_mulMod (c : A) (f g : Poly A n) (k : ℕ) (hk : k < n) :
     (mulMod c f g)[k] = ∑ i : Fin n, ∑ j : Fin n,

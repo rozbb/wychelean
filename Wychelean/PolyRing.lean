@@ -1,4 +1,5 @@
 import Wychelean.PolyRing.Poly
+import Wychelean.PolyRing.ModMonic
 import Wychelean.PolyRing.Quotient
 import Wychelean.PolyRing.Reduce
 import Wychelean.PolyRing.Residues

@@ -26,6 +26,8 @@ private def ζDsa : PrimitiveRoot (ZMod 8380417) (2 ^ 9) :=
 private instance : Fact (2 ^ 7 ∣ 256) := ⟨by decide⟩
 private instance : Fact (2 ^ 8 ∣ 256) := ⟨by decide⟩
 
+private instance {q n : ℕ} : ToString (Poly (ZMod q) n) :=
+  ⟨fun f => toString (f.coeffs.toList.map (·.val))⟩
 private instance {q : ℕ} : ToString (PolyMod (ZMod q) 256 (-1)) :=
   ⟨fun f => toString (f.coeffs.toList.map (·.val))⟩
 private instance {q d m : ℕ} {γ : Fin m → ZMod q} : ToString (Residues (ZMod q) d m γ) :=
@@ -120,6 +122,29 @@ def cyclicSuite : Suite where
 
 end Cyclic
 
-def suites : List Suite := [kemSuite, dsaSuite, cyclicSuite]
+section Monic
+
+/-- `X² + X + 1` over `ℤ_7`. -/
+private def μ : Poly (ZMod 7) 2 := ⟨#v[1, 1]⟩
+
+def monicSuite : Suite where
+  name := "PolyRing division by a monic polynomial"
+  tests := IO.lazyPure fun _ =>
+    let x : Poly (ZMod 7) 2 := ⟨#v[0, 1]⟩
+    let onePlusX : Poly (ZMod 7) 2 := ⟨#v[1, 1]⟩
+    let f := (dense 1 0 0).poly
+    let g := (dense 7 3 1).poly
+    [ check "X^3 mod (X^2 + X + 1) = 1" (⟨#v[1, 0]⟩ : Poly (ZMod 7) 2)
+        (Poly.modMonic μ (⟨#v[0, 0, 0, 1]⟩ : Poly (ZMod 7) 4)),
+      check "X^5 + 3 mod (X^2 + X + 1) = 2 - X" (⟨#v[2, 6]⟩ : Poly (ZMod 7) 2)
+        (Poly.modMonic μ (⟨#v[3, 0, 0, 0, 0, 1]⟩ : Poly (ZMod 7) 6)),
+      check "X * X = -X - 1" (⟨#v[6, 6]⟩ : Poly (ZMod 7) 2) (Poly.mulMonic μ x x),
+      check "(1 + X)^2 = X" (⟨#v[0, 1]⟩ : Poly (ZMod 7) 2) (Poly.mulMonic μ onePlusX onePlusX),
+      check "mulMonic (X^256 + 1) = mulMod (-1)" (Poly.mulMod (-1) f g)
+        (Poly.mulMonic (Poly.binomial (-1)) f g) ]
+
+end Monic
+
+def suites : List Suite := [kemSuite, dsaSuite, cyclicSuite, monicSuite]
 
 end Wychelean.PolyRing.Tests
