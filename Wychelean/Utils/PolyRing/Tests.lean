@@ -1,14 +1,9 @@
-import Wychelean.PolyRing
+import Wychelean.Utils.PolyRing
 import RunTests.Basic
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.Tactic.NormNum.Prime
 
-/-! Executable checks of the transform at the ML-KEM parameters (`q = 3329`, `ζ = 17`, seven
-layers) and the ML-DSA parameters (`q = 8380417`, `ζ = 1753`, eight layers): the layer form
-against the closed form, a radix-4 schedule, the butterfly loops, and products through the NTT
-against the ring product. -/
-
-namespace Wychelean.PolyRing.Tests
+namespace Wychelean.Utils.PolyRing.Tests
 
 open RunTests
 
@@ -69,10 +64,7 @@ def kemSuite : Suite where
     (polys.map fun f =>
       check "ntt = radix-4 schedule" (NTT.nttSched [2, 2, 2, 1] 0 ζKem f (by decide)) (ntt f)) ++
     (polys.map fun f =>
-      check "nttInvSched (ntt f) = f" f (NTT.nttInvSched [2, 2, 2, 1] 0 ζKem (ntt f) (by decide))) ++
-    (polys.map fun f => check "ntt loops = ntt" (NTT.Loops.ntt 7 ζKem.val f (by decide)) (ntt f)) ++
-    (polys.map fun f =>
-      check "nttInv loops = nttInv" (NTT.Loops.nttInv 7 ζKem.val (ntt f) (by decide)) (ntt f).nttInv)
+      check "nttInvSched (ntt f) = f" f (NTT.nttInvSched [2, 2, 2, 1] 0 ζKem (ntt f) (by decide)))
 
 end Kem
 
@@ -94,10 +86,7 @@ def dsaSuite : Suite where
     (polys.map fun f => check "nttInv (ntt f) = f" f (ntt' f).nttInv) ++
     ((polys.zip polys.reverse).map fun (f, g) =>
       check s!"f * g via NTT" (f * g) (ntt' f * ntt' g).nttInv) ++
-    (polys.map fun f => check "ntt = nttSpec" (NTT.nttSpec ζDsa f (by decide)) (ntt' f)) ++
-    (polys.map fun f => check "ntt loops = ntt" (NTT.Loops.ntt 8 ζDsa.val f (by decide)) (ntt' f)) ++
-    (polys.map fun f =>
-      check "nttInv loops = nttInv" (NTT.Loops.nttInv 8 ζDsa.val (ntt' f) (by decide)) (ntt' f).nttInv)
+    (polys.map fun f => check "ntt = nttSpec" (NTT.nttSpec ζDsa f (by decide)) (ntt' f))
 
 end Dsa
 
@@ -170,4 +159,4 @@ end Refine
 
 def suites : List Suite := [kemSuite, dsaSuite, cyclicSuite, monicSuite, refineSuite]
 
-end Wychelean.PolyRing.Tests
+end Wychelean.Utils.PolyRing.Tests

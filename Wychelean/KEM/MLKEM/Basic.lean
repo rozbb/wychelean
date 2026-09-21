@@ -5,7 +5,7 @@ import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.NormNum.Prime
 import Mathlib.Algebra.Field.ZMod
 import Wychelean.Utils.Round
-import Wychelean.PolyRing
+import Wychelean.KEM.MLKEM.NTT
 import Wychelean.Hashes.SHA3.XOF
 
 /-!
@@ -18,13 +18,10 @@ https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b
 namespace Wychelean.KEM.MLKEM
 
 open Wychelean Wychelean.Hashes
-open scoped Wychelean.PolyRing
+open scoped Wychelean.Utils.PolyRing
 open scoped Wychelean.Notations
 
-/-! ## Bounds infrastructure for `get_elem_tactic`
-
-These scoped lemmas let `grind` discharge array-index bounds arising from `for`
-loops over ranges. They are activated by `open Bounds`. -/
+/-! ## Index bounds (`open Bounds`) -/
 
 namespace Bounds
 
@@ -75,117 +72,7 @@ end Bounds
 
 open Bounds
 
-/-! ## §2.4 / §8 Constants and Parameters (Table 2) -/
-
-/- `ByteVec n` (from Defs) is the standard interface type in FIPS 203. -/
-
-/-- q = 3329, the modulus for ML-KEM (§2). -/
-abbrev q : Nat := 3329
-
-/-- ℤ_q = ℤ/3329ℤ, the coefficient ring. -/
-abbrev Zq := ZMod q
-
-/-- `ℤ_m[X] / (X^256 + 1)`: `R_q` for `m = q`, and the compressed coefficients for `m = 2^d`
-(§4.2.1). -/
-abbrev Polynomial (m : ℕ := q) := PolyRing.PolyMod (ZMod m) 256 (-1)
-
-instance : Fact (Nat.Prime q) := ⟨by norm_num⟩
-
-/-- ζ = 17 ∈ ℤ_q is a primitive 256-th root of unity modulo q (§4.3), from `ζ^128 = -1`. -/
-def ζ : PolyRing.PrimitiveRoot Zq (2 ^ 8) :=
-  PolyRing.PrimitiveRoot.ofPowEqNegOne 17 (by decide +kernel) (by decide)
-
-/-- `T_q`, the NTT representation of `R_q` (§2.4.6). -/
-abbrev Tq := PolyRing.NTTDomain 7 ζ 256
-
-instance : Fact (2 ^ 7 ∣ 256) := ⟨by decide⟩
-
-/-- m(d) = 2^d if d < 12, q if d = 12 (§4.2.1). -/
-abbrev m (d : ℕ) := if d < 12 then 2^d else q
-
-/-- ML-KEM parameter sets (§8, Table 2).
-    ML-KEM-512, ML-KEM-768, and ML-KEM-1024 correspond to
-    NIST security categories 1, 3, and 5 respectively. -/
-inductive ParameterSet where
-  | ML_KEM_512
-  | ML_KEM_768
-  | ML_KEM_1024
-
-/-- Module rank `k` (Table 2): dimension of the polynomial module lattice. -/
-abbrev K := {k : ℕ // k ∈ ({2, 3, 4} : Set ℕ)}
-/-- CBD noise parameter type: η ∈ {2, 3} (Table 2). -/
-abbrev Η := {η : ℕ // η ∈ ({2, 3} : Set ℕ)}
-
-/-- Module rank k: 2 for ML-KEM-512, 3 for 768, 4 for 1024 (Table 2). -/
-
-@[reducible, scoped grind] def k (p : ParameterSet) : K :=
-  match p with
-  | .ML_KEM_512  => ⟨2, by grind⟩
-  | .ML_KEM_768  => ⟨3, by grind⟩
-  | .ML_KEM_1024 => ⟨4, by grind⟩
-
-/-- CBD noise parameter η₁ (Table 2): 3 for ML-KEM-512, 2 for 768/1024. -/
-@[reducible] def η₁ (p : ParameterSet) : Η :=
-  match p with
-  | .ML_KEM_512  => ⟨3, by grind⟩
-  | .ML_KEM_768  => ⟨2, by grind⟩
-  | .ML_KEM_1024 => ⟨2, by grind⟩
-
-/-- CBD noise parameter η₂ = 2 for all parameter sets (Table 2). -/
-def η₂ : Η := ⟨2, by grind⟩
-
-/-- Ciphertext compression parameter dᵤ (Table 2): 10 for 512/768, 11 for 1024. -/
-@[reducible] def dᵤ (p : ParameterSet) : ℕ :=
-  match p with
-  | .ML_KEM_512  => 10
-  | .ML_KEM_768  => 10
-  | .ML_KEM_1024 => 11
-
-/-- Ciphertext compression parameter dᵥ (Table 2): 4 for 512/768, 5 for 1024. -/
-@[reducible] def dᵥ (p : ParameterSet) : ℕ :=
-  match p with
-  | .ML_KEM_512  => 4
-  | .ML_KEM_768  => 4
-  | .ML_KEM_1024 => 5
-
-/-! ### Sizes in bytes (Table 3) -/
-
-/-- Seeds, messages and shared secret keys are 32 bytes (§3.3, §7). -/
-abbrev seedLen : ℕ := 32
-abbrev Seed := ByteVec seedLen
-abbrev SharedKey := ByteVec seedLen
-/-- The outputs of `H`, `J` and each half of `G` are 32 bytes (§4.1). -/
-abbrev hashLen : ℕ := 32
-/-- `ByteEncode₁₂` of a vector of `k` polynomials: `384k`. -/
-abbrev vecLen' (k : K) : ℕ := 384 * k
-abbrev vecLen (p : ParameterSet) : ℕ := vecLen' (k p)
-/-- K-PKE encryption key: the encoded `t̂` and the seed `ρ`. -/
-abbrev ekPKELen (p : ParameterSet) : ℕ := vecLen p + seedLen
-/-- K-PKE decryption key: the encoded `ŝ`. -/
-abbrev dkPKELen (p : ParameterSet) : ℕ := vecLen p
-/-- ML-KEM encapsulation key: the K-PKE encryption key. -/
-abbrev ekLen (p : ParameterSet) : ℕ := ekPKELen p
-/-- ML-KEM decapsulation key: `dkPKE ‖ ek ‖ H(ek) ‖ z`, i.e. `768k + 96`. -/
-abbrev dkLen (p : ParameterSet) : ℕ := dkPKELen p + ekLen p + hashLen + seedLen
-/-- First ciphertext component, `ByteEncode_dᵤ` of a compressed vector. -/
-abbrev c₁Len (p : ParameterSet) : ℕ := 32 * dᵤ p * k p
-/-- Second ciphertext component, `ByteEncode_dᵥ` of a compressed polynomial. -/
-abbrev c₂Len (p : ParameterSet) : ℕ := 32 * dᵥ p
-/-- Ciphertext: `32(dᵤk + dᵥ)`. -/
-abbrev ctLen (p : ParameterSet) : ℕ := c₁Len p + c₂Len p
-
-/-! ## Vectors and Matrices of Polynomials (§2.4.4–§2.4.8) -/
-
-abbrev PolyVector (m : ℕ) (k : K) := PolyRing.PolyVec (ZMod m) 256 (-1) k
-
-/-- Vectors and matrices over `T_q` (§2.4.7–§2.4.8). -/
-abbrev NTTVector (k : K) := PolyRing.NTTVec 7 ζ 256 k
-abbrev NTTMatrix (k : K) := PolyRing.Mat Tq k k
-
-/-! ## §4.1 Cryptographic Functions (Eq. 4.1–4.5)
-
-Defined in terms of the SHA-3 specification from `Wychelean.Hashes.SHA3` (byte-level
-wrappers) and its incremental sponge API (`XOF`). -/
+/-! ## §4.1 Cryptographic Functions (Eq. 4.1–4.5) -/
 
 /-- H(s) := SHA3-256(s) — Eq. (4.4). -/
 def H {n} (s : ByteVec n) : ByteVec hashLen := SHA3.sha3_256 s
@@ -201,10 +88,7 @@ def G {n} (s : ByteVec n) : ByteVec hashLen × ByteVec hashLen :=
 def PRF (η : Η) (s : Seed) (b : Byte) : ByteVec (64 * η) :=
   SHA3.shake256 (s ‖ #v[b]) (64 * η)
 
-/-! ### eXtendable-Output Function (XOF) — §4.1, Eq. (4.1)–(4.2)
-
-XOF is SHAKE128 (§4.1). The state-passing API (Init/Absorb/Squeeze) allows
-incremental squeezing as required by SampleNTT (Algorithm 7). -/
+/-! ### SHAKE128 XOF — §4.1, Eq. (4.1)–(4.2) -/
 
 def XOF.Init := SHA3.SHAKE128.init
 
@@ -223,10 +107,10 @@ def Decompress (d : ℕ) (y : ZMod (m d)) (_ : 1 ≤ d ∧ d < 12 := by grind) :
   ⌈ ((q : ℚ) / (2^d : ℚ)) * y.val ⌋
 
 def Polynomial.Compress (d : ℕ) (f : Polynomial) (_ : 1 ≤ d ∧ d < 12 := by grind) : Polynomial (m d) :=
-  PolyRing.PolyMod.ofFn fun i => MLKEM.Compress d f[i]
+  Utils.PolyRing.PolyMod.ofFn fun i => MLKEM.Compress d f[i]
 
 def Polynomial.Decompress (d : ℕ) (f : Polynomial (m d)) (_ : 1 ≤ d ∧ d < 12 := by grind) : Polynomial :=
-  PolyRing.PolyMod.ofFn fun i => MLKEM.Decompress d f[i]
+  Utils.PolyRing.PolyMod.ofFn fun i => MLKEM.Decompress d f[i]
 
 def PolyVector.Compress {k : K} (d : ℕ) (v : PolyVector q k) (_ : 1 ≤ d ∧ d < 12 := by grind) : PolyVector (m d) k :=
   v.map (Polynomial.Compress d)
@@ -260,19 +144,19 @@ def PolyVector.ByteEncode {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ 
 def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : ByteVec (32 * d * k)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : PolyVector (m d) k :=
   Vector.ofFn fun i =>
     have := poly_vec_decode_idx_le d i i.isLt
-    PolyRing.PolyMod.ofCoeffs (MLKEM.ByteDecode (slice bytes (32 * d * i) (32 * d) (by grind)))
+    Utils.PolyRing.PolyMod.ofCoeffs (MLKEM.ByteDecode (slice bytes (32 * d * i) (32 * d) (by grind)))
 
 /-- `ByteEncode₁₂` of a vector over `T_q`, each entry by its residues in the order of §2.4.6. -/
 def ByteEncode₁₂ {k : K} (v : NTTVector k) : ByteVec (vecLen' k) :=
-  (v.map fun «f̂» => MLKEM.ByteEncode 12 «f̂».flatten).flatten.cast (Nat.mul_comm _ _)
+  (v.map fun «f̂» => MLKEM.ByteEncode 12 «f̂».coeffs).flatten.cast (Nat.mul_comm _ _)
 
 def ByteDecode₁₂ {k : K} (bytes : ByteVec (vecLen' k)) : NTTVector k :=
   Vector.ofFn fun i =>
     have := poly_vec_decode_idx_le 12 i i.isLt
-    PolyRing.Residues.ofFlat (MLKEM.ByteDecode (slice bytes (32 * 12 * i) (32 * 12) (by grind)))
+    Tq.mk (MLKEM.ByteDecode (slice bytes (32 * 12 * i) (32 * 12) (by grind)))
 
 /-! ## §4.2.2 Algorithm 7 — SampleNTT(B) -/
-def SampleNTT (B : ByteVec (seedLen + 2)) : Tq := PolyRing.Residues.ofFlat <| Id.run do
+def SampleNTT (B : ByteVec (seedLen + 2)) : Tq := Tq.mk <| Id.run do
   let mut ctx := XOF.Init
   ctx := XOF.Absorb ctx B
   let mut «â» : Vector Zq 256 := Vector.replicate 256 0
@@ -297,7 +181,7 @@ theorem Η.val_le (η : Η) : η.val ≤ 3 := by
 
 def SamplePolyCBD {η : Η} (B : ByteVec (64 * η)) : Polynomial :=
   let b := bytesToBits B
-  PolyRing.PolyMod.ofFn fun i =>
+  Utils.PolyRing.PolyMod.ofFn fun i =>
     have := sample_cbd_idx_le i η (by grind)
     let x := ∑ (j : Fin η), b[2 * i.val * η + j].toNat
     let y := ∑ (j : Fin η), b[2 * i.val * η + η + j].toNat

@@ -2,28 +2,6 @@ import Wychelean.KEM.MLKEM
 import RunTests.Basic
 import RunTests.Parser.Wycheproof
 
-/-!
-# ML-KEM Wycheproof known-answer tests
-
-Project Wycheproof's ML-KEM vectors, which carry the adversarial coverage: encapsulation keys
-whose coefficients are not reduced modulo `q` (the §7.2 modulus check), decapsulation keys with
-a corrupted hash or embedded key (the §7.3 hash check), keys, seeds and ciphertexts of the wrong
-length, malleable ciphertexts, and ciphertexts that must take the implicit-rejection path.
-All four file kinds drive the internal API of FIPS 203 (§6) with explicit seeds and messages:
-
-- `mlkem_*_keygen_seed_test.json`: `KeyGen` from the seed `d ‖ z` must give the expected keys.
-- `mlkem_*_test.json`: `Internal.KeyGen` from the seed, then `Decaps` of the given ciphertext
-  must give the expected shared key.
-- `mlkem_*_encaps_test.json`: `Encaps` with the given message must give the expected shared key
-  and ciphertext, or reject the encapsulation key.
-- `mlkem_*_semi_expanded_decaps_test.json`: `Decaps` with an explicit decapsulation key.
-
-A case marked `invalid` must be rejected, which here means a length that does not fit the
-parameter set, or `Encaps`/`Decaps` returning `none`. A `valid` case must be accepted and give
-the expected answer. Malformed expected values are reported as fixture problems, never as a
-pass.
--/
-
 namespace Wychelean.KEM.MLKEM.Tests
 
 open RunTests RunTests.Parser RunTests.Parser.Wycheproof

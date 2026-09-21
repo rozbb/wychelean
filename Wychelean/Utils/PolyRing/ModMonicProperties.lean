@@ -1,15 +1,7 @@
-import Wychelean.PolyRing.ModMonic
-import Wychelean.PolyRing.ModBinomialProperties
+import Wychelean.Utils.PolyRing.ModMonic
+import Wychelean.Utils.PolyRing.ModBinomialProperties
 
-/-!
-The long division `Poly.modMonic` computes remainders: `f - modMonic μ f` is a multiple of
-`X^d + μ` (`dvd_sub_modMonic`, over any commutative ring), so `modMonic` is the quotient map
-onto `AdjoinRoot (X^d + μ)` (`toR_modMonic`), agrees with Mathlib's `%ₘ` (`toPoly_modMonic`), is
-characterised by divisibility (`modMonic_eq_iff_dvd`), and `mulMonic` is the ring product
-(`toR_mulMonic`). The binomial fast paths are instances (`modMonic_binomial`, `mulMonic_binomial`).
--/
-
-namespace Wychelean.PolyRing.Poly
+namespace Wychelean.Utils.PolyRing.Poly
 
 open Polynomial
 
@@ -230,4 +222,4 @@ theorem modMonic_binomial {r : ℕ} [NeZero r] (p : Poly A n) (δ : A) (hn : n =
 
 end
 
-end Wychelean.PolyRing.Poly
+end Wychelean.Utils.PolyRing.Poly

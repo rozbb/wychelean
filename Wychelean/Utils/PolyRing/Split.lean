@@ -1,15 +1,8 @@
-import Wychelean.PolyRing.Residues
-import Wychelean.PolyRing.ModBinomial
+import Wychelean.Utils.PolyRing.Residues
+import Wychelean.Utils.PolyRing.ModBinomial
 import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
 
-/-!
-One layer of a number-theoretic transform at any radix. `split r` reduces every residue modulo
-`X^{r·d} - γ i` to its `r` residues modulo `X^d - γ' (k + r·i)`; when the `γ' (k + r·i)` are the
-`r`-th roots of `γ i` this is the Chinese remainder map, and `splitInv r` inverts it. Layers
-compose (`split_split`), so any schedule of radices computes the same residues as one layer.
--/
-
-namespace Wychelean.PolyRing.Residues
+namespace Wychelean.Utils.PolyRing.Residues
 
 variable {F : Type*} {d m : ℕ} {γ : Fin m → F}
 
@@ -80,6 +73,11 @@ theorem split_add (b : Residues.Binomial F d' m γ) :
   ext j
   simp [split_apply, Poly.modBinomial_add]
 
+theorem split_smul (c : F) :
+    split r (c • a) γ' hd hm = c • split r a γ' hd hm := by
+  ext j
+  simp only [split_apply, smul_apply, Poly.modBinomial_smul]
+
 theorem split_sub (b : Residues.Binomial F d' m γ) :
     split r (a - b) γ' hd hm = split r a γ' hd hm - split r b γ' hd hm := by
   ext j
@@ -132,4 +130,4 @@ theorem splitInv_apply (r : ℕ) (b : Residues.Binomial F d m' γ') (γ : Fin m 
 
 end Inverse
 
-end Wychelean.PolyRing.Residues
+end Wychelean.Utils.PolyRing.Residues

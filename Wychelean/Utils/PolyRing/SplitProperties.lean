@@ -1,16 +1,8 @@
-import Wychelean.PolyRing.Split
-import Wychelean.PolyRing.ModBinomialProperties
+import Wychelean.Utils.PolyRing.Split
+import Wychelean.Utils.PolyRing.ModBinomialProperties
 import Mathlib.Algebra.Ring.GeomSum
 
-/-!
-A layer is a quotient map when its points are roots of the points above (`LayerPoints`): it is
-multiplicative and agrees with Mathlib's maps between the `AdjoinRoot`s. It is a bijection when the
-points above each residue are all the roots (`SplitPoints`): `splitInv` inverts it on both sides,
-by the orthogonality of the powers of a primitive root of unity. The characterisations
-`split_eq_iff_*` are what an external witness of a layer's output has to discharge.
--/
-
-namespace Wychelean.PolyRing
+namespace Wychelean.Utils.PolyRing
 
 open Polynomial
 
@@ -254,4 +246,4 @@ end Inverse
 
 end Residues
 
-end Wychelean.PolyRing
+end Wychelean.Utils.PolyRing

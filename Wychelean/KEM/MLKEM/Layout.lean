@@ -3,7 +3,7 @@ import Wychelean.KEM.MLKEM.Basic
 namespace Wychelean.KEM.MLKEM
 
 open Wychelean Wychelean.Hashes
-open scoped Wychelean.PolyRing
+open scoped Wychelean.Utils.PolyRing
 open scoped Wychelean.Notations
 open Bounds
 
@@ -38,7 +38,7 @@ instance : ByteLayout (Ciphertext p) (ctLen p) where
   pack c := PolyVector.ByteEncode (dᵤ p) c.u ‖ ByteEncode (dᵥ p) c.v.coeffs
   unpack b :=
     let (c₁, c₂) := split b (c₁Len p) (c₂Len p)
-    ⟨PolyVector.ByteDecode (dᵤ p) c₁, PolyRing.PolyMod.ofCoeffs (ByteDecode c₂)⟩
+    ⟨PolyVector.ByteDecode (dᵤ p) c₁, Utils.PolyRing.PolyMod.ofCoeffs (ByteDecode c₂)⟩
 
 /-- `dk = dkPKE ‖ ek ‖ H(ek) ‖ z` (Algorithm 16, step 3). -/
 structure Dk (p : ParameterSet) where

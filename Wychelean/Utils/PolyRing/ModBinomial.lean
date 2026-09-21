@@ -1,13 +1,6 @@
-import Wychelean.PolyRing.Poly
+import Wychelean.Utils.PolyRing.Poly
 
-/-!
-Reduction modulo a binomial. For `p ∈ A[X]/(X^n - γ)` with `n = r·d` and `δ^r = γ`, the residue
-`p mod (X^d - δ)` has coefficient `x` equal to `∑ₜ p[x + d·t] δ^t`: write `p = ∑ₜ X^(d·t) pₜ` with
-`pₜ` of degree below `d` and replace `X^d` by `δ`. The definition needs no hypothesis on `δ`; the
-quotient-map meaning is in `ModBinomialProperties`.
--/
-
-namespace Wychelean.PolyRing.Poly
+namespace Wychelean.Utils.PolyRing.Poly
 
 variable {A : Type*} [CommRing A] {n : ℕ}
 
@@ -104,4 +97,4 @@ def merge (r d : ℕ) (hn : n = r * d) (δ : Fin r → A) (b : Fin r → Poly A 
 
 end Field
 
-end Wychelean.PolyRing.Poly
+end Wychelean.Utils.PolyRing.Poly

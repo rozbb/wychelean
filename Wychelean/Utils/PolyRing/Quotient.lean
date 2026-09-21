@@ -1,15 +1,7 @@
-import Wychelean.PolyRing.Poly
+import Wychelean.Utils.PolyRing.Poly
 import Mathlib.RingTheory.AdjoinRoot
 
-/-!
-`Poly A d` is a computable representation of Mathlib's `AdjoinRoot (X^d + μ)` for any monic
-modulus `X^d + μ` given by its lower coefficients `μ`: `toR μ` sends the coefficient vector to
-the class of its representative, is injective (`A` nontrivial), surjective, and turns the
-wrap-around product `mulMod c` into the product of `A[X]/(X^d - c)`. The quotient maps between
-these rings for a divisibility of moduli are `R.reduce`.
--/
-
-namespace Wychelean.PolyRing
+namespace Wychelean.Utils.PolyRing
 
 open Polynomial
 
@@ -283,4 +275,4 @@ end Poly
 
 end
 
-end Wychelean.PolyRing
+end Wychelean.Utils.PolyRing

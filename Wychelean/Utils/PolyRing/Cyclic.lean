@@ -1,12 +1,6 @@
-import Wychelean.PolyRing.NTTProperties
+import Wychelean.Utils.PolyRing.NTTProperties
 
-/-!
-The cyclic ring `F[X]/(X^n - 1)`: its complete split at a primitive `2^levels`-th root of unity
-`ζ` has the points `ζ^BitRev(i)`, an instance of the same layer machinery as the negacyclic
-transform of FIPS 203/204.
--/
-
-namespace Wychelean.PolyRing.NTT.Cyclic
+namespace Wychelean.Utils.PolyRing.NTT.Cyclic
 
 variable {F : Type*} [CommRing F] {n levels : ℕ}
 
@@ -43,9 +37,9 @@ theorem ntt_mul [Nontrivial F] (ζ : PrimitiveRoot F (2 ^ levels)) (f g : PolyMo
     (hL : 2 ^ levels ∣ n) : ntt ζ (f * g) hL = ntt ζ f hL * ntt ζ g hL :=
   Residues.split_mul (2 ^ levels) f (blockSize_mul hL) (Nat.one_mul _).symm (layerPoints ζ) g
 
-end Wychelean.PolyRing.NTT.Cyclic
+end Wychelean.Utils.PolyRing.NTT.Cyclic
 
-namespace Wychelean.PolyRing.NTT.Cyclic
+namespace Wychelean.Utils.PolyRing.NTT.Cyclic
 
 variable {F : Type*} [Field F] {n levels : ℕ}
 
@@ -63,4 +57,4 @@ theorem ntt_nttInv (ζ : PrimitiveRoot F (2 ^ levels)) (h2 : ((2 ^ levels : ℕ)
     ntt ζ (nttInv ζ a hL) hL = a :=
   Residues.split_splitInv (2 ^ levels) (blockSize_mul hL) (Nat.one_mul _).symm (splitPoints ζ) h2 a
 
-end Wychelean.PolyRing.NTT.Cyclic
+end Wychelean.Utils.PolyRing.NTT.Cyclic

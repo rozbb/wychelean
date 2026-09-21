@@ -1,15 +1,7 @@
-import Wychelean.PolyRing.ModBinomial
-import Wychelean.PolyRing.Quotient
+import Wychelean.Utils.PolyRing.ModBinomial
+import Wychelean.Utils.PolyRing.Quotient
 
-/-!
-`Poly.modBinomial` is the quotient map `A[X]/(X^n - γ) → A[X]/(X^d - δ)` when `n = r·d` and
-`δ^r = γ`: it agrees with Mathlib's map between the `AdjoinRoot`s (`toR_modBinomial`, the map
-being `R.reduceBinomial`), with
-`%ₘ (X^d - C δ)` on representatives (`toPoly_modBinomial`), it turns `mulMod γ` into `mulMod δ`,
-and it is characterised by divisibility (`modBinomial_eq_iff_dvd`).
--/
-
-namespace Wychelean.PolyRing
+namespace Wychelean.Utils.PolyRing
 
 open Polynomial
 
@@ -108,4 +100,4 @@ end Poly
 
 end
 
-end Wychelean.PolyRing
+end Wychelean.Utils.PolyRing

@@ -1,18 +1,8 @@
-import Wychelean.PolyRing.Split
+import Wychelean.Utils.PolyRing.Split
 import Wychelean.Utils.Bits
 import Mathlib.GroupTheory.OrderOfElement
 
-/-!
-The number-theoretic transform of FIPS 203 §4.3 and FIPS 204 §7.5 on the negacyclic ring
-`F[X]/(X^n + 1)`: `levels` radix-2 layers whose points are `ζ^(2·BitRev(i) + 1)` for a primitive
-`2^(levels+1)`-th root of unity `ζ` (`ζ = 17` with seven layers for ML-KEM, `ζ = 1753` with eight
-for ML-DSA). The root is carried with its proof, so the transform cannot be instantiated at an
-arbitrary element. `ntt` is the Cooley–Tukey recursion (FIPS 203 Algorithm 9 / FIPS 204
-Algorithm 41 as a fold of `Residues.split 2`), `nttSpec` the closed form (one layer of radix
-`2^levels`), `nttSched` any schedule of radices `2^b`; `NTTProperties` proves them equal.
--/
-
-namespace Wychelean.PolyRing
+namespace Wychelean.Utils.PolyRing
 
 /-- A primitive `k`-th root of unity with its proof. -/
 abbrev PrimitiveRoot (F : Type*) [CommMonoid F] (k : ℕ) := {ζ : F // IsPrimitiveRoot ζ k}
@@ -216,4 +206,4 @@ end Inverse
 
 end Methods
 
-end Wychelean.PolyRing
+end Wychelean.Utils.PolyRing

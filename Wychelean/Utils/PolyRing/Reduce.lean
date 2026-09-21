@@ -1,13 +1,7 @@
-import Wychelean.PolyRing.Poly
+import Wychelean.Utils.PolyRing.Poly
 import Mathlib.Data.ZMod.ValMinAbs
 
-/-!
-Reduction modulo `q` and the centred lift between `ℤ[X]` and `ℤ_q[X]` coefficient vectors
-(FIPS 204 §2.3, `mod±`). Both respect the wrap-around product, so they connect
-`ℤ[X]/(X^n - c)` with `ℤ_q[X]/(X^n - c)`.
--/
-
-namespace Wychelean.PolyRing.Poly
+namespace Wychelean.Utils.PolyRing.Poly
 
 variable {n : ℕ} (q : ℕ)
 
@@ -69,4 +63,4 @@ theorem natAbs_getElem_lift_le [NeZero q] (f : Poly (ZMod q) n) (i : ℕ) (hi : 
   rw [getElem_lift]
   exact ZMod.natAbs_valMinAbs_le _
 
-end Wychelean.PolyRing.Poly
+end Wychelean.Utils.PolyRing.Poly

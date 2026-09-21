@@ -1,13 +1,6 @@
-import Wychelean.PolyRing.Split
+import Wychelean.Utils.PolyRing.Split
 
-/-!
-One layer between arbitrary monic moduli: `refine r` reduces every residue modulo `X^d' + μᵢ` to
-its `r` residues modulo the components `X^d + μ'_{k + r·i}`. When each new component divides the
-one above it (`LayerDvd`, a decidable condition) the layer is a ring homomorphism, is the tower
-of quotient maps, and layers compose; the binomial `split` is the instance at `X^d - γ`.
--/
-
-namespace Wychelean.PolyRing
+namespace Wychelean.Utils.PolyRing
 
 open Polynomial
 
@@ -147,4 +140,4 @@ end Divisible
 
 end Residues
 
-end Wychelean.PolyRing
+end Wychelean.Utils.PolyRing

@@ -1,14 +1,6 @@
-import Wychelean.PolyRing.ModMonicProperties
+import Wychelean.Utils.PolyRing.ModMonicProperties
 
-/-!
-The product ring `∏ᵢ F[X]/(X^d + μᵢ)` of the residues modulo monic moduli of degree `d`: a vector
-of polynomials of degree below `d`, one per component ideal `(X^d + μᵢ)`, the components being the
-type index. `Residues.Binomial` is the family of binomial components `X^d - γᵢ` (the NTT layers),
-and the ring `F[X]/(X^n + μ)` itself is the one-component case `PolyQuot F n μ`, with
-`PolyMod F n c := PolyQuot F n (X^n - c)`.
--/
-
-namespace Wychelean.PolyRing
+namespace Wychelean.Utils.PolyRing
 
 /-- Residues modulo the components `X^d + μᵢ`: `a i` is the residue modulo `X^d + μ i`. -/
 structure Residues (F : Type*) (d m : ℕ) (μ : Fin m → Poly F d) where
@@ -65,6 +57,36 @@ theorem flat_idx_lt {r i : ℕ} (hr : r < d) (hi : i < m) : r + d * i < m * d :=
 
 def ofFlat (v : Vector F (m * d)) : Residues F d m μ :=
   ofFn fun i => Poly.ofFn fun r => v[r.val + d * i.val]'(flat_idx_lt r.isLt i.isLt)
+
+@[simp] theorem getElem_flatten (a : Residues F d m μ) (i : Fin m) (r : Fin d) :
+    a.flatten[r.val + d * i.val]'(flat_idx_lt r.isLt i.isLt) = (a i)[r.val] := by
+  have hd : 0 < d := Nat.zero_lt_of_lt r.isLt
+  simp only [flatten, Vector.getElem_flatten, Vector.getElem_map]
+  have hdiv : (r.val + d * i.val) / d = i.val := by
+    rw [Nat.add_mul_div_left _ _ hd, Nat.div_eq_of_lt r.isLt, Nat.zero_add]
+  have hmod : (r.val + d * i.val) % d = r.val := by
+    rw [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt r.isLt]
+  simp only [hdiv, hmod]
+  rfl
+
+@[simp] theorem ofFlat_flatten (a : Residues F d m μ) : ofFlat a.flatten = a := by
+  apply ext
+  intro i
+  apply Poly.ext
+  intro r hr
+  simp only [ofFlat, apply_ofFn, Poly.getElem_ofFn, getElem_flatten a i ⟨r, hr⟩]
+
+@[simp] theorem flatten_ofFlat (v : Vector F (m * d)) :
+    (ofFlat v : Residues F d m μ).flatten = v := by
+  apply Vector.ext
+  intro j hj
+  have hd : 0 < d := Nat.pos_of_lt_mul_left hj
+  have hi : j / d < m := Nat.div_lt_of_lt_mul (by simpa [Nat.mul_comm] using hj)
+  have hr : j % d < d := Nat.mod_lt _ hd
+  have heq : j % d + d * (j / d) = j := Nat.mod_add_div _ _
+  have h := getElem_flatten (ofFlat v : Residues F d m μ) ⟨j / d, hi⟩ ⟨j % d, hr⟩
+  simp only [ofFlat, apply_ofFn, Poly.getElem_ofFn] at h
+  simpa only [heq, ofFlat] using h
 
 section Ring
 
@@ -262,4 +284,4 @@ end PolyMod
 /-- Vectors of `k` ring elements (FIPS 203 §2.4.4). -/
 abbrev PolyVec (F : Type*) [CommRing F] (n : ℕ) (c : F) (k : ℕ) := Vector (PolyMod F n c) k
 
-end Wychelean.PolyRing
+end Wychelean.Utils.PolyRing

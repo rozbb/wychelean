@@ -4,15 +4,11 @@ import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Ring
 
 /-!
-Polynomials of degree below `n` as coefficient vectors. `Poly A n` carries no modulus: it is the
-data shared by every quotient `A[X]/(X^n - c)`, whose ring structure lives on `Residues`
-(one component) with the product `mulMod c`.
-
 Adapted from Microsoft SymCrypt (MIT; see Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/MLKEM/Spec.lean
 -/
 
-namespace Wychelean.PolyRing
+namespace Wychelean.Utils.PolyRing
 
 /-- A polynomial of degree below `n`: its coefficient vector, `f[i]` the coefficient of `X^i`. -/
 structure Poly (A : Type*) (n : ℕ) where
@@ -186,4 +182,4 @@ instance [Mul α] [Add α] [Zero α] : HMul (Mat α k l) (Vector α l) (Vector �
 
 end Linear
 
-end Wychelean.PolyRing
+end Wychelean.Utils.PolyRing

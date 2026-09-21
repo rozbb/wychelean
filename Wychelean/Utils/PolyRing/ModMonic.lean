@@ -1,14 +1,6 @@
-import Wychelean.PolyRing.Poly
+import Wychelean.Utils.PolyRing.Poly
 
-/-!
-Long division by a monic polynomial `X^d + μ`, given by its lower coefficients `μ`. `reduceTop`
-removes the top coefficient of a polynomial of degree below `d + k + 1` using `X^(d+k) ≡ -X^k·μ`;
-`modMonicAux` repeats it `k` times, so `modMonic μ f` is the remainder of `f` modulo `X^d + μ` and
-`mulMonic μ f g` the product in `A[X]/(X^d + μ)`. The definitions need no hypothesis on `μ`; their
-meaning as remainders is in `ModMonicProperties`.
--/
-
-namespace Wychelean.PolyRing.Poly
+namespace Wychelean.Utils.PolyRing.Poly
 
 variable {A : Type*} [CommRing A] {d k n : ℕ}
 
@@ -133,4 +125,4 @@ theorem modMonic_smul (a : A) (f : Poly A n) : modMonic μ (a • f) = a • mod
 theorem modMonic_zero : modMonic μ (0 : Poly A n) = 0 := by
   rw [modMonic, pad_zero, modMonicAux_zero]
 
-end Wychelean.PolyRing.Poly
+end Wychelean.Utils.PolyRing.Poly

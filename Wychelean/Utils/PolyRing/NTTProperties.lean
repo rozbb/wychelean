@@ -1,15 +1,7 @@
-import Wychelean.PolyRing.NTT
-import Wychelean.PolyRing.SplitProperties
+import Wychelean.Utils.PolyRing.NTT
+import Wychelean.Utils.PolyRing.SplitProperties
 
-/-!
-The bit-reversed point tables of FIPS 203 §4.3 satisfy the layer hypotheses, so the Cooley–Tukey
-recursion `ntt` and every schedule `nttSched` equal the closed form `nttSpec`, which is
-multiplicative and inverted by `nttInvSpec`/`nttInv`. The `ntt_eq_iff` family characterises the
-transform for a consumer holding a candidate output: coefficient sums, divisibility of
-representatives, images in the quotient rings, or evaluation when the split is complete.
--/
-
-namespace Wychelean.PolyRing.NTT
+namespace Wychelean.Utils.PolyRing.NTT
 
 open Polynomial Residues
 
@@ -264,4 +256,4 @@ theorem nttInv_eq_iff (a : NTTDomain levels ζ n) (hL : 2 ^ levels ∣ n) (f : P
 
 end WitnessInverse
 
-end Wychelean.PolyRing.NTT
+end Wychelean.Utils.PolyRing.NTT

@@ -5,7 +5,7 @@ import Wychelean.KEM.MLKEM.Layout
 namespace Wychelean.KEM.MLKEM
 
 open Wychelean Wychelean.Hashes
-open scoped Wychelean.PolyRing
+open scoped Wychelean.Utils.PolyRing
 open scoped Wychelean.Notations
 open Bounds
 
@@ -29,7 +29,7 @@ def K_PKE.Encrypt (p : ParameterSet) (ek : EkPKE p) (m : Seed) (r : Seed) : Ciph
   let e₂ := SamplePolyCBD (PRF η₂ r ((2 * k p : ℕ) : Byte))                    -- Alg. 14, step 17
   let «ŷ» := y.ntt                                                             -- Alg. 14, step 18
   let u := («Â»ᵀ * «ŷ» : NTTVector (k p)).nttInv + e₁                          -- Alg. 14, step 19
-  let μ := Polynomial.Decompress 1 (PolyRing.PolyMod.ofCoeffs (ByteDecode (m.cast (by grind))))  -- Alg. 14, step 20
+  let μ := Polynomial.Decompress 1 (Utils.PolyRing.PolyMod.ofCoeffs (ByteDecode (m.cast (by grind))))  -- Alg. 14, step 20
   let v := ⟪«t̂», «ŷ»⟫.nttInv + e₂ + μ                                         -- Alg. 14, step 21
   ⟨PolyVector.Compress (dᵤ p) u, Polynomial.Compress (dᵥ p) v⟩                 -- Alg. 14, steps 22–24
 
@@ -67,10 +67,7 @@ def Internal.Decaps (p : ParameterSet) (dk : ByteVec (dkLen p)) (c : ByteVec (ct
   let c' := pack (K_PKE.Encrypt p (unpack ekPKE) m' r')                        -- Alg. 18, step 8
   if c ≠ c' then «K̄» else K'                                                  -- Alg. 18, steps 9–12
 
-/-! ## §7 The ML-KEM Key-Encapsulation Mechanism
-
-The bytes that Algorithms 19–20 draw from the random bit generator (§3.3), `d` and `z` for
-KeyGen and `m` for Encaps, are arguments here. -/
+/-! ## §7 ML-KEM (random bytes are explicit arguments) -/
 
 /-! ## §7.1 Algorithm 19 — ML-KEM.KeyGen() -/
 def KeyGen (p : ParameterSet) (d z : Seed) : ByteVec (ekLen p) × ByteVec (dkLen p) :=

@@ -5,14 +5,8 @@ import RunTests.Parser.Rsp
 /-!
 # ML-KEM known-answer tests from the SymCrypt specification
 
-The three NIST ACVP vectors (one per parameter set) and the Appendix A table of
-`ζ^BitRev₇(i)` values that ship with the SymCrypt Lean specification, plus its round-trip
-checks. The vectors are in `TestVectors/symcrypt_acvp.rsp`, copied from
+NIST ACVP vectors and round-trip checks from SymCrypt:
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/SpecTests/MLKEM/TestVectors.lean
-which attributes them to SymCrypt's `unittest/kat_kem.dat`, derived from NIST ACVP
-ML-KEM-keyGen-FIPS203 and ML-KEM-encapDecap-FIPS203. Each parameter set runs
-`Internal.KeyGen` against the expected keys, `Internal.Encaps` against the expected shared key
-and ciphertext, and a `Internal.KeyGen → Internal.Encaps → Internal.Decaps`/`Decaps` round trip.
 -/
 
 namespace Wychelean.KEM.MLKEM.Tests
@@ -45,10 +39,10 @@ def appendixAAndRoundTrips : Suite where
       check s!"zeta^BitRev7({i})" appendixA[i]! (ζ.val ^ (bitRev 7 i) : Zq).val) ++ [
     let F : Vector (ZMod (m 12)) 256 := Vector.ofFn fun i => (i.val : ZMod (m 12))
     check "ByteDecode (ByteEncode 12 F) = F" true (ByteDecode (ByteEncode 12 F) == F),
-    let f : Polynomial := PolyRing.PolyMod.ofFn fun i => ((i.val + 1 : ℕ) : Zq)
+    let f : Polynomial := Utils.PolyRing.PolyMod.ofFn fun i => ((i.val + 1 : ℕ) : Zq)
     check "nttInv (ntt f) = f" true ((f.ntt : Tq).nttInv == f),
     let one : Polynomial := 1
-    let f : Polynomial := PolyRing.PolyMod.ofFn fun i => ((i.val * 7 + 3 : ℕ) : Zq)
+    let f : Polynomial := Utils.PolyRing.PolyMod.ofFn fun i => ((i.val * 7 + 3 : ℕ) : Zq)
     check "nttInv (ntt f * ntt one) = f" true ((f.ntt * one.ntt : Tq).nttInv == f) ]
 
 private def vectorFile : System.FilePath := "Wychelean/KEM/MLKEM/TestVectors/symcrypt_acvp.rsp"
