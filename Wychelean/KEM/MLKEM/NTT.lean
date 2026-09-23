@@ -39,7 +39,7 @@ end Bounds
 open Bounds
 
 /-! ## §4.3 Algorithm 9 — NTT(f) -/
-def NTT (f : Polynomial) : Tq := Id.run do
+def Polynomial.NTT (f : Polynomial) : Tq := Id.run do
   let mut «f̂» := f.coeffs                                                     -- Alg. 9, step 1
   let mut i := 1                                                              -- Alg. 9, step 2
   for h0 : len in [128, 64, 32, 16, 8, 4, 2] do                              -- Alg. 9, step 3
@@ -55,7 +55,7 @@ def NTT (f : Polynomial) : Tq := Id.run do
   return ⟨«f̂»⟩                                                               -- Alg. 9, step 14
 
 /-! ## §4.3 Algorithm 10 — NTT⁻¹(f̂) -/
-def NTTInv («f̂» : Tq) : Polynomial := Id.run do
+def Tq.NTTInv («f̂» : Tq) : Polynomial := Id.run do
   let mut f := «f̂».coeffs                                                     -- Alg. 10, step 1
   let mut i := 127                                                            -- Alg. 10, step 2
   for h0 : len in [2, 4, 8, 16, 32, 64, 128] do                              -- Alg. 10, step 3
@@ -90,5 +90,16 @@ def MultiplyNTTs («f̂» «ĝ» : Tq) : Tq := Id.run do
 
 /-- `f̂ ×_{T_q} ĝ` is `MultiplyNTTs(f̂, ĝ)` (§2.4.5, Eq. 2.8). -/
 instance : Mul Tq := ⟨MultiplyNTTs⟩
+
+/-! ### NTT and NTT⁻¹ of vectors (§2.4.6, Eq. 2.9; §2.4.8, Eq. 2.16)
+
+With `Polynomial.NTT` and `PolyVector.NTT` both opened, `NTT(s)` resolves by the type of `s`,
+as in the pseudocode. -/
+
+/-- `NTT(v)`: run NTT once for each coordinate of `v`. -/
+def PolyVector.NTT {n : ℕ} (v : Vector Polynomial n) : Vector Tq n := v.map Polynomial.NTT
+
+/-- `NTT⁻¹(v̂)`: run NTT⁻¹ once for each coordinate of `v̂`. -/
+def NTTVector.NTTInv {n : ℕ} (v : Vector Tq n) : Vector Polynomial n := v.map Tq.NTTInv
 
 end Wychelean.KEM.MLKEM

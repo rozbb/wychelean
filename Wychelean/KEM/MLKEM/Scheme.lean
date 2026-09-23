@@ -8,6 +8,10 @@ open Wychelean Wychelean.Hashes
 open scoped Wychelean.Utils.Linear
 open scoped Wychelean.Notations
 open Bounds
+open Polynomial (NTT)
+open PolyVector (NTT)
+open Tq (NTTInv)
+open NTTVector (NTTInv)
 
 /-! ## §5.1 Algorithm 13 — K-PKE.KeyGen(d) -/
 def K_PKE.KeyGen (p : ParameterSet) (d : Seed) : EkPKE p × DkPKE p := Id.run do
@@ -25,8 +29,8 @@ def K_PKE.KeyGen (p : ParameterSet) (d : Seed) : EkPKE p × DkPKE p := Id.run do
   for hi : i in [0:k p] do                                                     -- Alg. 13, step 12
     e := e.set i (SamplePolyCBD (PRF (η₁ p) σ N))                              -- Alg. 13, step 13
     N := N + 1                                                                 -- Alg. 13, step 14
-  let «ŝ» := s.map NTT                                                         -- Alg. 13, step 16
-  let «ê» := e.map NTT                                                         -- Alg. 13, step 17
+  let «ŝ» := NTT s                                                             -- Alg. 13, step 16
+  let «ê» := NTT e                                                             -- Alg. 13, step 17
   let «t̂» := «Â» * «ŝ» + «ê»                                                  -- Alg. 13, step 18
   return (⟨«t̂», ρ⟩, ⟨«ŝ»⟩)                                                    -- Alg. 13, steps 19–21
 
@@ -47,8 +51,8 @@ def K_PKE.Encrypt (p : ParameterSet) (ekPKE : EkPKE p) (m : Seed) (r : Seed) : C
     e₁ := e₁.set i (SamplePolyCBD (PRF η₂ r N))                                -- Alg. 14, step 14
     N := N + 1                                                                 -- Alg. 14, step 15
   let e₂ := SamplePolyCBD (PRF η₂ r N)                                         -- Alg. 14, step 17
-  let «ŷ» := y.map NTT                                                         -- Alg. 14, step 18
-  let u := («Â»ᵀ * «ŷ»).map NTTInv + e₁                                        -- Alg. 14, step 19
+  let «ŷ» := NTT y                                                             -- Alg. 14, step 18
+  let u := NTTInv («Â»ᵀ * «ŷ») + e₁                                            -- Alg. 14, step 19
   let μ := Polynomial.Decompress 1 ⟨ByteDecode (m.cast (by grind))⟩            -- Alg. 14, step 20
   let v := NTTInv ⟪«t̂», «ŷ»⟫ + e₂ + μ                                         -- Alg. 14, step 21
   return ⟨PolyVector.Compress (dᵤ p) u, Polynomial.Compress (dᵥ p) v⟩          -- Alg. 14, steps 22–24
@@ -59,7 +63,7 @@ def K_PKE.Decrypt (p : ParameterSet) (dkPKE : DkPKE p) (c : Ciphertext p) : Seed
   let u' := PolyVector.Decompress (dᵤ p) u                                     -- Alg. 15, step 3
   let v' := Polynomial.Decompress (dᵥ p) v                                     -- Alg. 15, step 4
   let ⟨«ŝ»⟩ := dkPKE                                                           -- Alg. 15, step 5
-  let w := v' - NTTInv ⟪«ŝ», u'.map NTT⟫                                       -- Alg. 15, step 6
+  let w := v' - NTTInv ⟪«ŝ», NTT u'⟫                                           -- Alg. 15, step 6
   let m := ByteEncode 1 (Polynomial.Compress 1 w).coeffs                       -- Alg. 15, step 7
   m.cast (by grind)                                                            -- Alg. 15, step 8
 

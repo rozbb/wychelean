@@ -143,7 +143,7 @@ theorem forwardMatches_step (s : Fin 7) (v : Vector Zq 256) (f : Polynomial)
 
 /-- All seven executable stages agree with the recursive transform, for every input. -/
 theorem toAbstract_ntt (f : Polynomial) :
-    Tq.toAbstract (MLKEM.NTT f) = Utils.PolyRing.NTT.ntt 7 ζRoot f.toPolyMod (by decide) := by
+    Tq.toAbstract (Polynomial.NTT f) = Utils.PolyRing.NTT.ntt 7 ζRoot f.toPolyMod (by decide) := by
   rw [NTT_eq_forward]
   let P (s : ℕ) (a : Vector Zq 256 × ℕ) : Prop :=
     ∃ hs : s ≤ 7, a.2 = 2 ^ s ∧ ForwardMatches s hs a.1 f
@@ -371,6 +371,8 @@ end Wychelean.KEM.MLKEM.NTT
 namespace Wychelean.KEM.MLKEM
 
 open Utils.PolyRing
+open _root_.Wychelean.KEM.MLKEM.Polynomial (NTT)
+open Tq (NTTInv)
 
 /-- The recursive transform retained as the algebraic comparison operation. -/
 abbrev abstractNTT (f : Polynomial) : AbstractTq :=

@@ -5,9 +5,11 @@ import Wychelean.KEM.MLKEM.Properties.NTTEquivalence
 namespace Wychelean.KEM.MLKEM
 
 open Wychelean.Utils.PolyRing
+open _root_.Wychelean.KEM.MLKEM.Polynomial (NTT)
+open Tq (NTTInv)
 
 -- The FIPS loops are related to the folds by `Properties/Loops.lean`, never by unfolding.
-attribute [local irreducible] NTT NTTInv MultiplyNTTs
+attribute [local irreducible] Polynomial.NTT Tq.NTTInv MultiplyNTTs
 
 /-- Algorithm 9 computes the ordered residues modulo `X² - ζ^(2·BitRev₇(i) + 1)`. -/
 theorem ntt_eq_nttSpec (f : Polynomial) : Tq.toAbstract (NTT f) =

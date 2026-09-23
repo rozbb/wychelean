@@ -9,6 +9,9 @@ https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b
 
 namespace Wychelean.KEM.MLKEM.Tests
 
+open Polynomial (NTT)
+open Tq (NTTInv)
+
 #guard
   let b : Vector Bool (8 * 2) :=
     ⟨⟨[false, true, false, true, false, false, false, false,

@@ -124,8 +124,8 @@ theorem block_size (a l : ℕ) : [a:a + l].size = l := by
   simp [Std.Legacy.Range.size]
 
 /-- Algorithm 9 is the fold of its seven stages. -/
-theorem NTT_eq_forward (f : Polynomial) : NTT f = ⟨NTT.forward f.coeffs⟩ := by
-  unfold MLKEM.NTT NTT.forward
+theorem NTT_eq_forward (f : Polynomial) : f.NTT = ⟨NTT.forward f.coeffs⟩ := by
+  unfold Polynomial.NTT NTT.forward
   simp only [Std.Legacy.Range.forIn'_eq_forIn'_range', bind_pure_comp, Prod.mk.eta,
     List.forIn'_pure_yield_eq_foldl, Id.run_pure, map_pure]
   refine congrArg (fun p : Vector Zq 256 × ℕ => Tq.mk p.1) ?_
@@ -157,8 +157,8 @@ theorem len_mem_rev (s : Fin 7) : NTT.len ⟨6 - s.val, by omega⟩ ∈ [2, 4, 8
   fin_cases s <;> decide
 
 /-- Algorithm 10 is the fold of its seven stages, followed by the scaling. -/
-theorem NTTInv_eq_inverse (a : Tq) : NTTInv a = ⟨NTT.inverse a.coeffs⟩ := by
-  unfold MLKEM.NTTInv NTT.inverse
+theorem NTTInv_eq_inverse (a : Tq) : a.NTTInv = ⟨NTT.inverse a.coeffs⟩ := by
+  unfold Tq.NTTInv NTT.inverse
   simp only [Std.Legacy.Range.forIn'_eq_forIn'_range', bind_pure_comp, Prod.mk.eta,
     List.forIn'_pure_yield_eq_foldl, Id.run_pure, map_pure]
   refine congrArg Polynomial.mk ?_

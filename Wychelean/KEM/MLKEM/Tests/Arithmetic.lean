@@ -3,6 +3,9 @@ import RunTests.Basic
 
 namespace Wychelean.KEM.MLKEM.Tests
 
+open Polynomial (NTT)
+open Tq (NTTInv)
+
 open RunTests
 open scoped Wychelean.Utils.Linear
 
