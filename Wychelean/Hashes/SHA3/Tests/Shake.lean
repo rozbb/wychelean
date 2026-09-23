@@ -2,16 +2,6 @@ import Wychelean.Hashes.SHA3.Tests.Rsp
 import Wychelean.Hashes.SHA3.XOF
 import RunTests.Basic
 
-/-!
-# SHAKE known-answer tests
-
-NIST CAVP SHAKE response files (see `TestVectors/README.md`): short and long messages, variable
-output lengths, and the SHA3VS §6.3.3 Monte Carlo recurrence, each in byte- and bit-oriented
-form. The variable-output files also exercise the incremental XOF: the output is squeezed in
-three-byte requests, as ML-KEM's SampleNTT does, and in a schedule of requests that straddle
-the rate boundary (0, 1, rate - 1, rate, rate + 1 bytes), and must equal the one-shot result.
--/
-
 namespace Wychelean.Hashes.SHA3.Tests
 open RunTests Rsp Std.Internal.Parsec.String
 

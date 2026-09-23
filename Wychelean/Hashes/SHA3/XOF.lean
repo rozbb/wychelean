@@ -3,16 +3,10 @@ import Wychelean.Hashes.SHA3.Basic
 /-!
 # Incremental sponge API
 
-An incremental (streaming) sponge: `init → absorb → squeeze*`. FIPS 202 only defines the
-functional sponge (Algorithm 8); this models the software pattern of squeezing on demand, as
-ML-KEM's `SampleNTT` (FIPS 203 Algorithm 7) requires from its XOF. Consecutive `squeeze`s are
-meant to return successive bits of the stream that `shake128`/`shake256` produce in one call;
-that correspondence is checked by the SHAKE variable-output tests but not yet proved. `absorb`
-is defined for the initial context only, as FIPS 203 §4.1 uses it: the XOF is absorbed once.
+One absorb followed by repeated squeezes; equivalence to one-shot SHAKE is tested, not proved.
 
 Adapted from Microsoft SymCrypt (MIT; see LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/SHA3/XOF.lean
-The state is expressed over the `BitVec` sponge of `Wychelean.Hashes.SHA3.Basic`.
 -/
 
 namespace Wychelean.Hashes.SHA3

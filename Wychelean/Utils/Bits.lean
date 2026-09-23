@@ -1,12 +1,6 @@
 import Wychelean.Utils.Bytes
 import Wychelean.Utils.Vector
 
-/-!
-Bits and Boolean-string operations used by bit-oriented specifications.
-The rotation, notations, extension, and slicing definitions are adapted from Microsoft SymCrypt:
-https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/Defs.lean
-MIT notice: Wychelean/Hashes/SHA3/LICENSE.SymCrypt.
--/
 namespace Wychelean
 
 /-- Replace the bit at LSB index `i`; an index outside the vector leaves it unchanged. -/
@@ -60,13 +54,6 @@ def slice {n : ℕ} (v : Vector α n) (off len : ℕ) (h : off + len ≤ n := by
 def split {n : ℕ} (v : Vector α n) (a b : ℕ) (h : n = a + b := by first | rfl | omega) :
     Vector α a × Vector α b :=
   (slice v 0 a (by omega), slice v a b (by omega))
-
-/-! ## Bit reversal
-
-`bitRev n i` reverses the `n` least-significant bits of `i` (FIPS 203 §2.3, BitRev₇).
-Adapted from Microsoft SymCrypt (MIT; see Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
-https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/NatBit.lean
-`Nat.ofBitsList` is spelled out directly; upstream uses Aeneas' `Nat.ofBits`. -/
 
 /-- The `n` least-significant bits of `x`, least significant first. -/
 def _root_.Nat.bitsn (x n : ℕ) : Vector Bool n := Vector.ofFn fun i => x.testBit i
