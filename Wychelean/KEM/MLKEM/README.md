@@ -13,7 +13,8 @@ and stands alone: it imports neither `Wychelean.Utils.PolyRing` nor its own proo
   `Polynomial`: the pseudocode never multiplies in `R_q` (§2.4.5).
 - `NTT.lean`: Algorithms 9–12 as the FIPS loops. `Polynomial.NTT` and `PolyVector.NTT` (and the
   inverses) are both opened where used, so `NTT(s)` resolves by the type of `s` (§2.4.8).
-- `Basic.lean`: hash functions, Compress/Decompress, and Algorithms 5–8.
+- `Basic.lean`: hash functions, Compress/Decompress, and Algorithms 7–8.
+- `Encode.lean`: Algorithms 5–6 and their application to vectors.
 - `Layout.lean`: typed keys and ciphertexts with their byte encodings.
 - `Scheme.lean`: Algorithms 13–21.
 
