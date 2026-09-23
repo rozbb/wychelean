@@ -1,6 +1,7 @@
 import Mathlib.Tactic.NormNum.Prime
 import Mathlib.Algebra.Field.ZMod
 import Wychelean.Utils.PolyRing.NTT
+import Wychelean.Utils.Matrix
 
 namespace Wychelean.KEM.MLKEM
 
@@ -140,7 +141,7 @@ abbrev PolyVector (m : ℕ) (k : K) := Utils.PolyRing.PolyVec (ZMod m) 256 (-1) 
 
 /-- Vectors and matrices over `T_q` (§2.4.7–§2.4.8). -/
 abbrev NTTVector (k : K) := Vector Tq k
-abbrev NTTMatrix (k : K) := Utils.PolyRing.Mat Tq k k
+abbrev NTTMatrix (k : K) := Utils.Linear.Mat Tq k k
 
 
 end Wychelean.KEM.MLKEM

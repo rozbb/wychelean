@@ -4,7 +4,7 @@ import RunTests.Basic
 namespace Wychelean.KEM.MLKEM.Tests
 
 open RunTests
-open scoped Wychelean.Utils.PolyRing
+open scoped Wychelean.Utils.PolyRing Wychelean.Utils.Linear
 
 -- These definitional checks pin the public notation to the FIPS executable definitions.
 example (f : Polynomial) : f.ntt.coeffs = NTT.forward f.coeffs := rfl

@@ -3,7 +3,7 @@ import Wychelean.KEM.MLKEM.Basic
 namespace Wychelean.KEM.MLKEM
 
 open Wychelean Wychelean.Hashes
-open scoped Wychelean.Utils.PolyRing
+open scoped Wychelean.Utils.PolyRing Wychelean.Utils.Linear
 open scoped Wychelean.Notations
 open Bounds
 
