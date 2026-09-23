@@ -18,7 +18,7 @@ https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b
 namespace Wychelean.KEM.MLKEM
 
 open Wychelean Wychelean.Hashes
-open scoped Wychelean.Utils.PolyRing Wychelean.Utils.Linear
+open scoped Wychelean.Utils.Linear
 open scoped Wychelean.Notations
 
 /-! ## Index bounds (`open Bounds`) -/
@@ -107,10 +107,10 @@ def Decompress (d : ℕ) (y : ZMod (m d)) (_ : 1 ≤ d ∧ d < 12 := by grind) :
   ⌈ ((q : ℚ) / (2^d : ℚ)) * y.val ⌋
 
 def Polynomial.Compress (d : ℕ) (f : Polynomial) (_ : 1 ≤ d ∧ d < 12 := by grind) : Polynomial (m d) :=
-  Utils.PolyRing.PolyMod.ofFn fun i => MLKEM.Compress d f[i]
+  Polynomial.ofFn fun i => MLKEM.Compress d f[i]
 
 def Polynomial.Decompress (d : ℕ) (f : Polynomial (m d)) (_ : 1 ≤ d ∧ d < 12 := by grind) : Polynomial :=
-  Utils.PolyRing.PolyMod.ofFn fun i => MLKEM.Decompress d f[i]
+  Polynomial.ofFn fun i => MLKEM.Decompress d f[i]
 
 def PolyVector.Compress {k : K} (d : ℕ) (v : PolyVector q k) (_ : 1 ≤ d ∧ d < 12 := by grind) : PolyVector (m d) k :=
   v.map (Polynomial.Compress d)
@@ -121,21 +121,24 @@ def PolyVector.Decompress {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ 
 /-! ## §4.2.1 Algorithm 5 — ByteEncode_d(F) -/
 def ByteEncode (d : ℕ) (F : Vector (ZMod (m d)) 256) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : ByteVec (32 * d) := Id.run do
   let mut b := Vector.replicate (256 * d) 0
-  for hi: i in [0:256] do
+  for hi: i in [0:256] do                                                     -- Alg. 5, step 1
     have := byte_encode_idx_le i d
-    let mut a := F[i].val
-    for hj: j in [0:d] do
-      b := b.set (i * d + j) (Bool.ofNat (a % 2))
-      a := (a - b[i * d + j].toNat) / 2
-  let B := bitsToBytes (b.cast (by grind))
-  pure B
+    let mut a := F[i].val                                                     -- Alg. 5, step 2
+    for hj: j in [0:d] do                                                     -- Alg. 5, step 3
+      b := b.set (i * d + j) (Bool.ofNat (a % 2))                             -- Alg. 5, step 4
+      a := (a - b[i * d + j].toNat) / 2                                       -- Alg. 5, step 5
+  let B := bitsToBytes (b.cast (by grind))                                    -- Alg. 5, step 8
+  return B                                                                    -- Alg. 5, step 9
 
 /-! ## §4.2.1 Algorithm 6 — ByteDecode_d(B) -/
-def ByteDecode {d : ℕ} (B : ByteVec (32 * d)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : Vector (ZMod (m d)) 256 :=
-  let b := bytesToBits B
-  Vector.ofFn fun i =>
+def ByteDecode {d : ℕ} (B : ByteVec (32 * d)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) :
+    Vector (ZMod (m d)) 256 := Id.run do
+  let b := bytesToBits B                                                      -- Alg. 6, step 1
+  let mut F : Vector (ZMod (m d)) 256 := Vector.replicate 256 0
+  for hi: i in [0:256] do                                                     -- Alg. 6, step 2
     have := byte_encode_idx_le i d
-    ∑ (j : Fin d), b[i * d + j].toNat * 2^j.val
+    F := F.set i (∑ j : Fin d, b[i * d + j].toNat * 2 ^ j.val)               -- Alg. 6, step 3
+  return F                                                                    -- Alg. 6, step 5
 
 /-- `ByteEncode_d` of each entry, concatenated (§2.4.8). -/
 def PolyVector.ByteEncode {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : ByteVec (32 * d * k) :=
@@ -144,7 +147,7 @@ def PolyVector.ByteEncode {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ 
 def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : ByteVec (32 * d * k)) (_ : 1 ≤ d ∧ d ≤ 12 := by grind) : PolyVector (m d) k :=
   Vector.ofFn fun i =>
     have := poly_vec_decode_idx_le d i i.isLt
-    Utils.PolyRing.PolyMod.ofCoeffs (MLKEM.ByteDecode (slice bytes (32 * d * i) (32 * d) (by grind)))
+    ⟨MLKEM.ByteDecode (slice bytes (32 * d * i) (32 * d) (by grind))⟩
 
 /-- `ByteEncode₁₂` of a vector over `T_q`, each entry by its residues in the order of §2.4.6. -/
 def ByteEncode₁₂ {k : K} (v : NTTVector k) : ByteVec (vecLen' k) :=
@@ -156,44 +159,37 @@ def ByteDecode₁₂ {k : K} (bytes : ByteVec (vecLen' k)) : NTTVector k :=
     Tq.mk (MLKEM.ByteDecode (slice bytes (32 * 12 * i) (32 * 12) (by grind)))
 
 /-! ## §4.2.2 Algorithm 7 — SampleNTT(B) -/
-def SampleNTT (B : ByteVec (seedLen + 2)) : Tq := Tq.mk <| Id.run do
-  let mut ctx := XOF.Init
-  ctx := XOF.Absorb ctx B
+def SampleNTT (B : ByteVec (seedLen + 2)) : Tq := Id.run do
+  let mut ctx := XOF.Init                                                     -- Alg. 7, step 1
+  ctx := XOF.Absorb ctx B                                                     -- Alg. 7, step 2
   let mut «â» : Vector Zq 256 := Vector.replicate 256 0
-  let mut j := 0
-  while hj : j < 256 do
-    let (ctx', C) := XOF.Squeeze ctx 3
+  let mut j := 0                                                              -- Alg. 7, step 3
+  while hj : j < 256 do                                                       -- Alg. 7, step 4
+    let (ctx', C) := XOF.Squeeze ctx 3                                        -- Alg. 7, step 5
     ctx := ctx'
-    let d₁ := C[0].toNat + 256 * (C[1].toNat % 16)
-    let d₂ := C[1].toNat / 16 + 16 * C[2].toNat
-    if d₁ < q then
-      «â» := «â».set j d₁
-      j := j + 1
-    if h : d₂ < q ∧ j < 256 then
-      «â» := «â».set j d₂
-      j := j + 1
-  pure «â»
+    let d₁ := C[0].toNat + 256 * (C[1].toNat % 16)                            -- Alg. 7, step 6
+    let d₂ := C[1].toNat / 16 + 16 * C[2].toNat                              -- Alg. 7, step 7
+    if d₁ < q then                                                            -- Alg. 7, step 8
+      «â» := «â».set j d₁                                                     -- Alg. 7, step 9
+      j := j + 1                                                              -- Alg. 7, step 10
+    if h : d₂ < q ∧ j < 256 then                                              -- Alg. 7, step 12
+      «â» := «â».set j d₂                                                     -- Alg. 7, step 13
+      j := j + 1                                                              -- Alg. 7, step 14
+  return ⟨«â»⟩                                                               -- Alg. 7, step 17
 
 /-! ## §4.2.2 Algorithm 8 — SamplePolyCBD_η(B) -/
 
 theorem Η.val_le (η : Η) : η.val ≤ 3 := by
   have h := η.property; simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at h; omega
 
-def SamplePolyCBD {η : Η} (B : ByteVec (64 * η)) : Polynomial :=
-  let b := bytesToBits B
-  Utils.PolyRing.PolyMod.ofFn fun i =>
+def SamplePolyCBD {η : Η} (B : ByteVec (64 * η)) : Polynomial := Id.run do
+  let b := bytesToBits B                                                      -- Alg. 8, step 1
+  let mut f : Vector Zq 256 := Vector.replicate 256 0
+  for hi: i in [0:256] do                                                     -- Alg. 8, step 2
     have := sample_cbd_idx_le i η (by grind)
-    let x := ∑ (j : Fin η), b[2 * i.val * η + j].toNat
-    let y := ∑ (j : Fin η), b[2 * i.val * η + η + j].toNat
-    x - y
-
-/-- `Â[i][j] = SampleNTT(ρ ‖ j ‖ i)` (Algorithm 13, steps 3–7; Algorithm 14, steps 4–8). -/
-def SampleMatrix {k : K} (ρ : Seed) : NTTMatrix k :=
-  Vector.ofFn fun i => Vector.ofFn fun j => SampleNTT (ρ ‖ #v[(j : Byte), (i : Byte)])
-
-/-- `k` polynomials `SamplePolyCBD_η(PRF_η(s, N))` for `N = N₀, N₀ + 1, …`
-(the loops over `N` of Algorithms 13–14). -/
-def SampleCBDVector {k : K} (η : Η) (s : Seed) (N₀ : ℕ) : PolyVector q k :=
-  Vector.ofFn fun i => SamplePolyCBD (PRF η s ((N₀ + i : ℕ) : Byte))
+    let x := ∑ j : Fin η, b[2 * i * η + j].toNat                              -- Alg. 8, step 3
+    let y := ∑ j : Fin η, b[2 * i * η + η + j].toNat                          -- Alg. 8, step 4
+    f := f.set i (x - y)                                                      -- Alg. 8, step 5
+  return ⟨f⟩                                                                  -- Alg. 8, step 7
 
 end Wychelean.KEM.MLKEM

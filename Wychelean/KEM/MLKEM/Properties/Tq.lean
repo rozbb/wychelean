@@ -1,12 +1,29 @@
-import Wychelean.KEM.MLKEM.NTT
+import Wychelean.KEM.MLKEM.Properties.Loops
+import Wychelean.KEM.MLKEM.Properties.Ring
+
+/-!
+# `T_q` as a ring
+
+The coefficient array of `f̂ ∈ T_q` read as its 128 residues modulo `X² - ζ^(2·BitRev₇(i)+1)`
+(FIPS 203 Eq. 4.12–4.13), and the ring structure of `T_q` transported from that product ring.
+-/
 
 namespace Wychelean.KEM.MLKEM
 
 open Utils.PolyRing
 
-abbrev AbstractTq := Residues.Binomial Zq 2 128 (Utils.PolyRing.NTT.points ζ.val 7)
+abbrev AbstractTq := Residues.Binomial Zq 2 128 (Utils.PolyRing.NTT.points ζ 7)
 
 namespace Tq
+
+/-- The residue `f̂[2i] + f̂[2i+1]·X` modulo `X² - ζ^(2·BitRev₇(i)+1)` (Eq. 4.13). -/
+def component (a : Tq) (i : Fin 128) : Poly Zq 2 :=
+  Poly.ofFn fun r => a[r.val + 2 * i.val]'(by omega)
+
+instance : CoeFun Tq (fun _ => Fin 128 → Poly Zq 2) := ⟨component⟩
+
+instance : One Tq := ⟨⟨Vector.ofFn fun i => if i.val % 2 = 0 then 1 else 0⟩⟩
+instance : SMul Zq Tq := ⟨fun c a => ⟨a.coeffs.map (c * ·)⟩⟩
 
 /-- Interpret adjacent coefficients as the ordered quadratic residues. -/
 def toAbstract (a : Tq) : AbstractTq := Residues.ofFlat a.coeffs
@@ -81,6 +98,7 @@ def abstractEquiv : Tq ≃ AbstractTq where
 
 /-- Algorithms 11–12 agree with multiplication modulo each quadratic binomial. -/
 @[simp] theorem toAbstract_mul (a b : Tq) : toAbstract (a * b) = toAbstract a * toAbstract b := by
+  rw [mul_eq_multiply]
   apply Residues.ext
   intro i
   rw [Residues.mul_two]
@@ -89,13 +107,13 @@ def abstractEquiv : Tq ≃ AbstractTq where
   rw [toAbstract_apply, component_getElem]
   change ((Vector.ofFn fun i : Fin 128 =>
     MLKEM.NTT.baseCaseMultiply a[2 * i.val] a[2 * i.val + 1]
-      b[2 * i.val] b[2 * i.val + 1] (17 ^ (2 * bitRev 7 i.val + 1))).flatten)[j + 2 * i.val] = _
+      b[2 * i.val] b[2 * i.val + 1] (ζ ^ (2 * bitRev 7 i.val + 1))).flatten)[j + 2 * i.val] = _
   rw [Vector.getElem_flatten, Vector.getElem_ofFn]
   have hdiv : (j + 2 * i.val) / 2 = i.val := by omega
   have hmod : (j + 2 * i.val) % 2 = j := by omega
   simp only [hdiv, hmod, toAbstract_apply, component_getElem]
   interval_cases j <;> simp [MLKEM.NTT.baseCaseMultiply, Nat.add_comm,
-    Poly.getElem_mk, Utils.PolyRing.NTT.points, Utils.PolyRing.NTT.point, show ζ.val = (17 : Zq) from rfl]
+    Poly.getElem_mk, Utils.PolyRing.NTT.points, Utils.PolyRing.NTT.point]
 
 local macro "abstract_law" : tactic =>
   `(tactic| (apply toAbstract_injective

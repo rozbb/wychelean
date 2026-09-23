@@ -36,14 +36,14 @@ private def appendixA : Array Nat := #[
 def appendixAAndRoundTrips : Suite where
   name := "ML-KEM Appendix A and NTT round trips"
   tests := pure <| (List.range 128).map (fun i =>
-      check s!"zeta^BitRev7({i})" appendixA[i]! (ζ.val ^ (bitRev 7 i) : Zq).val) ++ [
+      check s!"zeta^BitRev7({i})" appendixA[i]! (ζ ^ (bitRev 7 i) : Zq).val) ++ [
     let F : Vector (ZMod (m 12)) 256 := Vector.ofFn fun i => (i.val : ZMod (m 12))
     check "ByteDecode (ByteEncode 12 F) = F" true (ByteDecode (ByteEncode 12 F) == F),
-    let f : Polynomial := Utils.PolyRing.PolyMod.ofFn fun i => ((i.val + 1 : ℕ) : Zq)
-    check "nttInv (ntt f) = f" true ((f.ntt : Tq).nttInv == f),
-    let one : Polynomial := 1
-    let f : Polynomial := Utils.PolyRing.PolyMod.ofFn fun i => ((i.val * 7 + 3 : ℕ) : Zq)
-    check "nttInv (ntt f * ntt one) = f" true ((f.ntt * one.ntt : Tq).nttInv == f) ]
+    let f : Polynomial := Polynomial.ofFn fun i => ((i.val + 1 : ℕ) : Zq)
+    check "NTT⁻¹(NTT(f)) = f" true (NTTInv (NTT f) == f),
+    let one : Polynomial := Polynomial.ofFn fun i => if i.val = 0 then 1 else 0
+    let f : Polynomial := Polynomial.ofFn fun i => ((i.val * 7 + 3 : ℕ) : Zq)
+    check "NTT⁻¹(NTT(f) ×_Tq NTT(1)) = f" true (NTTInv (NTT f * NTT one) == f) ]
 
 private def vectorFile : System.FilePath := "Wychelean/KEM/MLKEM/TestVectors/symcrypt_acvp.rsp"
 

@@ -1,4 +1,4 @@
-import Wychelean.KEM.MLKEM.NTTStages
+import Wychelean.KEM.MLKEM.Properties.NTTStages
 import Wychelean.Utils.PolyRing.NTTProperties
 
 namespace Wychelean.KEM.MLKEM.NTT
@@ -7,9 +7,9 @@ open Utils.PolyRing
 
 /-- The root for the partial transform after `s` forward stages. -/
 def root (s : ℕ) (hs : s ≤ 7) : PrimitiveRoot Zq (2 ^ (s + 1)) :=
-  ζ.pow2 (7 - s) (s + 1) (by omega)
+  ζRoot.pow2 (7 - s) (s + 1) (by omega)
 
-@[simp] theorem root_val (s : ℕ) (hs : s ≤ 7) : (root s hs).val = (17 : Zq) ^ 2 ^ (7 - s) := rfl
+@[simp] theorem root_val (s : ℕ) (hs : s ≤ 7) : (root s hs).val = ζ ^ 2 ^ (7 - s) := rfl
 
 theorem root_sq (s : ℕ) (hs : s < 7) :
     (root (s + 1) (by omega)).sq = root s (by omega) := by
@@ -19,9 +19,9 @@ theorem root_sq (s : ℕ) (hs : s < 7) :
   congr 2
   omega
 
-@[simp] theorem root_seven : root 7 le_rfl = ζ := by
+@[simp] theorem root_seven : root 7 le_rfl = ζRoot := by
   apply Subtype.ext
-  change (17 : Zq) ^ 1 = 17
+  change ζ ^ 1 = ζ
   exact pow_one _
 
 theorem depth_dvd (s : ℕ) (hs : s ≤ 7) : 2 ^ s ∣ 256 :=
@@ -54,7 +54,7 @@ theorem bitRev_counter (s : Fin 7) (b : Fin (blocks s)) :
 
 theorem point_even (s : Fin 7) (b : Fin (blocks s)) :
     Utils.PolyRing.NTT.point (root (s.val + 1) (by omega)).val (s.val + 1) (2 * b.val) =
-      17 ^ bitRev 7 (2 ^ s.val + b.val) := by
+      ζ ^ bitRev 7 (2 ^ s.val + b.val) := by
   rw [Utils.PolyRing.NTT.point, root_val, bitRev_succ]
   simp only [Nat.mul_div_cancel_left _ (by decide : 0 < 2), Nat.mul_mod_right, Nat.mul_zero, Nat.add_zero]
   rw [← pow_mul, bitRev_counter]
@@ -62,7 +62,7 @@ theorem point_even (s : Fin 7) (b : Fin (blocks s)) :
 
 theorem point_odd (s : Fin 7) (b : Fin (blocks s)) :
     Utils.PolyRing.NTT.point (root (s.val + 1) (by omega)).val (s.val + 1) (2 * b.val + 1) =
-      -(17 ^ bitRev 7 (2 ^ s.val + b.val) : Zq) := by
+      -(ζ ^ bitRev 7 (2 ^ s.val + b.val) : Zq) := by
   have he := point_even s b
   rw [Utils.PolyRing.NTT.point, bitRev_succ s.val (2 * b.val)] at he
   rw [Utils.PolyRing.NTT.point, bitRev_succ s.val (2 * b.val + 1)]
@@ -83,7 +83,7 @@ theorem flat_index (s : ℕ) (hs : s ≤ 7) (b : Fin (2 ^ s)) (j : ℕ)
 def ForwardMatches (s : ℕ) (hs : s ≤ 7) (v : Vector Zq 256) (f : Polynomial) : Prop :=
   ∀ (b : Fin (2 ^ s)) (j : ℕ) (hj : j < 256 / 2 ^ s),
     v[j + (256 / 2 ^ s) * b.val]'(flat_index s hs b j hj) =
-      (Utils.PolyRing.NTT.ntt s (root s hs) f (depth_dvd s hs) b)[j]
+      (Utils.PolyRing.NTT.ntt s (root s hs) f.toPolyMod (depth_dvd s hs) b)[j]
 
 theorem forwardMatches_zero (f : Polynomial) : ForwardMatches 0 (by omega) f.coeffs f := by
   intro b j hj
@@ -124,7 +124,7 @@ theorem forwardMatches_step (s : Fin 7) (v : Vector Zq 256) (f : Polynomial)
     have hidx : j + (256 / 2 ^ (s.val + 1)) * b.val = j + 2 * len s * p.val := by
       rw [child_width s, he]; ring
     have hpoint : Utils.PolyRing.NTT.points (root (s.val + 1) (by omega)).val (s.val + 1) b =
-        17 ^ bitRev 7 (2 ^ s.val + p.val) := by
+        ζ ^ bitRev 7 (2 ^ s.val + p.val) := by
       change Utils.PolyRing.NTT.point _ _ b.val = _
       rw [he]
       exact point_even s p
@@ -134,7 +134,7 @@ theorem forwardMatches_step (s : Fin 7) (v : Vector Zq 256) (f : Polynomial)
     have hidx : j + (256 / 2 ^ (s.val + 1)) * b.val = j + len s + 2 * len s * p.val := by
       rw [child_width s, he]; ring
     have hpoint : Utils.PolyRing.NTT.points (root (s.val + 1) (by omega)).val (s.val + 1) b =
-        -(17 ^ bitRev 7 (2 ^ s.val + p.val) : Zq) := by
+        -(ζ ^ bitRev 7 (2 ^ s.val + p.val) : Zq) := by
       change Utils.PolyRing.NTT.point _ _ b.val = _
       rw [he]
       exact point_odd s p
@@ -143,7 +143,8 @@ theorem forwardMatches_step (s : Fin 7) (v : Vector Zq 256) (f : Polynomial)
 
 /-- All seven executable stages agree with the recursive transform, for every input. -/
 theorem toAbstract_ntt (f : Polynomial) :
-    Tq.toAbstract f.ntt = Utils.PolyRing.NTT.ntt 7 ζ f (by decide) := by
+    Tq.toAbstract (MLKEM.NTT f) = Utils.PolyRing.NTT.ntt 7 ζRoot f.toPolyMod (by decide) := by
+  rw [NTT_eq_forward]
   let P (s : ℕ) (a : Vector Zq 256 × ℕ) : Prop :=
     ∃ hs : s ≤ 7, a.2 = 2 ^ s ∧ ForwardMatches s hs a.1 f
   have h := foldl_invariant (n := 7) forwardStage P (f.coeffs, 1)
@@ -164,13 +165,13 @@ theorem toAbstract_ntt (f : Polynomial) :
   intro j hj
   rw [Tq.toAbstract_apply, Tq.component_getElem]
   have he := hm i j hj
-  have hr : root 7 hs = ζ := root_seven
+  have hr : root 7 hs = ζRoot := root_seven
   rw [hr] at he
   exact he
 
 /-- Coefficients of the partial recursive transform, used only in the correctness proof. -/
 def partialCoeffs (s : ℕ) (hs : s ≤ 7) (f : Polynomial) : Vector Zq 256 :=
-  (Utils.PolyRing.NTT.ntt s (root s hs) f (depth_dvd s hs)).flatten.cast
+  (Utils.PolyRing.NTT.ntt s (root s hs) f.toPolyMod (depth_dvd s hs)).flatten.cast
     (Utils.PolyRing.NTT.blockSize_mul (depth_dvd s hs)).symm
 
 theorem partialMatches (s : ℕ) (hs : s ≤ 7) (f : Polynomial) :
@@ -202,7 +203,7 @@ theorem forwardStage_partial (s : Fin 7) (f : Polynomial) :
 
 theorem forward_eq_partial (f : Polynomial) : forward f.coeffs = partialCoeffs 7 le_rfl f := by
   have h := congrArg Residues.flatten (toAbstract_ntt f)
-  simp only [Tq.toAbstract, Polynomial.ntt, Residues.flatten_ofFlat] at h
+  simp only [Tq.toAbstract, NTT_eq_forward, Residues.flatten_ofFlat] at h
   unfold partialCoeffs
   rw [root_seven]
   exact h
@@ -245,10 +246,10 @@ theorem inverse_counter_exponents (s : Fin 7) (b : Fin (blocks s)) :
   nlinarith
 
 theorem inverse_twiddle (s : Fin 7) (b : Fin (blocks s)) :
-    (17 ^ bitRev 7 (2 ^ (s.val + 1) - 1 - b.val) : Zq) *
-      17 ^ bitRev 7 (2 ^ s.val + b.val) = -1 := by
+    (ζ ^ bitRev 7 (2 ^ (s.val + 1) - 1 - b.val) : Zq) *
+      ζ ^ bitRev 7 (2 ^ s.val + b.val) = -1 := by
   rw [← pow_add, inverse_counter_exponents]
-  exact ζ.pow_eq_neg_one
+  exact ζRoot.pow_eq_neg_one
 
 theorem vector_ext_pairs (s : Fin 7) {v w : Vector Zq 256}
     (hl : ∀ b j, v[(low s b j).val] = w[(low s b j).val])
@@ -291,8 +292,8 @@ theorem inverseStage_forwardStage (s : Fin 7) (v : Vector Zq 256) (c : Zq) :
     have hh := (forwardStage_pairs s v (2 ^ s.val)).2.2 b j
     simp only [Vector.getElem_map] at h ⊢
     rw [h, hl, hh]
-    calc _ = -2 * c * (17 ^ bitRev 7 (2 ^ (s.val + 1) - 1 - b.val) *
-        17 ^ bitRev 7 (2 ^ s.val + b.val)) * v[(high s b j).val] := by ring
+    calc _ = -2 * c * (ζ ^ bitRev 7 (2 ^ (s.val + 1) - 1 - b.val) *
+        ζ ^ bitRev 7 (2 ^ s.val + b.val)) * v[(high s b j).val] := by ring
       _ = _ := by rw [inverse_twiddle]; ring
 
 /-- On an arbitrary layer, Algorithm 10 computes twice the abstract `splitInv`. -/
@@ -303,20 +304,22 @@ theorem inverseStage_splitInv (s : Fin 7)
     ((Residues.splitInv 2 a (Utils.PolyRing.NTT.points (root s.val (by omega)).val s.val)
       (Utils.PolyRing.NTT.blockSize_succ (depth_dvd (s.val + 1) (by omega))) (pow_succ 2 s.val)).flatten.cast
         (Utils.PolyRing.NTT.blockSize_mul (depth_dvd s.val (by omega))).symm).map ((2 : Zq) * ·) := by
-  let f : Polynomial := Utils.PolyRing.NTT.nttInv (s.val + 1) (root (s.val + 1) (by omega)) a
-    (depth_dvd (s.val + 1) (by omega))
+  let f : Polynomial := Polynomial.ofPolyMod
+    (Utils.PolyRing.NTT.nttInv (s.val + 1) (root (s.val + 1) (by omega)) a
+      (depth_dvd (s.val + 1) (by omega)))
   have hnext : partialCoeffs (s.val + 1) (by omega) f = a.flatten.cast
       (Utils.PolyRing.NTT.blockSize_mul (depth_dvd (s.val + 1) (by omega))).symm := by
     unfold partialCoeffs
-    rw [show Utils.PolyRing.NTT.ntt (s.val + 1) (root (s.val + 1) (by omega)) f
-        (depth_dvd (s.val + 1) (by omega)) = a from
+    rw [show Utils.PolyRing.NTT.ntt (s.val + 1) (root (s.val + 1) (by omega)) f.toPolyMod
+        (depth_dvd (s.val + 1) (by omega)) = a by
+      dsimp only [f]; rw [Polynomial.toPolyMod_ofPolyMod]; exact
       Utils.PolyRing.NTT.ntt_nttInv (n := 256) (s.val + 1) (root (s.val + 1) (by omega)) a
         (depth_dvd (s.val + 1) (by omega))]
-  have hparent : Utils.PolyRing.NTT.ntt s.val (root s.val (by omega)) f (depth_dvd s.val (by omega)) =
+  have hparent : Utils.PolyRing.NTT.ntt s.val (root s.val (by omega)) f.toPolyMod (depth_dvd s.val (by omega)) =
       Residues.splitInv 2 a (Utils.PolyRing.NTT.points (root s.val (by omega)).val s.val)
         (Utils.PolyRing.NTT.blockSize_succ (depth_dvd (s.val + 1) (by omega))) (pow_succ 2 s.val) := by
     dsimp only [f]
-    rw [Utils.PolyRing.NTT.nttInv, root_sq s.val s.isLt]
+    rw [Polynomial.toPolyMod_ofPolyMod, Utils.PolyRing.NTT.nttInv, root_sq s.val s.isLt]
     exact Utils.PolyRing.NTT.ntt_nttInv (n := 256) s.val (root s.val (by omega)) _ _
   have h := inverseStage_forwardStage s (partialCoeffs s.val (by omega) f) 1
   rw [forwardStage_partial] at h
@@ -370,47 +373,51 @@ namespace Wychelean.KEM.MLKEM
 open Utils.PolyRing
 
 /-- The recursive transform retained as the algebraic comparison operation. -/
-abbrev abstractNTT (f : Polynomial) : AbstractTq := Utils.PolyRing.NTT.ntt 7 ζ f (by decide)
+abbrev abstractNTT (f : Polynomial) : AbstractTq :=
+  Utils.PolyRing.NTT.ntt 7 ζRoot f.toPolyMod (by decide)
 
-abbrev abstractNTTInv (a : AbstractTq) : Polynomial := Utils.PolyRing.NTT.nttInv 7 ζ a (by decide)
+abbrev abstractNTTInv (a : AbstractTq) : Polynomial :=
+  Polynomial.ofPolyMod (Utils.PolyRing.NTT.nttInv 7 ζRoot a (by decide))
 
-theorem toAbstract_ntt (f : Polynomial) : Tq.toAbstract f.ntt = abstractNTT f := NTT.toAbstract_ntt f
+theorem toAbstract_ntt (f : Polynomial) : Tq.toAbstract (NTT f) = abstractNTT f :=
+  NTT.toAbstract_ntt f
 
-@[simp] theorem nttInv_ntt (f : Polynomial) : f.ntt.nttInv = f := by
-  change PolyMod.ofCoeffs (NTT.inverse (NTT.forward f.coeffs)) = f
+@[simp] theorem nttInv_ntt (f : Polynomial) : NTTInv (NTT f) = f := by
+  rw [NTTInv_eq_inverse, NTT_eq_forward]
+  change Polynomial.mk (NTT.inverse (NTT.forward f.coeffs)) = f
   rw [NTT.inverse_forward]
-  exact PolyQuot.ext fun _ _ => rfl
 
 /-- Algorithm 10 agrees with the recursive inverse on every NTT-domain input. -/
-theorem nttInv_eq_abstract (a : Tq) : a.nttInv = abstractNTTInv (Tq.toAbstract a) := by
+theorem nttInv_eq_abstract (a : Tq) : NTTInv a = abstractNTTInv (Tq.toAbstract a) := by
   let f := abstractNTTInv (Tq.toAbstract a)
-  have hf : f.ntt = a := Tq.toAbstract_injective
-    ((toAbstract_ntt f).trans (Utils.PolyRing.NTT.ntt_nttInv (n := 256) 7 ζ (Tq.toAbstract a) (by decide)))
-  change a.nttInv = f
-  exact (congrArg Tq.nttInv hf).symm.trans (nttInv_ntt f)
+  have hf : NTT f = a := Tq.toAbstract_injective (by
+    rw [toAbstract_ntt, abstractNTT, Polynomial.toPolyMod_ofPolyMod]
+    exact Utils.PolyRing.NTT.ntt_nttInv (n := 256) 7 ζRoot (Tq.toAbstract a) (by decide))
+  change NTTInv a = f
+  exact (congrArg NTTInv hf).symm.trans (nttInv_ntt f)
 
-@[simp] theorem ntt_nttInv (a : Tq) : a.nttInv.ntt = a := by
+@[simp] theorem ntt_nttInv (a : Tq) : NTT (NTTInv a) = a := by
   apply Tq.toAbstract_injective
-  rw [toAbstract_ntt, nttInv_eq_abstract]
-  exact Utils.PolyRing.NTT.ntt_nttInv (n := 256) 7 ζ (Tq.toAbstract a) (by decide)
+  rw [toAbstract_ntt, nttInv_eq_abstract, abstractNTT, Polynomial.toPolyMod_ofPolyMod]
+  exact Utils.PolyRing.NTT.ntt_nttInv (n := 256) 7 ζRoot (Tq.toAbstract a) (by decide)
 
 /-- Executable Algorithms 9–12 give a ring equivalence with the polynomial ring. -/
 def nttEquiv : Polynomial ≃+* Tq where
-  toFun := Polynomial.ntt
-  invFun := Tq.nttInv
+  toFun := NTT
+  invFun := NTTInv
   left_inv := nttInv_ntt
   right_inv := ntt_nttInv
   map_mul' f g := by
     apply Tq.toAbstract_injective
-    simp only [toAbstract_ntt, Tq.toAbstract_mul]
-    exact Utils.PolyRing.NTT.ntt_mul ζ f g (by decide)
+    simp only [toAbstract_ntt, Tq.toAbstract_mul, abstractNTT, Polynomial.toPolyMod_mul]
+    exact Utils.PolyRing.NTT.ntt_mul ζRoot f.toPolyMod g.toPolyMod (by decide)
   map_add' f g := by
     apply Tq.toAbstract_injective
-    simp only [toAbstract_ntt, Tq.toAbstract_add, abstractNTT,
+    simp only [toAbstract_ntt, Tq.toAbstract_add, abstractNTT, Polynomial.toPolyMod_add,
       Utils.PolyRing.NTT.ntt_eq_nttSpec, Utils.PolyRing.NTT.nttSpec]
     exact Residues.split_add ..
 
-@[simp] theorem nttEquiv_apply (f : Polynomial) : nttEquiv f = f.ntt := rfl
-@[simp] theorem nttEquiv_symm_apply (a : Tq) : nttEquiv.symm a = a.nttInv := rfl
+@[simp] theorem nttEquiv_apply (f : Polynomial) : nttEquiv f = NTT f := rfl
+@[simp] theorem nttEquiv_symm_apply (a : Tq) : nttEquiv.symm a = NTTInv a := rfl
 
 end Wychelean.KEM.MLKEM

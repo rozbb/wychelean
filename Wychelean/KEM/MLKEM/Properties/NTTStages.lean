@@ -1,18 +1,6 @@
-import Wychelean.KEM.MLKEM.NTTRepresentation
+import Wychelean.KEM.MLKEM.Properties.Tq
 
 namespace Wychelean.KEM.MLKEM.NTT
-
-/-- A bounded traversal invariant, indexed by the number of completed iterations. -/
-theorem foldl_invariant {α : Type*} {n : ℕ} (f : α → Fin n → α)
-    (P : ℕ → α → Prop) (a : α) (h0 : P 0 a)
-    (step : ∀ (i : Fin n) (a : α), P i.val a → P (i.val + 1) (f a i)) :
-    P n (Fin.foldl n f a) := by
-  induction n with
-  | zero => exact h0
-  | succ n ih =>
-    rw [Fin.foldl_succ_last]
-    apply step (Fin.last n)
-    exact ih (fun a i => f a i.castSucc) (fun i a h => step i.castSucc a h)
 
 /-- Completed butterfly pairs have their final values; unvisited pairs and other entries retain
 those of the input. This lemma proves a loop property without adding an executable transform. -/
@@ -95,12 +83,12 @@ theorem low_ne_high (s : Fin 7) (b : Fin (blocks s)) (i j : Fin (len s)) :
 /-- The inner traversal computes each forward butterfly and leaves other blocks alone. -/
 theorem forwardBlock_pairs (s : Fin 7) (v : Vector Zq 256) (c : ℕ) (b : Fin (blocks s)) :
     let out := (forwardBlock s (v, c) b).1
-    let z : Zq := 17 ^ bitRev 7 c
+    let z : Zq := ζ ^ bitRev 7 c
     (∀ j, out[(low s b j).val] = v[(low s b j).val] + z * v[(high s b j).val]) ∧
     (∀ j, out[(high s b j).val] = v[(low s b j).val] - z * v[(high s b j).val]) ∧
     (∀ k : Fin 256, (∀ j, low s b j ≠ k ∧ high s b j ≠ k) → out[k.val] = v[k.val]) :=
   foldl_pairs (low s b) (high s b) (low_injective s b) (high_injective s b)
-    (low_ne_high s b) (fun x y => (x + 17 ^ bitRev 7 c * y, x - 17 ^ bitRev 7 c * y)) v
+    (low_ne_high s b) (fun x y => (x + ζ ^ bitRev 7 c * y, x - ζ ^ bitRev 7 c * y)) v
 
 @[simp] theorem low_div (s : Fin 7) (b : Fin (blocks s)) (j : Fin (len s)) :
     (low s b j).val / (2 * len s) = b.val := by
@@ -130,7 +118,7 @@ theorem different_blocks (s : Fin 7) (b b' : Fin (blocks s)) (h : b ≠ b')
 theorem forwardBlock_low (s : Fin 7) (v : Vector Zq 256) (c : ℕ)
     (b b' : Fin (blocks s)) (j : Fin (len s)) :
     (forwardBlock s (v, c) b).1[(low s b' j).val] =
-      if b' = b then v[(low s b' j).val] + 17 ^ bitRev 7 c * v[(high s b' j).val]
+      if b' = b then v[(low s b' j).val] + ζ ^ bitRev 7 c * v[(high s b' j).val]
       else v[(low s b' j).val] := by
   split
   · rename_i h; subst b'; exact (forwardBlock_pairs s v c b).1 j
@@ -141,7 +129,7 @@ theorem forwardBlock_low (s : Fin 7) (v : Vector Zq 256) (c : ℕ)
 theorem forwardBlock_high (s : Fin 7) (v : Vector Zq 256) (c : ℕ)
     (b b' : Fin (blocks s)) (j : Fin (len s)) :
     (forwardBlock s (v, c) b).1[(high s b' j).val] =
-      if b' = b then v[(low s b' j).val] - 17 ^ bitRev 7 c * v[(high s b' j).val]
+      if b' = b then v[(low s b' j).val] - ζ ^ bitRev 7 c * v[(high s b' j).val]
       else v[(high s b' j).val] := by
   split
   · rename_i h; subst b'; exact (forwardBlock_pairs s v c b).2.1 j
@@ -154,15 +142,15 @@ theorem forwardStage_pairs (s : Fin 7) (v : Vector Zq 256) (c : ℕ) :
     let out := forwardStage (v, c) s
     out.2 = c + blocks s ∧
     (∀ b j, out.1[(low s b j).val] =
-      v[(low s b j).val] + 17 ^ bitRev 7 (c + b.val) * v[(high s b j).val]) ∧
+      v[(low s b j).val] + ζ ^ bitRev 7 (c + b.val) * v[(high s b j).val]) ∧
     (∀ b j, out.1[(high s b j).val] =
-      v[(low s b j).val] - 17 ^ bitRev 7 (c + b.val) * v[(high s b j).val]) := by
+      v[(low s b j).val] - ζ ^ bitRev 7 (c + b.val) * v[(high s b j).val]) := by
   let P (t : ℕ) (a : Vector Zq 256 × ℕ) : Prop := a.2 = c + t ∧
     (∀ b j, a.1[(low s b j).val] = if b.val < t then
-      v[(low s b j).val] + 17 ^ bitRev 7 (c + b.val) * v[(high s b j).val]
+      v[(low s b j).val] + ζ ^ bitRev 7 (c + b.val) * v[(high s b j).val]
       else v[(low s b j).val]) ∧
     (∀ b j, a.1[(high s b j).val] = if b.val < t then
-      v[(low s b j).val] - 17 ^ bitRev 7 (c + b.val) * v[(high s b j).val]
+      v[(low s b j).val] - ζ ^ bitRev 7 (c + b.val) * v[(high s b j).val]
       else v[(high s b j).val])
   have h := foldl_invariant (n := blocks s) (forwardBlock s) P (v, c) (by simp [P]) (by
     intro b a h
@@ -191,13 +179,13 @@ theorem forwardStage_pairs (s : Fin 7) (v : Vector Zq 256) (c : ℕ) :
 /-- The inner traversal computes each inverse butterfly and leaves other blocks alone. -/
 theorem inverseBlock_pairs (s : Fin 7) (v : Vector Zq 256) (c : ℕ) (b : Fin (blocks s)) :
     let out := (inverseBlock s (v, c) b).1
-    let z : Zq := 17 ^ bitRev 7 c
+    let z : Zq := ζ ^ bitRev 7 c
     (∀ j, out[(low s b j).val] = v[(low s b j).val] + v[(high s b j).val]) ∧
     (∀ j, out[(high s b j).val] = z * (v[(high s b j).val] - v[(low s b j).val])) ∧
     (∀ k : Fin 256, (∀ j, low s b j ≠ k ∧ high s b j ≠ k) → out[k.val] = v[k.val]) := by
   have h := foldl_pairs (high s b) (low s b) (high_injective s b) (low_injective s b)
     (fun i j => Ne.symm (low_ne_high s b j i))
-    (fun x y => (17 ^ bitRev 7 c * (x - y), y + x)) v
+    (fun x y => (ζ ^ bitRev 7 c * (x - y), y + x)) v
   exact ⟨h.2.1, h.1, fun k hk => h.2.2 k (fun j => (hk j).symm)⟩
 
 theorem inverseBlock_low (s : Fin 7) (v : Vector Zq 256) (c : ℕ)
@@ -214,7 +202,7 @@ theorem inverseBlock_low (s : Fin 7) (v : Vector Zq 256) (c : ℕ)
 theorem inverseBlock_high (s : Fin 7) (v : Vector Zq 256) (c : ℕ)
     (b b' : Fin (blocks s)) (j : Fin (len s)) :
     (inverseBlock s (v, c) b).1[(high s b' j).val] =
-      if b' = b then 17 ^ bitRev 7 c * (v[(high s b' j).val] - v[(low s b' j).val])
+      if b' = b then ζ ^ bitRev 7 c * (v[(high s b' j).val] - v[(low s b' j).val])
       else v[(high s b' j).val] := by
   split
   · rename_i h; subst b'; exact (inverseBlock_pairs s v c b).2.1 j
@@ -229,13 +217,13 @@ theorem inverseStage_pairs (s : Fin 7) (v : Vector Zq 256) (c : ℕ) :
     (∀ b j, out.1[(low s b j).val] =
       v[(low s b j).val] + v[(high s b j).val]) ∧
     (∀ b j, out.1[(high s b j).val] =
-      17 ^ bitRev 7 (c - b.val) * (v[(high s b j).val] - v[(low s b j).val])) := by
+      ζ ^ bitRev 7 (c - b.val) * (v[(high s b j).val] - v[(low s b j).val])) := by
   let P (t : ℕ) (a : Vector Zq 256 × ℕ) : Prop := a.2 = c - t ∧
     (∀ b j, a.1[(low s b j).val] = if b.val < t then
       v[(low s b j).val] + v[(high s b j).val]
       else v[(low s b j).val]) ∧
     (∀ b j, a.1[(high s b j).val] = if b.val < t then
-      17 ^ bitRev 7 (c - b.val) * (v[(high s b j).val] - v[(low s b j).val])
+      ζ ^ bitRev 7 (c - b.val) * (v[(high s b j).val] - v[(low s b j).val])
       else v[(high s b j).val])
   have h := foldl_invariant (n := blocks s) (inverseBlock s) P (v, c) (by simp [P]) (by
     intro b a h

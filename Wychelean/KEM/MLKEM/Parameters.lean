@@ -1,7 +1,7 @@
 import Mathlib.Tactic.NormNum.Prime
 import Mathlib.Algebra.Field.ZMod
-import Wychelean.Utils.PolyRing.NTT
 import Wychelean.Utils.Matrix
+import Wychelean.Utils.Bits
 
 namespace Wychelean.KEM.MLKEM
 
@@ -17,49 +17,68 @@ abbrev q : Nat := 3329
 /-- ℤ_q = ℤ/3329ℤ, the coefficient ring. -/
 abbrev Zq := ZMod q
 
-/-- `ℤ_m[X] / (X^256 + 1)`: `R_q` for `m = q`, and the compressed coefficients for `m = 2^d`
-(§4.2.1). -/
-abbrev Polynomial (m : ℕ := q) := Utils.PolyRing.PolyMod (ZMod m) 256 (-1)
+/-- An element of `R_q = ℤ_q[X] / (X^256 + 1)` (`m = q`), or its compressed form over `ℤ_{2^d}`
+(§4.2.1), represented by its coefficient array `(f₀, …, f₂₅₅)` (§2.4.4, Eq. 2.5). -/
+structure Polynomial (m : ℕ := q) where
+  coeffs : Vector (ZMod m) 256
+deriving DecidableEq
+
+namespace Polynomial
+
+variable {m : ℕ}
+
+/-- `f[i]` is the `i`-th coefficient `fᵢ` (§2.4.4). -/
+instance : GetElem (Polynomial m) ℕ (ZMod m) (fun _ i => i < 256) where
+  getElem f i h := f.coeffs[i]
+
+@[simp] theorem getElem_mk (v : Vector (ZMod m) 256) (i : ℕ) (h : i < 256) :
+    (Polynomial.mk v)[i] = v[i] := rfl
+
+def ofFn (f : Fin 256 → ZMod m) : Polynomial m := ⟨Vector.ofFn f⟩
+
+@[ext] theorem ext {f g : Polynomial m} (h : ∀ (i : ℕ) (hi : i < 256), f[i] = g[i]) : f = g := by
+  cases f; cases g
+  congr 1
+  exact Vector.ext h
+
+/-- Addition is coordinate-wise (§2.4.5, Eq. 2.3). -/
+instance : Zero (Polynomial m) := ⟨⟨Vector.replicate 256 0⟩⟩
+instance : Add (Polynomial m) := ⟨fun f g => ⟨Vector.zipWith (· + ·) f.coeffs g.coeffs⟩⟩
+instance : Sub (Polynomial m) := ⟨fun f g => ⟨Vector.zipWith (· - ·) f.coeffs g.coeffs⟩⟩
+instance : Neg (Polynomial m) := ⟨fun f => ⟨f.coeffs.map (- ·)⟩⟩
+
+end Polynomial
 
 instance : Fact (Nat.Prime q) := ⟨by norm_num⟩
 
-/-- ζ = 17 ∈ ℤ_q is a primitive 256-th root of unity modulo q (§4.3), from `ζ^128 = -1`. -/
-def ζ : Utils.PolyRing.PrimitiveRoot Zq (2 ^ 8) :=
-  Utils.PolyRing.PrimitiveRoot.ofPowEqNegOne 17 (by decide +kernel) (by decide)
+/-- ζ = 17 ∈ ℤ_q, a primitive 256-th root of unity modulo q (§4.3). -/
+def ζ : Zq := 17
 
-/-- `T_q`, the NTT representation of `R_q` (§2.4.6). -/
+/-- An element of `T_q` (§4.3, Eq. 4.11), represented by the array
+`(ĝ₀,₀, ĝ₀,₁, …, ĝ₁₂₇,₀, ĝ₁₂₇,₁)` (§2.4.4, Eq. 2.7). -/
 structure Tq where
   coeffs : Vector Zq 256
 deriving DecidableEq
 
 namespace Tq
 
-abbrev flatten (a : Tq) : Vector Zq 256 := a.coeffs
-
 instance : GetElem Tq ℕ Zq (fun _ i => i < 256) where
   getElem a i h := a.coeffs[i]
 
-/-- The quadratic component at `X² - ζ^(2·BitRev₇(i)+1)`. -/
-def component (a : Tq) (i : Fin 128) : Utils.PolyRing.Poly Zq 2 :=
-  Utils.PolyRing.Poly.ofFn fun r => a[r.val + 2 * i.val]'(by omega)
-
-instance : CoeFun Tq (fun _ => Fin 128 → Utils.PolyRing.Poly Zq 2) := ⟨component⟩
+@[simp] theorem getElem_mk (v : Vector Zq 256) (i : ℕ) (h : i < 256) : (Tq.mk v)[i] = v[i] := rfl
 
 @[ext] theorem ext {a b : Tq} (h : ∀ (i : ℕ) (hi : i < 256), a[i] = b[i]) : a = b := by
   cases a; cases b
   congr 1
   exact Vector.ext h
 
+/-- Addition is coordinate-wise (§2.4.5); multiplication is `MultiplyNTTs` (Eq. 2.8). -/
 instance : Zero Tq := ⟨⟨Vector.replicate 256 0⟩⟩
-instance : One Tq := ⟨⟨Vector.ofFn fun i => if i.val % 2 = 0 then 1 else 0⟩⟩
 instance : Add Tq := ⟨fun a b => ⟨Vector.zipWith (· + ·) a.coeffs b.coeffs⟩⟩
 instance : Sub Tq := ⟨fun a b => ⟨Vector.zipWith (· - ·) a.coeffs b.coeffs⟩⟩
 instance : Neg Tq := ⟨fun a => ⟨a.coeffs.map (- ·)⟩⟩
-instance : SMul Zq Tq := ⟨fun c a => ⟨a.coeffs.map (c * ·)⟩⟩
 
 end Tq
-
-instance : Fact (2 ^ 7 ∣ 256) := ⟨by decide⟩
 
 /-- m(d) = 2^d if d < 12, q if d = 12 (§4.2.1). -/
 abbrev m (d : ℕ) := if d < 12 then 2^d else q
@@ -137,7 +156,7 @@ abbrev ctLen (p : ParameterSet) : ℕ := c₁Len p + c₂Len p
 
 /-! ## Vectors and Matrices of Polynomials (§2.4.4–§2.4.8) -/
 
-abbrev PolyVector (m : ℕ) (k : K) := Utils.PolyRing.PolyVec (ZMod m) 256 (-1) k
+abbrev PolyVector (m : ℕ) (k : K) := Vector (Polynomial m) k
 
 /-- Vectors and matrices over `T_q` (§2.4.7–§2.4.8). -/
 abbrev NTTVector (k : K) := Vector Tq k

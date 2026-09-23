@@ -81,3 +81,15 @@ import Wychelean.KEM.MLKEM.Properties
 /-- info: 'Wychelean.Utils.PolyRing.Residues.flatten_ofFlat' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Wychelean.Utils.PolyRing.Residues.flatten_ofFlat
+
+/-- info: 'Wychelean.KEM.MLKEM.NTT_eq_forward' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Wychelean.KEM.MLKEM.NTT_eq_forward
+
+/-- info: 'Wychelean.KEM.MLKEM.NTTInv_eq_inverse' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Wychelean.KEM.MLKEM.NTTInv_eq_inverse
+
+/-- info: 'Wychelean.KEM.MLKEM.mul_eq_multiply' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Wychelean.KEM.MLKEM.mul_eq_multiply

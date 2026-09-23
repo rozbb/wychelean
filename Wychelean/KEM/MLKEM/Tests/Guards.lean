@@ -21,14 +21,14 @@ namespace Wychelean.KEM.MLKEM.Tests
 
 #guard ByteDecode (ByteEncode 1 (Vector.replicate 256 (0 : ZMod (m 1)))) = Vector.replicate 256 0
 
-#guard ((0 : Polynomial).ntt : Tq) = 0
-#guard (0 : Tq).nttInv = 0
-#guard ((0 : Polynomial).ntt : Tq).nttInv = 0
+#guard NTT 0 = 0
+#guard NTTInv 0 = 0
+#guard NTTInv (NTT 0) = 0
 
 -- Appendix A spot checks: ζ^{BitRev7(i)} mod q
-#guard (ζ.val ^ (bitRev 7 0) : Zq).val = 1
-#guard (ζ.val ^ (bitRev 7 1) : Zq).val = 1729
-#guard (ζ.val ^ (bitRev 7 64) : Zq).val = 17
-#guard (ζ.val ^ (bitRev 7 127) : Zq).val = 2154
+#guard (ζ ^ (bitRev 7 0) : Zq).val = 1
+#guard (ζ ^ (bitRev 7 1) : Zq).val = 1729
+#guard (ζ ^ (bitRev 7 64) : Zq).val = 17
+#guard (ζ ^ (bitRev 7 127) : Zq).val = 2154
 
 end Wychelean.KEM.MLKEM.Tests
