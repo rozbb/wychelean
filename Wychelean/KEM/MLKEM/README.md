@@ -1,86 +1,48 @@
-# ML-KEM arithmetic
+# ML-KEM
 
-The executable arithmetic follows [FIPS 203](https://doi.org/10.6028/NIST.FIPS.203), Algorithms 9–12.
-`Polynomial` retains its polynomial-ring representation. `Tq` stores 256 field coefficients in FIPS
-order; component `i` consists of coefficients `2*i` and `2*i+1`, and its multiplicative identity is
-128 copies of `(1, 0)`.
+The specification follows the pseudocode of [FIPS 203](https://doi.org/10.6028/NIST.FIPS.203)
+and stands alone: it imports neither `Wychelean.Utils.PolyRing` nor its own proofs
+(`Tests/Standalone.lean` enforces this). The proofs relating it to the ring library live in
+`Properties/`.
 
-| Public operation | Executable definition |
-| --- | --- |
-| `f.ntt` | `NTT.forward`, Algorithm 9 |
-| `a.nttInv` | `NTT.inverse`, Algorithm 10 |
-| `a * b : Tq` | `NTT.multiply`, Algorithm 11, calling `NTT.baseCaseMultiply`, Algorithm 12 |
+## Specification
 
-The seven stages, their blocks, and their butterfly pairs use bounded `Fin.foldl` traversals.
-Forward lengths are 128 through 2; inverse lengths are 2 through 128. The inverse normalizes with
-3303. Vector methods apply these operations entrywise. Matrix multiplication and inner products
-retain the generic definitions in `Wychelean.Utils.PolyRing`.
+- `Parameters.lean`: `q`, `ζ = 17`, the parameter sets and byte lengths. `Polynomial` (an element
+  of `R_q`) and `Tq` (an element of `T_q`) are coefficient arrays in `Zq^256` (§2.4.4). Both have
+  coordinate-wise `+` and `-`; `Tq` multiplies by `MultiplyNTTs` (Eq. 2.8). There is no product on
+  `Polynomial`: the pseudocode never multiplies in `R_q` (§2.4.5).
+- `NTT.lean`: Algorithms 9–12 as the FIPS loops. `Polynomial.NTT` and `PolyVector.NTT` (and the
+  inverses) are both opened where used, so `NTT(s)` resolves by the type of `s` (§2.4.8).
+- `Basic.lean`: hash functions, Compress/Decompress, and Algorithms 5–8.
+- `Layout.lean`: typed keys and ciphertexts with their byte encodings.
+- `Scheme.lean`: Algorithms 13–21.
 
-## Modules and proofs
+Each algorithm is imperative (`Id.run do`, `for`, `while`), one statement per FIPS line, with
+`-- Alg. N, step M` comments.
 
-- `Parameters.lean` defines the parameters, polynomial types, and flat `Tq` representation.
-- `NTT.lean` defines the executable arithmetic. `Basic`, `Layout`, and `Scheme` depend on it.
-- `NTTRepresentation.lean` proves the coefficient conversions inverse and packages
-  `Tq.abstractRingEquiv`, retaining the concrete arithmetic operations. Its `AbstractTq` abbreviation
-  is definitionally `NTTDomain 7 ζ 256`, with dimensions reduced to 2 and 128 for elaboration.
-- `NTTStages.lean` proves invariants for completed pairs and blocks, including the twiddle counters.
-- `NTTEquivalence.lean` relates forward stage `s` to the recursive transform with root
-  `17^(2^(7-s))`. Each inverse stage is twice the corresponding `splitInv`; its traversal accumulates
-  a factor `2^7`, cancelled by 3303. `nttEquiv : Polynomial ≃+* Tq` uses the executable operations.
-- `Properties.lean` exposes inverse, multiplication, coefficient-sum, scalar, and quotient-map results.
+## Properties
 
-The main bridges quantify over every input:
+- `Loops.lean`: the FIPS loops of Algorithms 9–11 equal the stage folds of `Stages.lean`
+  (`NTT_eq_forward`, `NTTInv_eq_inverse`, `mul_eq_multiply`).
+- `Ring.lean`: `Polynomial` as `ℤ_q[X]/(X^256 + 1)` of PolyRing (`Polynomial.ringEquiv`), its
+  product, and `ζRoot`, ζ as a primitive 256-th root of unity.
+- `Tq.lean`: `T_q` as the product of the 128 quadratic quotients (`Tq.abstractRingEquiv`).
+- `NTTStages.lean`, `NTTEquivalence.lean`: each fold stage against the recursive transform of
+  PolyRing; `nttEquiv : Polynomial ≃+* Tq`.
+- `NTT.lean`: the public results, e.g. `nttInv_mul : NTTInv (NTT f * NTT g) = f * g` (Eq. 4.9),
+  `ntt_eq_nttSpec` (Eq. 4.12), `mul_residue` (Eq. 4.14).
 
-```lean
-toAbstract_ntt (f : Polynomial) : Tq.toAbstract f.ntt = abstractNTT f
-nttInv_eq_abstract (a : Tq) : a.nttInv = abstractNTTInv a.toAbstract
-Tq.toAbstract_mul (a b : Tq) : (a * b).toAbstract = a.toAbstract * b.toAbstract
-```
-
-The reusable recursive transforms and algebraic proofs live under the public namespace and import
-path `Wychelean.Utils.PolyRing`. There are no compatibility modules at the former location.
+`Tests/Axioms.lean` guards the axioms of these results: only `propext`, `Classical.choice` and
+`Quot.sound`.
 
 ## Verification
 
 ```sh
 lake build
-lake build runTests
 lake test
 lake test -- --full
-lake test -- --only 'ML-KEM FIPS arithmetic'
+lake test -- --only 'ML-KEM'
 ```
 
-`Tests/Arithmetic.lean` checks notation resolution by definitional equality and runs 70 comparisons
-on zero, one, boundary monomials, dense polynomials, and arbitrary flat NTT inputs.
-`Tests/Axioms.lean` guards the transitive axiom reports for the public bridges and arithmetic theorems:
-only `propext`, `Classical.choice`, and `Quot.sound` are allowed. No compiler-trust proof shortcut is
-used. Source review of the FIPS transcription remains the connection to the standard's pseudocode.
-
-## Validation record
-
-Validated on 2026-09-20 with Lean `v4.34.0-rc2`:
-
-- Library and native test-executable builds passed at the default Lean limits.
-- Default suite: 15,628 checks passed; full suite: 18,711 checks passed.
-- Existing ACVP and Wycheproof fixtures were unchanged.
-- After making arithmetic test setup lazy, its 70 checks and the full ML-KEM subset's 1,977 checks
-  passed again. The change only defers pure test evaluation until the suite is selected.
-- Guarded transitive axiom checks passed. Source scans found no old namespace imports, removed-loop
-  imports, proof placeholders, or compiler-trust proof shortcuts in the new arithmetic.
-
-Native timing on the same machine and toolchain, including process startup, fixture loading, and
-output, with compilation outside the measurements:
-
-| Run | Baseline | FIPS arithmetic |
-| --- | ---: | ---: |
-| ACVP, 18 identical checks, median of three interleaved rounds | 2.63 s | 2.27 s |
-| Full `--only ML-KEM` subset, one run | 159.04 s | 129.61 s |
-
-The full subset grew from 1,907 to 1,977 checks. ACVP wall time decreased by about 14%; the full
-subset took about 19% less time despite the additional checks. These are test-process timings,
-not isolated transform benchmarks.
-
-The new proof modules built in approximately 2.6–4.7 seconds each. Profiling identified bounded
-traversal reasoning and typeclass inference as the main proof costs; kernel checking of the
-transform-equivalence module took approximately 0.33 seconds. No heartbeat or recursion limit was
-raised.
+On 2026-09-23 with Lean `v4.34.0-rc2`, `lake build` passed without warnings and `lake test`
+passed all 15,628 checks, including the ACVP and Wycheproof ML-KEM vectors.
