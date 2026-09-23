@@ -91,10 +91,7 @@ def MultiplyNTTs («f̂» «ĝ» : Tq) : Tq := Id.run do
 /-- `f̂ ×_{T_q} ĝ` is `MultiplyNTTs(f̂, ĝ)` (§2.4.5, Eq. 2.8). -/
 instance : Mul Tq := ⟨MultiplyNTTs⟩
 
-/-! ### NTT and NTT⁻¹ of vectors (§2.4.6, Eq. 2.9; §2.4.8, Eq. 2.16)
-
-With `Polynomial.NTT` and `PolyVector.NTT` both opened, `NTT(s)` resolves by the type of `s`,
-as in the pseudocode. -/
+/-! ### NTT and NTT⁻¹ of vectors (§2.4.6, Eq. 2.9; §2.4.8, Eq. 2.16) -/
 
 /-- `NTT(v)`: run NTT once for each coordinate of `v`. -/
 def PolyVector.NTT {n : ℕ} (v : Vector Polynomial n) : Vector Tq n := v.map Polynomial.NTT
