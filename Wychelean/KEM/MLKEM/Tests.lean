@@ -1,6 +1,7 @@
 import Wychelean.KEM.MLKEM.Tests.Axioms
 import Wychelean.KEM.MLKEM.Tests.Arithmetic
 import Wychelean.KEM.MLKEM.Tests.Guards
+import Wychelean.KEM.MLKEM.Tests.Standalone
 import Wychelean.KEM.MLKEM.Tests.Cavp
 import Wychelean.KEM.MLKEM.Tests.Wycheproof
 
