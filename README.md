@@ -25,6 +25,9 @@ Every primitive contains its own tests in `Tests.lean`. Suites are registered in
 `RunTests/Main.lean`; each suite loads its test vectors and evaluates its checks when it runs.
 The ordinary `lake build` target does not import the test suites.
 
+`lake test -- --full` adds the slow suites: SHA3 and SHAKE long-message and Monte Carlo vectors,
+and every ML-KEM Wycheproof case rather than a sample of each group.
+
 # Docs
 
 To build docs:

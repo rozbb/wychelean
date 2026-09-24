@@ -24,9 +24,25 @@ def getField (α) [FromJson α] (j : Json) (key : String) : Except String α :=
   | .error _ => .error s!"missing field \"{key}\""
   | .ok value => (fromJson? value).mapError fun error => s!"field \"{key}\": {error}"
 
+/-- Read a field that may be absent, in which case `default` stands in for it -/
+def getFieldD (α) [FromJson α] (j : Json) (key : String) (default : α) : Except String α :=
+  match j.getObjVal? key with
+  | .error _ => .ok default
+  | .ok value => (fromJson? value).mapError fun error => s!"field \"{key}\": {error}"
+
 /-- Read a field holding exactly `n` bytes of hex -/
 def getHexField (n : Nat) (j : Json) (key : String) : Except String (Vector UInt8 n) := do
   (fromHex (← getField String j key)).mapError fun error => s!"field \"{key}\": {error}"
+
+/-- Read a field holding hex of any length, including none; length checks are the caller's -/
+def getHexBytes (j : Json) (key : String) : Except String (Array UInt8) := do
+  (parse readHex (← getField String j key)).mapError fun error => s!"field \"{key}\": {error}"
+
+/-- Read an optional hex field of any length -/
+def getHexBytes? (j : Json) (key : String) : Except String (Option (Array UInt8)) :=
+  match j.getObjVal? key with
+  | .error _ => .ok none
+  | .ok _ => some <$> getHexBytes j key
 
 /-! ## Files -/
 
@@ -50,7 +66,8 @@ instance : ToString ExpectedResult where
 structure Case (α : Type) where
   tcId : Nat
   comment : String
-  /-- Names of the file's `notes` entries explaining what this case exercises, e.g. `Twist`. -/
+  /-- Names of the file's `notes` entries explaining what this case exercises, e.g. `Twist`.
+  Some files omit `comment` or `flags`; they read as empty. -/
   flags : Array String
   result : ExpectedResult
   data : α
@@ -87,8 +104,8 @@ private def parseCase (payload : Json → Except String α) (j : Json) : Except 
   let tcId ← getField Nat j "tcId"
   let case : Except String (Case α) := do
     return { tcId,
-             comment := ← getField String j "comment",
-             flags := ← getField (Array String) j "flags",
+             comment := ← getFieldD String j "comment" "",
+             flags := ← getFieldD (Array String) j "flags" #[],
              result := ← parseResult j,
              data := ← payload j }
   case.mapError fun error => s!"tcId {tcId}: {error}"
