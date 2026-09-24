@@ -11,7 +11,7 @@ https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b
 
 namespace Wychelean.KEM.MLKEM.Tests
 
-open Polynomial (NTT)
+open _root_.Wychelean.KEM.MLKEM.Polynomial (NTT)
 open Tq (NTTInv)
 open RunTests RunTests.Parser RunTests.Parser.Rsp
 open Std.Internal.Parsec.String
