@@ -7,8 +7,7 @@ namespace Wychelean.KEM.MLKEM
 open Wychelean
 open scoped Wychelean.Notations Wychelean.Utils.Linear
 
-/-- Stepped ranges `[a : b : s]` whose step is a variable, as in the butterfly loops: the
-positivity proof is taken from the context (`Bounds.len_pos`) when `decide` cannot supply it. -/
+/-- `[a : b : s]` with a variable step, proved positive by `omega` from `Bounds.len_pos`. -/
 scoped macro_rules
 | `([ $start : $stop : $step ]) =>
   `({ start := $start, stop := $stop, step := $step, step_pos := by first | decide | omega :
