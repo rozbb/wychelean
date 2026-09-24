@@ -104,7 +104,7 @@ def Encaps.KeyCheck (p : ParameterSet) (ek : ByteVec (ekLen p)) : Bool :=
 /-! ## §7.2 Algorithm 20 — ML-KEM.Encaps(ek) -/
 def Encaps (p : ParameterSet) (ek : ByteVec (ekLen p)) (m : Seed) :
     Option (SharedKey × ByteVec (ctLen p)) :=
-  if Encaps.KeyCheck p ek then some (Internal.Encaps p ek m)                     -- Alg. 20, steps 5–7
+  if Encaps.KeyCheck p ek then some (Internal.Encaps p ek m)                     -- Alg. 20, step 5
   else none
 
 /-- Hash check (§7.3, Eq. 7.2): the stored `H(ek)` matches the embedded `ek`. -/

@@ -56,7 +56,7 @@ open Bounds
 /-- H(s) := SHA3-256(s) — Eq. (4.4). -/
 def H {n} (s : ByteVec n) : ByteVec hashLen := SHA3.sha3_256 s
 
-/-- J(s) := SHAKE256(s, 32) — Eq. (4.4). -/
+/-- J(s) := SHAKE256(s, 8·32) — Eq. (4.4). -/
 def J {n} (s : ByteVec n) : ByteVec hashLen := SHA3.shake256 s hashLen
 
 /-- G(c) := SHA3-512(c), split into two 32-byte outputs — Eq. (4.5). -/
@@ -67,7 +67,7 @@ def G {n} (s : ByteVec n) : ByteVec hashLen × ByteVec hashLen :=
 def PRF (η : Η) (s : Seed) (b : Byte) : ByteVec (64 * η) :=
   SHA3.shake256 (s ‖ #v[b]) (64 * η)
 
-/-! ### SHAKE128 XOF — §4.1, Eq. (4.1)–(4.2) -/
+/-! ### XOF wrapper of the SHAKE128 incremental API — §4.1 -/
 
 def XOF.Init := SHA3.SHAKE128.init
 

@@ -65,7 +65,7 @@ def PolyVector.ByteDecode {k : K} (d : ℕ) (bytes : ByteVec (32 * d * k)) (_ : 
     have := poly_vec_decode_idx_le d i i.isLt
     ⟨MLKEM.ByteDecode (slice bytes (32 * d * i) (32 * d) (by grind))⟩
 
-/-- `ByteEncode₁₂` of a vector over `T_q`, each entry by its residues in the order of §2.4.6. -/
+/-- `ByteEncode₁₂` of a vector over `T_q` (§2.4.4, Eq. 2.7). -/
 def ByteEncode₁₂ {k : K} (v : NTTVector k) : ByteVec (vecLen' k) :=
   (v.map fun «f̂» => MLKEM.ByteEncode 12 «f̂».coeffs).flatten.cast (Nat.mul_comm _ _)
 

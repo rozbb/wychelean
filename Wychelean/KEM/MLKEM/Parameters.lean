@@ -11,7 +11,7 @@ open Wychelean
 
 /- `ByteVec n` (from Defs) is the standard interface type in FIPS 203. -/
 
-/-- q = 3329, the modulus for ML-KEM (§2). -/
+/-- q = 3329, the modulus for ML-KEM (§2.3). -/
 abbrev q : Nat := 3329
 
 /-- ℤ_q = ℤ/3329ℤ, the coefficient ring. -/
@@ -153,11 +153,11 @@ abbrev c₂Len (p : ParameterSet) : ℕ := 32 * dᵥ p
 /-- Ciphertext: `32(dᵤk + dᵥ)`. -/
 abbrev ctLen (p : ParameterSet) : ℕ := c₁Len p + c₂Len p
 
-/-! ## Vectors and Matrices of Polynomials (§2.4.4–§2.4.8) -/
+/-! ## Vectors and Matrices of Polynomials (§2.4.6–§2.4.7) -/
 
 abbrev PolyVector (m : ℕ) (k : K) := Vector (Polynomial m) k
 
-/-- Vectors and matrices over `T_q` (§2.4.7–§2.4.8). -/
+/-- Vectors and matrices over `T_q` (§2.4.6–§2.4.7). -/
 abbrev NTTVector (k : K) := Vector Tq k
 abbrev NTTMatrix (k : K) := Utils.Linear.Mat Tq k k
 
