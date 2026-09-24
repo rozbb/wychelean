@@ -17,8 +17,7 @@ abbrev q : Nat := 3329
 /-- ℤ_q = ℤ/3329ℤ, the coefficient ring. -/
 abbrev Zq := ZMod q
 
-/-- An element of `R_q = ℤ_q[X] / (X^256 + 1)` (`m = q`), or its compressed form over `ℤ_{2^d}`
-(§4.2.1), represented by its coefficient array `(f₀, …, f₂₅₅)` (§2.4.4, Eq. 2.5). -/
+/-- Coefficient array `(f₀, …, f₂₅₅)` over `ℤ_m` (§2.4.4). -/
 structure Polynomial (m : ℕ := q) where
   coeffs : Vector (ZMod m) 256
 deriving DecidableEq
