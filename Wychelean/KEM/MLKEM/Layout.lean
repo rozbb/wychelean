@@ -7,8 +7,6 @@ open scoped Wychelean.Utils.Linear
 open scoped Wychelean.Notations
 open Bounds
 
-/-! ## Key and ciphertext layouts -/
-
 /-- `ekPKE = ByteEncode₁₂(t̂) ‖ ρ` (Algorithm 13, step 19). -/
 structure EkPKE (p : ParameterSet) where
   «t̂» : NTTVector (k p)
@@ -28,8 +26,7 @@ instance : ByteLayout (DkPKE p) (dkPKELen p) where
   pack d := ByteEncode₁₂ d.«ŝ»
   unpack b := ⟨ByteDecode₁₂ b⟩
 
-/-- `c = ByteEncode_dᵤ(u) ‖ ByteEncode_dᵥ(v)` of the compressed `u` and `v`
-(Algorithm 14, steps 22–24). -/
+/-- `c = ByteEncode_dᵤ(u) ‖ ByteEncode_dᵥ(v)` (Algorithm 14, steps 22–24). -/
 structure Ciphertext (p : ParameterSet) where
   u : PolyVector (m (dᵤ p)) (k p)
   v : Polynomial (m (dᵥ p))

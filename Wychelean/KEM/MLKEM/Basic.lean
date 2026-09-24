@@ -75,9 +75,7 @@ def XOF.Absorb s (B : ByteVec ℓ) := SHA3.SHAKE128.absorb s B
 
 def XOF.Squeeze s ℓ := SHA3.SHAKE128.squeeze s ℓ
 
-/-! ## §4.2.1 Compress / Decompress — Eq. (4.7), (4.8)
-
-Lossy compression from ℤ_q to ℤ_{2^d} and decompression back. -/
+/-! ## §4.2.1 Compress / Decompress — Eq. (4.7), (4.8) -/
 
 def Compress (d : ℕ) (x : Zq) (_ : 1 ≤ d ∧ d < 12 := by grind) : ZMod (m d) :=
   ⌈ ((2^d : ℚ) / (q : ℚ)) * x.val ⌋
