@@ -1,6 +1,6 @@
 name = "Wychelean"
 version = "0.1.0"
-defaultTargets = ["Wychelean"]
+defaultTargets = ["Wychelean", "AxiomCheck"]
 testDriver = "runTests"
 
 [[require]]
@@ -9,6 +9,11 @@ scope = "leanprover-community"
 
 [[lean_lib]]
 name = "Wychelean"
+
+# Fails the build if the library depends on an axiom that is not on the allowlist in
+# `AxiomCheck.lean`.
+[[lean_lib]]
+name = "AxiomCheck"
 
 # The known-answer test harness. The suites it runs live next to the specifications they test (e.g.
 # `Wychelean/DH/X25519/Tests.lean`) and are pulled in by `RunTests.Main`, so they are built by
