@@ -213,7 +213,7 @@ theorem sponge.squeeze_chunks (s : sponge.squeezingState r) (sizes : List Nat) :
 
 end Incremental
 
-private theorem bytesToBits_append {n m : Nat} (a : ByteVec n) (c : ByteVec m) :
+theorem bytesToBits_append {n m : Nat} (a : ByteVec n) (c : ByteVec m) :
     bytesToBits (a ++ c) = ((bytesToBits a) ++ (bytesToBits c)).cast (by omega) := by
   apply Vector.ext
   intro i hi
@@ -232,7 +232,7 @@ private theorem bitsToBytes_append {m n : Nat}
     (bytesToBits_append (bitsToBytes a) (bitsToBytes c))
   simpa only [bitsToBytes_bytesToBits, bytesToBits_bitsToBytes] using h.symm
 
-private theorem squeeze_bytes_output_add (f : BitVec b → BitVec b) (r : Nat)
+theorem squeeze_bytes_output_add (f : BitVec b → BitVec b) (r : Nat)
     (hr : 0 < r ∧ r < b) (s : Incremental.sponge.squeezingState r) (m n : Nat) :
     (bitsToBytes (Incremental.sponge.squeeze f r hr s (8 * m)).2).toList ++
       (bitsToBytes (Incremental.sponge.squeeze f r hr
@@ -317,7 +317,7 @@ private theorem bytesToBits_cast_toList {n m : Nat} (v : ByteVec n) (h : n = m) 
   cases h
   rfl
 
-private theorem bytesToBits_array_append (a c : Array Byte) :
+theorem bytesToBits_array_append (a c : Array Byte) :
     (bytesToBits (a ++ c).toVector).toList =
       (bytesToBits a.toVector).toList ++ (bytesToBits c.toVector).toList := by
   rw [toVector_append, bytesToBits_cast_toList, bytesToBits_append]
