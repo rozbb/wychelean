@@ -29,32 +29,26 @@ private def evaluateBytes (xof : Xof) (m : Array UInt8) (len : Nat) : Array UInt
 
 /-- Absorb input chunks, then squeeze `len` bytes using the cycled request sizes. -/
 private def evaluateIncremental (xof : Xof) (chunks : List (Array UInt8)) (len : Nat)
-    (schedule : Array Nat) :
-    Array UInt8 := Id.run do
-  let mut out : Array UInt8 := #[]
-  let mut k := 0
+    (schedule : Array Nat) : Array UInt8 :=
+  let run {Absorbing Squeezing : Type} (init : Absorbing)
+      (absorb : {n : Nat} → Absorbing → ByteVec n → Absorbing)
+      (finalize : Absorbing → Squeezing)
+      (squeeze : Squeezing → (n : Nat) → Squeezing × ByteVec n) := Id.run do
+    let input := chunks.foldl (fun s chunk => absorb s chunk.toVector) init
+    let mut s := finalize input
+    let mut out : Array UInt8 := #[]
+    let mut k := 0
+    while out.size < len do
+      let (s', c) := squeeze s (min schedule[k % schedule.size]! (len - out.size))
+      s := s'
+      out := out ++ c.toArray
+      k := k + 1
+    return out
   match xof with
   | .shake128 =>
-    let mut input := SHAKE128.init
-    for chunk in chunks do
-      input := SHAKE128.absorb input chunk.toVector
-    let mut s := SHAKE128.finalize input
-    while out.size < len do
-      let (s', c) := SHAKE128.squeeze s (min schedule[k % schedule.size]! (len - out.size))
-      s := s'
-      out := out ++ c.toArray
-      k := k + 1
+    run SHAKE128.init SHAKE128.absorb SHAKE128.finalize SHAKE128.squeeze
   | .shake256 =>
-    let mut input := SHAKE256.init
-    for chunk in chunks do
-      input := SHAKE256.absorb input chunk.toVector
-    let mut s := SHAKE256.finalize input
-    while out.size < len do
-      let (s', c) := SHAKE256.squeeze s (min schedule[k % schedule.size]! (len - out.size))
-      s := s'
-      out := out ++ c.toArray
-      k := k + 1
-  return out
+    run SHAKE256.init SHAKE256.absorb SHAKE256.finalize SHAKE256.squeeze
 
 /-- Exercise partial-byte input chunks through the generic stateful API. -/
 private def evaluateIncrementalBits (xof : Xof) (chunks : List (Array Bit)) (d : Nat) :
@@ -70,13 +64,11 @@ private def evaluateIncrementalBits (xof : Xof) (chunks : List (Array Bit)) (d :
   let out := BitVec.ofBitsLE bits
   return (out.setWidth (8 * ((d + 7) / 8))).toBytesLE.toArray
 
-/-- Request sizes for the incremental checks: SampleNTT's three bytes, and a schedule crossing
-the rate boundary of `xof` (168 bytes for SHAKE128, 136 for SHAKE256). -/
+/-- SampleNTT-sized requests and rate-boundary crossings. -/
 private def schedules (xof : Xof) : List (Array Nat) :=
   let rate := match xof with | .shake128 => 168 | .shake256 => 136
   [#[3], #[1, rate - 1, 0, rate + 1, rate, 5, 0, 2]]
 
-/-- Stateful SHAKE agrees with one-shot SHAKE regardless of input and output chunk boundaries. -/
 private def incrementalSuite : Suite where
   name := "SHAKE stateful"
   verbose := false
@@ -137,8 +129,7 @@ private def knownAnswers (dir file : String) (xof : Xof) (parser : Parser (List 
       else
         return check name expected (toHex (evaluateBits xof v.msg.bits v.output.length).toVector)
 
-/-- SHA3VS §6.3.3: 100 checkpoints of 1000 iterations; the rightmost two output bytes, read as a
-big-endian integer, choose the next output length. -/
+/-- SHA3VS §6.3.3: Monte Carlo test. -/
 private def monte (dir file : String) (xof : Xof) : Suite where
   name := s!"{dir}/{file}"
   tests := do
