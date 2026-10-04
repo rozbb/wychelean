@@ -67,11 +67,13 @@ def G {n} (s : ByteVec n) : ByteVec hashLen × ByteVec hashLen :=
 def PRF (η : Η) (s : Seed) (b : Byte) : ByteVec (64 * η) :=
   SHA3.shake256 (s ‖ #v[b]) (64 * η)
 
-/-! ### XOF wrapper of the SHAKE128 incremental API — §4.1 -/
+/-! ### XOF wrapper of the stateful SHAKE128 API — §4.1 -/
 
 def XOF.Init := SHA3.SHAKE128.init
 
 def XOF.Absorb s (B : ByteVec ℓ) := SHA3.SHAKE128.absorb s B
+
+def XOF.Finalize s := SHA3.SHAKE128.finalize s
 
 def XOF.Squeeze s ℓ := SHA3.SHAKE128.squeeze s ℓ
 
@@ -97,8 +99,9 @@ def PolyVector.Decompress {k : K} (d : ℕ) (v : PolyVector (m d) k) (_ : 1 ≤ 
 
 /-! ## §4.2.2 Algorithm 7 — SampleNTT(B) -/
 def SampleNTT (B : ByteVec (seedLen + 2)) : Tq := Id.run do
-  let mut ctx := XOF.Init                                                     -- Alg. 7, step 1
-  ctx := XOF.Absorb ctx B                                                     -- Alg. 7, step 2
+  let ctx := XOF.Init                                                        -- Alg. 7, step 1
+  let ctx := XOF.Absorb ctx B                                                -- Alg. 7, step 2
+  let mut ctx := XOF.Finalize ctx                                            -- padding before step 5
   let mut «â» : Vector Zq 256 := Vector.replicate 256 0
   let mut j := 0                                                              -- Alg. 7, step 3
   while hj : j < 256 do                                                       -- Alg. 7, step 4

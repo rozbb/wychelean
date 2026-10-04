@@ -27,21 +27,28 @@ private def evaluateBytes (xof : Xof) (m : Array UInt8) (len : Nat) : Array UInt
   | .shake128 => (shake128 m.toVector len).toArray
   | .shake256 => (shake256 m.toVector len).toArray
 
-/-- The incremental API, squeezing `len` bytes in requests of the sizes in `schedule`, cycled. -/
-private def evaluateIncremental (xof : Xof) (m : Array UInt8) (len : Nat) (schedule : Array Nat) :
+/-- Absorb input chunks, then squeeze `len` bytes using the cycled request sizes. -/
+private def evaluateIncremental (xof : Xof) (chunks : List (Array UInt8)) (len : Nat)
+    (schedule : Array Nat) :
     Array UInt8 := Id.run do
   let mut out : Array UInt8 := #[]
   let mut k := 0
   match xof with
   | .shake128 =>
-    let mut s := SHAKE128.absorb SHAKE128.init m.toVector
+    let mut input := SHAKE128.init
+    for chunk in chunks do
+      input := SHAKE128.absorb input chunk.toVector
+    let mut s := SHAKE128.finalize input
     while out.size < len do
       let (s', c) := SHAKE128.squeeze s (min schedule[k % schedule.size]! (len - out.size))
       s := s'
       out := out ++ c.toArray
       k := k + 1
   | .shake256 =>
-    let mut s := SHAKE256.absorb SHAKE256.init m.toVector
+    let mut input := SHAKE256.init
+    for chunk in chunks do
+      input := SHAKE256.absorb input chunk.toVector
+    let mut s := SHAKE256.finalize input
     while out.size < len do
       let (s', c) := SHAKE256.squeeze s (min schedule[k % schedule.size]! (len - out.size))
       s := s'
@@ -49,11 +56,61 @@ private def evaluateIncremental (xof : Xof) (m : Array UInt8) (len : Nat) (sched
       k := k + 1
   return out
 
+/-- Exercise partial-byte input chunks through the generic stateful API. -/
+private def evaluateIncrementalBits (xof : Xof) (chunks : List (Array Bit)) (d : Nat) :
+    Array UInt8 := Id.run do
+  let r := match xof with | .shake128 => Internal.b - 256 | .shake256 => Internal.b - 512
+  have hr : 0 < r ∧ r < Internal.b := by cases xof <;> decide
+  let f := Permutations.Keccak.keccak_f .w1600
+  let mut input := Incremental.sponge.init r hr
+  for chunk in chunks do
+    input := Incremental.sponge.absorb f r hr input chunk.toList
+  let s := Incremental.sponge.finalize f r hr input Internal.xofSuffix.toBitsLE.toList
+  let (_, bits) := Incremental.sponge.squeeze f r hr s d
+  let out := BitVec.ofBitsLE bits
+  return (out.setWidth (8 * ((d + 7) / 8))).toBytesLE.toArray
+
 /-- Request sizes for the incremental checks: SampleNTT's three bytes, and a schedule crossing
 the rate boundary of `xof` (168 bytes for SHAKE128, 136 for SHAKE256). -/
 private def schedules (xof : Xof) : List (Array Nat) :=
   let rate := match xof with | .shake128 => 168 | .shake256 => 136
   [#[3], #[1, rate - 1, 0, rate + 1, rate, 5, 0, 2]]
+
+/-- Stateful SHAKE agrees with one-shot SHAKE regardless of input and output chunk boundaries. -/
+private def incrementalSuite : Suite where
+  name := "SHAKE stateful"
+  verbose := false
+  tests := do
+    let mut tests := []
+    for (xof, rate) in [(Xof.shake128, 168), (Xof.shake256, 136)] do
+      let len := 2 * rate + 1
+      let requests := schedules xof ++ [#[0, 3]]
+      for schedule in requests do
+        tests := tests ++ [check s!"{xof.name}, no absorbs, requests={schedule}"
+          (toHex (evaluateBytes xof #[] len).toVector)
+          (toHex (evaluateIncremental xof [] len schedule).toVector)]
+      for size in [0, 1, rate - 1, rate, rate + 1, 2 * rate - 1, 2 * rate, 2 * rate + 1] do
+        let msg := (Array.range size).map (fun i => UInt8.ofNat i)
+        let expected := toHex (evaluateBytes xof msg len).toVector
+        for split in [0, 1, rate - 1, rate, rate + 1] do
+          let chunks := [#[], msg.extract 0 split, #[], msg.extract split size, #[]]
+          for schedule in requests do
+            tests := tests ++ [check s!"{xof.name}, Len={size}, split={split}, requests={schedule}"
+              expected (toHex (evaluateIncremental xof chunks len schedule).toVector)]
+        let byteChunks := msg.toList.map (fun byte => #[byte])
+        for schedule in requests do
+          tests := tests ++ [check s!"{xof.name}, Len={size}, byte chunks, requests={schedule}"
+            expected (toHex (evaluateIncremental xof byteChunks len schedule).toVector)]
+      let r := 8 * rate
+      let d := 8 * len + 3
+      for size in [r - 5, r - 4, r - 3, r - 2, r - 1, r, r + 1] do
+        let msg := (Array.range size).map (fun i => i % 3 == 1)
+        let expected := toHex (evaluateBits xof msg.toVector d).toVector
+        for split in [1, r - 1, r] do
+          let chunks := [#[], msg.extract 0 split, #[], msg.extract split size, #[]]
+          tests := tests ++ [check s!"{xof.name}, bit Len={size}, split={split}"
+            expected (toHex (evaluateIncrementalBits xof chunks d).toVector)]
+    return tests
 
 private def vectorDir : System.FilePath := "Wychelean/Hashes/SHA3/TestVectors"
 
@@ -72,7 +129,7 @@ private def knownAnswers (dir file : String) (xof : Xof) (parser : Parser (List 
         let actual := evaluateBytes xof v.msg.bytes len
         if incremental then
           for schedule in schedules xof do
-            let chunked := evaluateIncremental xof v.msg.bytes len schedule
+            let chunked := evaluateIncremental xof [v.msg.bytes] len schedule
             unless chunked == actual do
               return { name, failure := some s!"incremental squeeze with requests {schedule} \
                 differs from one-shot output" }
@@ -103,7 +160,7 @@ private def monte (dir file : String) (xof : Xof) : Suite where
 
 /-- Short-message and variable-output vectors; `full` adds long messages and Monte Carlo. -/
 def shakeSuites (full := false) : List Suite := Id.run do
-  let mut short := []
+  let mut short := [incrementalSuite]
   let mut long := []
   for (xof, bits) in [(Xof.shake128, 128), (Xof.shake256, 256)] do
     for byteOriented in [true, false] do
