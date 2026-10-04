@@ -1,7 +1,7 @@
 import Wychelean.Permutations.Keccak.Basic
 
 /-!
-# SHA3
+# SHA3 and SHAKE
 FIPS 202 §§3–6: https://doi.org/10.6028/NIST.FIPS.202
 Adapted from Microsoft SymCrypt (MIT; see LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/SHA3/Spec.lean
@@ -32,15 +32,22 @@ def squeeze (f : BitVec b → BitVec b) (r : Nat)
     (remaining ++ Z).cast (by omega)
 termination_by d
 
+/-- FIPS 202 Algorithm 8, steps 1–6: pad, absorb every rate block, and return the state. -/
+def absorb {n : Nat} (f : BitVec b → BitVec b) (r : Nat) (N : BitVec n) : BitVec b :=
+  let P := «pad10*1» r n ++ N
+  let blocks := (n + padLen r n) / r
+  Fin.foldl blocks (fun S block =>
+    let Pᵢ := P.extractLsb' (block.val * r) r
+    f (S ^^^ Pᵢ.zeroExtend b)) 0
+
+/-- One squeeze step: the next rate block of output and the permuted state. -/
+def squeezeStep (f : BitVec b → BitVec b) (r : Nat) (S : BitVec b) : BitVec r × BitVec b :=
+  (S.extractLsb' 0 r, f S)
+
 /-- SPONGE[f, pad10*1, r], FIPS 202 Algorithm 8. -/
 def sponge {n : Nat} (f : BitVec b → BitVec b) (r : Nat)
     (N : BitVec n) (d : Nat) (hr : 0 < r ∧ r < b := by dsimp [b]; omega) : BitVec d :=
-  let P := «pad10*1» r n ++ N
-  let blocks := (n + padLen r n) / r
-  let S := Fin.foldl blocks (fun S block =>
-    let Pᵢ := P.extractLsb' (block.val * r) r
-    f (S ^^^ Pᵢ.zeroExtend b)) 0
-  squeeze f r S d hr
+  squeeze f r (absorb f r N) d hr
 
 /-- KECCAK[c], FIPS 202 §5.2: width 1600, 24 rounds, rate 1600-c. -/
 def keccak (c : Nat) (N : BitVec n) (d : Nat)
@@ -49,6 +56,9 @@ def keccak (c : Nat) (N : BitVec n) (d : Nat)
 
 /-- FIPS 202 §6.1: suffix 01, with bit zero least significant. -/
 def hashSuffix : BitVec 2 := 0b10
+
+/-- FIPS 202 §6.2: suffix 1111. -/
+def xofSuffix : BitVec 4 := 0b1111
 
 end Internal
 
@@ -83,5 +93,21 @@ def sha3_384 {n} (msg : ByteVec n) : ByteVec 48 :=
 /-- SHA3-512, FIPS 202 §6.1. Any finite byte string; 64-byte digest. -/
 def sha3_512 {n} (msg : ByteVec n) : ByteVec 64 :=
   (sha3_512_bits (BitVec.ofBytesLE msg)).toBytesLE
+
+/-- SHAKE128, FIPS 202 §6.2. Any finite bit string; `d`-bit output. -/
+def shake128_bits {n : Nat} (msg : BitVec n) (d : Nat) : BitVec d :=
+  Internal.keccak 256 (Internal.xofSuffix ++ msg) d
+
+/-- SHAKE256, FIPS 202 §6.2. Any finite bit string; `d`-bit output. -/
+def shake256_bits {n : Nat} (msg : BitVec n) (d : Nat) : BitVec d :=
+  Internal.keccak 512 (Internal.xofSuffix ++ msg) d
+
+/-- SHAKE128, FIPS 202 §6.2. Any finite byte string; `len`-byte output. -/
+def shake128 {n} (msg : ByteVec n) (len : Nat) : ByteVec len :=
+  (shake128_bits (BitVec.ofBytesLE msg) (8 * len)).toBytesLE
+
+/-- SHAKE256, FIPS 202 §6.2. Any finite byte string; `len`-byte output. -/
+def shake256 {n} (msg : ByteVec n) (len : Nat) : ByteVec len :=
+  (shake256_bits (BitVec.ofBytesLE msg) (8 * len)).toBytesLE
 
 end Wychelean.Hashes.SHA3

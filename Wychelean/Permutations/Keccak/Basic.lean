@@ -79,13 +79,20 @@ def χ (A : State width) : State width :=
 /-- FIPS 202 Algorithm 5, steps 3b–3e: feedback at 6, 5, 4, 0. -/
 def LfsrTaps : BitVec 8 := 0b01110001
 
-/-- FIPS 202 §3.2.5, Algorithm 5. -/
-def rc (t : Int) : Bit := Id.run do
+/-- FIPS 202 §3.2.5, Algorithm 5, by running the linear feedback shift register. -/
+def rc.lfsr (t : Int) : Bit := Id.run do
   let mut R : BitVec 8 := 1
   for _ in [0 : (t % 255).toNat] do
     let feedback := if R.msb then LfsrTaps else 0
     R := (R <<< 1) ^^^ feedback
   return R[0]
+
+/-- One period of the register: Algorithm 5 depends on `t` only through `t mod 255`. -/
+def rc.period : Vector Bit 255 := Vector.ofFn fun t => rc.lfsr t
+
+/-- FIPS 202 §3.2.5, Algorithm 5: `rc(t)`, read from the tabulated period so that every
+permutation does not rerun the register (`rc_eq_lfsr` relates the two). -/
+def rc (t : Int) : Bit := rc.period[(t % 255).toNat]'(by omega)
 
 /-- Algorithm 6. -/
 def ι.RC (width : Width) (iᵣ : Int) : Lane width := Id.run do
