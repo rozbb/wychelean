@@ -17,7 +17,7 @@ structure sponge.absorbingState (rate : Nat) where
   h_pending : pending.size < rate
 
 /-- Squeezing state (FIPS 202 Algorithm 8, steps 8–10). -/
-structure sponge.state (rate : Nat) where
+structure sponge.squeezingState (rate : Nat) where
   S : BitVec b
   x : Nat
   hx : x ≤ rate
@@ -67,13 +67,13 @@ decreasing_by
   omega
 
 /-- Append the suffix and padding (FIPS 202 Algorithm 8, step 1; §5.1, Algorithm 9). -/
-def sponge.finalize (s : sponge.absorbingState r) (suffix : List Bit) : sponge.state r :=
+def sponge.finalize (s : sponge.absorbingState r) (suffix : List Bit) : sponge.squeezingState r :=
   let s := sponge.absorb f r hr s suffix
   let s := sponge.absorb f r hr s («pad10*1» r s.pending.size).toBitsLE.toList
   { S := s.S, x := 0, hx := Nat.zero_le r }
 
 /-- Bitwise FIPS 202 Algorithm 8, steps 8–10; permute when more output needs a new block. -/
-def sponge.squeezeBit (s : sponge.state r) : sponge.state r × Bit :=
+def sponge.squeezeBit (s : sponge.squeezingState r) : sponge.squeezingState r × Bit :=
   if h : s.x = r then
     ({ S := f s.S, x := 1, hx := hr.1 }, (f s.S).getLsbD 0)
   else
@@ -91,7 +91,7 @@ end
 
 /-- FIPS 202 Algorithm 8, steps 8–10; retain unused rate bits and permute only for more output. -/
 def sponge.squeezeList (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b := by decide)
-    (s : sponge.state r) (d : Nat) : sponge.state r × List Bit :=
+    (s : sponge.squeezingState r) (d : Nat) : sponge.squeezingState r × List Bit :=
   if hd : d = 0 then (s, [])
   else if hx : s.x = r then
     sponge.squeezeList f r hr { S := f s.S, x := 0, hx := Nat.zero_le r } d
@@ -111,7 +111,7 @@ decreasing_by
 variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b := by decide)
 
 /-- FIPS 202 Algorithm 8's output-length requirement: exactly `d` bits. -/
-@[simp] theorem sponge.squeezeList_length (s : sponge.state r) (d : Nat) :
+@[simp] theorem sponge.squeezeList_length (s : sponge.squeezingState r) (d : Nat) :
     (sponge.squeezeList f r hr s d).2.length = d := by
   fun_induction sponge.squeezeList f r hr s d <;>
     simp_all [List.length_append, sponge.outputBits_length]
@@ -120,7 +120,8 @@ variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b := by decid
   omega
 
 /-- Stateful form of FIPS 202 Algorithm 8, steps 8–10: output `d` bits and retain the context. -/
-def sponge.squeeze (s : sponge.state r) (d : Nat) : sponge.state r × Vector Bit d :=
+def sponge.squeeze (s : sponge.squeezingState r) (d : Nat) :
+    sponge.squeezingState r × Vector Bit d :=
   let result := sponge.squeezeList f r hr s d
   (result.1, ⟨result.2.toArray, by simp [result]⟩)
 
@@ -155,15 +156,15 @@ def SHAKE256.finalize (s : Incremental.sponge.absorbingState (b - 512)) :=
     s xofSuffix.toBitsLE.toList
 
 /-- FIPS 203 §4.1, Algorithm 2, step 6; byte packing: FIPS 202 Appendix B.1. -/
-def SHAKE128.squeeze (s : Incremental.sponge.state (b - 256)) (outBytes : Nat) :
-    Incremental.sponge.state (b - 256) × ByteVec outBytes :=
+def SHAKE128.squeeze (s : Incremental.sponge.squeezingState (b - 256)) (outBytes : Nat) :
+    Incremental.sponge.squeezingState (b - 256) × ByteVec outBytes :=
   let (s, bits) := Incremental.sponge.squeeze (Permutations.Keccak.keccak_f .w1600)
     (b - 256) (by decide) s (8 * outBytes)
   (s, bitsToBytes bits)
 
 /-- SHAKE256 incremental analogue (FIPS 202 §6.2); byte packing: Appendix B.1. -/
-def SHAKE256.squeeze (s : Incremental.sponge.state (b - 512)) (outBytes : Nat) :
-    Incremental.sponge.state (b - 512) × ByteVec outBytes :=
+def SHAKE256.squeeze (s : Incremental.sponge.squeezingState (b - 512)) (outBytes : Nat) :
+    Incremental.sponge.squeezingState (b - 512) × ByteVec outBytes :=
   let (s, bits) := Incremental.sponge.squeeze (Permutations.Keccak.keccak_f .w1600)
     (b - 512) (by decide) s (8 * outBytes)
   (s, bitsToBytes bits)

@@ -120,12 +120,12 @@ private theorem outputBits_zero (S : BitVec b) (x : Nat) : sponge.outputBits S x
   apply List.eq_nil_of_length_eq_zero
   simp [sponge.outputBits]
 
-@[simp] theorem sponge.squeezeList_zero (s : sponge.state r) :
+@[simp] theorem sponge.squeezeList_zero (s : sponge.squeezingState r) :
     sponge.squeezeList f r hr s 0 = (s, []) := by
   rw [sponge.squeezeList]
   rfl
 
-private theorem sponge.squeezeList_succ_nonboundary (s : sponge.state r) (d : Nat)
+private theorem sponge.squeezeList_succ_nonboundary (s : sponge.squeezingState r) (d : Nat)
     (hx : s.x < r) :
     sponge.squeezeList f r hr s (d + 1) =
       let result := sponge.squeezeList f r hr
@@ -156,7 +156,7 @@ private theorem sponge.squeezeList_succ_nonboundary (s : sponge.state r) (d : Na
         rw [show d + 1 - (r - (s.x + 1) + 1) = d - (r - (s.x + 1)) by omega]
 
 /-- Block squeezing agrees with the single-bit transition. -/
-theorem sponge.squeezeList_succ (s : sponge.state r) (d : Nat) :
+theorem sponge.squeezeList_succ (s : sponge.squeezingState r) (d : Nat) :
     sponge.squeezeList f r hr s (d + 1) =
       let (s', bit) := sponge.squeezeBit f r hr s
       let result := sponge.squeezeList f r hr s' d
@@ -171,7 +171,7 @@ theorem sponge.squeezeList_succ (s : sponge.state r) (d : Nat) :
     exact sponge.squeezeList_succ_nonboundary f r hr s d hlt
 
 /-- Squeeze chunking gives the same state and output (cf. FIPS 203 §4.1, Eq. (4.6)). -/
-theorem sponge.squeezeList_add (s : sponge.state r) (m n : Nat) :
+theorem sponge.squeezeList_add (s : sponge.squeezingState r) (m n : Nat) :
     ((sponge.squeezeList f r hr (sponge.squeezeList f r hr s m).1 n).1,
       (sponge.squeezeList f r hr s m).2 ++
         (sponge.squeezeList f r hr (sponge.squeezeList f r hr s m).1 n).2) =
@@ -183,19 +183,19 @@ theorem sponge.squeezeList_add (s : sponge.state r) (m n : Nat) :
     cases h : sponge.squeezeBit f r hr s with
     | mk s' bit =>
       simp only [sponge.squeezeList_succ, h, List.cons_append]
-      exact congrArg (fun p : sponge.state r × List Bit => (p.1, bit :: p.2)) (ih s')
+      exact congrArg (fun p : sponge.squeezingState r × List Bit => (p.1, bit :: p.2)) (ih s')
 
-@[simp] theorem sponge.squeeze_zero (s : sponge.state r) :
+@[simp] theorem sponge.squeeze_zero (s : sponge.squeezingState r) :
     (sponge.squeeze f r hr s 0).1 = s := by simp only [sponge.squeeze, sponge.squeezeList_zero]
 
 /-- Squeeze chunking gives the same state (cf. FIPS 203 §4.1, Eq. (4.6)). -/
-theorem sponge.squeeze_state_add (s : sponge.state r) (m n : Nat) :
+theorem sponge.squeeze_state_add (s : sponge.squeezingState r) (m n : Nat) :
     (sponge.squeeze f r hr (sponge.squeeze f r hr s m).1 n).1 =
       (sponge.squeeze f r hr s (m + n)).1 := by
   exact congrArg Prod.fst (sponge.squeezeList_add f r hr s m n)
 
 /-- Squeeze chunking gives the same output (FIPS 203 §4.1, Eq. (4.6)). -/
-theorem sponge.squeeze_output_add (s : sponge.state r) (m n : Nat) :
+theorem sponge.squeeze_output_add (s : sponge.squeezingState r) (m n : Nat) :
     (sponge.squeeze f r hr s m).2.toList ++
       (sponge.squeeze f r hr (sponge.squeeze f r hr s m).1 n).2.toList =
         (sponge.squeeze f r hr s (m + n)).2.toList := by
@@ -203,7 +203,7 @@ theorem sponge.squeeze_output_add (s : sponge.state r) (m n : Nat) :
     congrArg Prod.snd (sponge.squeezeList_add f r hr s m n)
 
 /-- Any finite squeeze sequence gives the same final state (cf. FIPS 203 §4.1, Eq. (4.6)). -/
-theorem sponge.squeeze_chunks (s : sponge.state r) (sizes : List Nat) :
+theorem sponge.squeeze_chunks (s : sponge.squeezingState r) (sizes : List Nat) :
     sizes.foldl (fun s n => (sponge.squeeze f r hr s n).1) s =
       (sponge.squeeze f r hr s sizes.sum).1 := by
   induction sizes generalizing s with
@@ -233,7 +233,7 @@ private theorem bitsToBytes_append {m n : Nat}
   simpa only [bitsToBytes_bytesToBits, bytesToBits_bitsToBytes] using h.symm
 
 private theorem squeeze_bytes_output_add (f : BitVec b → BitVec b) (r : Nat)
-    (hr : 0 < r ∧ r < b) (s : Incremental.sponge.state r) (m n : Nat) :
+    (hr : 0 < r ∧ r < b) (s : Incremental.sponge.squeezingState r) (m n : Nat) :
     (bitsToBytes (Incremental.sponge.squeeze f r hr s (8 * m)).2).toList ++
       (bitsToBytes (Incremental.sponge.squeeze f r hr
         (Incremental.sponge.squeeze f r hr s (8 * m)).1 (8 * n)).2).toList =
@@ -264,31 +264,32 @@ theorem SHAKE256.absorb_append {n m : Nat}
   simp only [SHAKE256.absorb, bytesToBits_append, Vector.toList_cast, Vector.toList_append]
   exact Incremental.sponge.absorb_append _ _ _ _ _ _
 
-theorem SHAKE128.squeeze_state_add (s : Incremental.sponge.state (b - 256)) (m n : Nat) :
+theorem SHAKE128.squeeze_state_add (s : Incremental.sponge.squeezingState (b - 256)) (m n : Nat) :
     (SHAKE128.squeeze (SHAKE128.squeeze s m).1 n).1 = (SHAKE128.squeeze s (m + n)).1 := by
   have h := Incremental.sponge.squeeze_state_add (Permutations.Keccak.keccak_f .w1600)
     (b - 256) (by decide) s (8 * m) (8 * n)
   rw [show 8 * m + 8 * n = 8 * (m + n) by omega] at h
   exact h
 
-theorem SHAKE256.squeeze_state_add (s : Incremental.sponge.state (b - 512)) (m n : Nat) :
+theorem SHAKE256.squeeze_state_add (s : Incremental.sponge.squeezingState (b - 512)) (m n : Nat) :
     (SHAKE256.squeeze (SHAKE256.squeeze s m).1 n).1 = (SHAKE256.squeeze s (m + n)).1 := by
   have h := Incremental.sponge.squeeze_state_add (Permutations.Keccak.keccak_f .w1600)
     (b - 512) (by decide) s (8 * m) (8 * n)
   rw [show 8 * m + 8 * n = 8 * (m + n) by omega] at h
   exact h
 
-theorem SHAKE128.squeeze_output_add (s : Incremental.sponge.state (b - 256)) (m n : Nat) :
+theorem SHAKE128.squeeze_output_add (s : Incremental.sponge.squeezingState (b - 256)) (m n : Nat) :
     (SHAKE128.squeeze s m).2.toList ++ (SHAKE128.squeeze (SHAKE128.squeeze s m).1 n).2.toList =
       (SHAKE128.squeeze s (m + n)).2.toList :=
   squeeze_bytes_output_add _ _ _ _ _ _
 
-theorem SHAKE256.squeeze_output_add (s : Incremental.sponge.state (b - 512)) (m n : Nat) :
+theorem SHAKE256.squeeze_output_add (s : Incremental.sponge.squeezingState (b - 512)) (m n : Nat) :
     (SHAKE256.squeeze s m).2.toList ++ (SHAKE256.squeeze (SHAKE256.squeeze s m).1 n).2.toList =
       (SHAKE256.squeeze s (m + n)).2.toList :=
   squeeze_bytes_output_add _ _ _ _ _ _
 
-theorem SHAKE128.squeeze_chunks (s : Incremental.sponge.state (b - 256)) (sizes : List Nat) :
+theorem SHAKE128.squeeze_chunks (s : Incremental.sponge.squeezingState (b - 256))
+    (sizes : List Nat) :
     sizes.foldl (fun s n => (SHAKE128.squeeze s n).1) s =
       (SHAKE128.squeeze s sizes.sum).1 := by
   induction sizes generalizing s with
@@ -296,7 +297,8 @@ theorem SHAKE128.squeeze_chunks (s : Incremental.sponge.state (b - 256)) (sizes 
   | cons size sizes ih =>
     simp only [List.foldl_cons, List.sum_cons, ih, SHAKE128.squeeze_state_add]
 
-theorem SHAKE256.squeeze_chunks (s : Incremental.sponge.state (b - 512)) (sizes : List Nat) :
+theorem SHAKE256.squeeze_chunks (s : Incremental.sponge.squeezingState (b - 512))
+    (sizes : List Nat) :
     sizes.foldl (fun s n => (SHAKE256.squeeze s n).1) s =
       (SHAKE256.squeeze s sizes.sum).1 := by
   induction sizes generalizing s with
