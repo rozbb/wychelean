@@ -14,7 +14,7 @@ open Tq (NTTInv)
 open NTTVector (NTTInv)
 
 /-! ## §5.1 Algorithm 13 — K-PKE.KeyGen(d) -/
-def K_PKE.KeyGen (p : ParameterSet) (d : Seed) : EkPKE p × DkPKE p := Id.run do
+def K_PKE.KeyGen (p : ParameterSet) (d : Seed) : ByteVec (ekPKELen p) × ByteVec (dkPKELen p) := Id.run do
   let (ρ, σ) := G (d ‖ #v[(k p : Byte)])                                       -- Alg. 13, step 1
   let mut N : ℕ := 0                                                           -- Alg. 13, step 2
   let mut «Â» : NTTMatrix (k p) := Vector.replicate _ (Vector.replicate _ 0)
@@ -32,12 +32,16 @@ def K_PKE.KeyGen (p : ParameterSet) (d : Seed) : EkPKE p × DkPKE p := Id.run do
   let «ŝ» := NTT s                                                             -- Alg. 13, step 16
   let «ê» := NTT e                                                             -- Alg. 13, step 17
   let «t̂» := «Â» * «ŝ» + «ê»                                                  -- Alg. 13, step 18
-  return (⟨«t̂», ρ⟩, ⟨«ŝ»⟩)                                                    -- Alg. 13, steps 19–21
+  let ekPKE := ByteEncode₁₂ «t̂» ‖ ρ                                           -- Alg. 13, step 19
+  let dkPKE := ByteEncode₁₂ «ŝ»                                                -- Alg. 13, step 20
+  return (ekPKE, dkPKE)                                                        -- Alg. 13, step 21
 
 /-! ## §5.2 Algorithm 14 — K-PKE.Encrypt(ekPKE, m, r) -/
-def K_PKE.Encrypt (p : ParameterSet) (ekPKE : EkPKE p) (m : Seed) (r : Seed) : Ciphertext p := Id.run do
+def K_PKE.Encrypt (p : ParameterSet) (ekPKE : ByteVec (ekPKELen p)) (m : Seed) (r : Seed) :
+    ByteVec (ctLen p) := Id.run do
   let mut N : ℕ := 0                                                           -- Alg. 14, step 1
-  let ⟨«t̂», ρ⟩ := ekPKE                                                       -- Alg. 14, steps 2–3
+  let «t̂» := ByteDecode₁₂ (slice ekPKE 0 (vecLen p))                          -- Alg. 14, step 2
+  let ρ := slice ekPKE (vecLen p) seedLen                                      -- Alg. 14, step 3
   let mut «Â» : NTTMatrix (k p) := Vector.replicate _ (Vector.replicate _ 0)
   for i in [0:k p] do                                                          -- Alg. 14, step 4
     for j in [0:k p] do                                                        -- Alg. 14, step 5
@@ -55,14 +59,17 @@ def K_PKE.Encrypt (p : ParameterSet) (ekPKE : EkPKE p) (m : Seed) (r : Seed) : C
   let u := NTTInv («Â»ᵀ * «ŷ») + e₁                                            -- Alg. 14, step 19
   let μ := Polynomial.Decompress 1 ⟨ByteDecode (m.cast (by grind))⟩            -- Alg. 14, step 20
   let v := NTTInv ⟪«t̂», «ŷ»⟫ + e₂ + μ                                         -- Alg. 14, step 21
-  return ⟨PolyVector.Compress (dᵤ p) u, Polynomial.Compress (dᵥ p) v⟩          -- Alg. 14, steps 22–24
+  let c₁ := PolyVector.ByteEncode (dᵤ p) (PolyVector.Compress (dᵤ p) u)        -- Alg. 14, step 22
+  let c₂ := ByteEncode (dᵥ p) (Polynomial.Compress (dᵥ p) v).coeffs            -- Alg. 14, step 23
+  return c₁ ‖ c₂                                                               -- Alg. 14, step 24
 
 /-! ## §5.3 Algorithm 15 — K-PKE.Decrypt(dkPKE, c) -/
-def K_PKE.Decrypt (p : ParameterSet) (dkPKE : DkPKE p) (c : Ciphertext p) : Seed :=
-  let ⟨u, v⟩ := c                                                              -- Alg. 15, steps 1–2
-  let u' := PolyVector.Decompress (dᵤ p) u                                     -- Alg. 15, step 3
-  let v' := Polynomial.Decompress (dᵥ p) v                                     -- Alg. 15, step 4
-  let ⟨«ŝ»⟩ := dkPKE                                                           -- Alg. 15, step 5
+def K_PKE.Decrypt (p : ParameterSet) (dkPKE : ByteVec (dkPKELen p)) (c : ByteVec (ctLen p)) : Seed :=
+  let c₁ := slice c 0 (c₁Len p)                                                -- Alg. 15, step 1
+  let c₂ := slice c (c₁Len p) (c₂Len p)                                        -- Alg. 15, step 2
+  let u' := PolyVector.Decompress (dᵤ p) (PolyVector.ByteDecode (dᵤ p) c₁)     -- Alg. 15, step 3
+  let v' := Polynomial.Decompress (dᵥ p) ⟨ByteDecode c₂⟩                       -- Alg. 15, step 4
+  let «ŝ» := ByteDecode₁₂ dkPKE                                                -- Alg. 15, step 5
   let w := v' - NTTInv ⟪«ŝ», NTT u'⟫                                           -- Alg. 15, step 6
   let m := ByteEncode 1 (Polynomial.Compress 1 w).coeffs                       -- Alg. 15, step 7
   m.cast (by grind)                                                            -- Alg. 15, step 8
@@ -70,7 +77,7 @@ def K_PKE.Decrypt (p : ParameterSet) (dkPKE : DkPKE p) (c : Ciphertext p) : Seed
 /-! ## §6.1 Algorithm 16 — ML-KEM.KeyGen_internal(d,z) -/
 def Internal.KeyGen (p : ParameterSet) (d z : Seed) : ByteVec (ekLen p) × ByteVec (dkLen p) :=
   let (ekPKE, dkPKE) := K_PKE.KeyGen p d                                       -- Alg. 16, step 1
-  let ek := pack ekPKE                                                         -- Alg. 16, step 2
+  let ek := ekPKE                                                              -- Alg. 16, step 2
   let dk := pack (⟨dkPKE, ek, H ek, z⟩ : Dk p)                            -- Alg. 16, step 3
   (ek, dk)
 
@@ -78,17 +85,17 @@ def Internal.KeyGen (p : ParameterSet) (d z : Seed) : ByteVec (ekLen p) × ByteV
 def Internal.Encaps (p : ParameterSet) (ek : ByteVec (ekLen p)) (m : Seed) :
     SharedKey × ByteVec (ctLen p) :=
   let (K, r) := G (m ‖ H ek)                                                   -- Alg. 17, step 1
-  let c := pack (K_PKE.Encrypt p (unpack ek) m r)                              -- Alg. 17, step 2
+  let c := K_PKE.Encrypt p ek m r                                              -- Alg. 17, step 2
   (K, c)
 
 /-! ## §6.3 Algorithm 18 — ML-KEM.Decaps_internal(dk, c) -/
 def Internal.Decaps (p : ParameterSet) (dk : ByteVec (dkLen p)) (c : ByteVec (ctLen p)) :
     SharedKey :=
   let ⟨dkPKE, ekPKE, h, z⟩ := (unpack dk : Dk p)                               -- Alg. 18, steps 1–4
-  let m' := K_PKE.Decrypt p dkPKE (unpack c)                          -- Alg. 18, step 5
+  let m' := K_PKE.Decrypt p dkPKE c                                            -- Alg. 18, step 5
   let (K', r') := G (m' ‖ h)                                                   -- Alg. 18, step 6
   let «K̄» := J (z ‖ c)                                                        -- Alg. 18, step 7
-  let c' := pack (K_PKE.Encrypt p (unpack ekPKE) m' r')                        -- Alg. 18, step 8
+  let c' := K_PKE.Encrypt p ekPKE m' r'                                        -- Alg. 18, step 8
   if c ≠ c' then «K̄» else K'                                                  -- Alg. 18, steps 9–12
 
 /-! ## §7 ML-KEM (random bytes are explicit arguments) -/
@@ -99,7 +106,8 @@ def KeyGen (p : ParameterSet) (d z : Seed) : ByteVec (ekLen p) × ByteVec (dkLen
 
 /-- Modulus check (§7.2, Eq. 7.1): every encoded coefficient is reduced modulo `q`. -/
 def Encaps.KeyCheck (p : ParameterSet) (ek : ByteVec (ekLen p)) : Bool :=
-  pack (unpack ek : EkPKE p) = ek
+  let test := ByteEncode₁₂ (ByteDecode₁₂ (slice ek 0 (vecLen p)) : NTTVector (k p))
+  test = slice ek 0 (vecLen p)                                                 -- Eq. (7.1)
 
 /-! ## §7.2 Algorithm 20 — ML-KEM.Encaps(ek) -/
 def Encaps (p : ParameterSet) (ek : ByteVec (ekLen p)) (m : Seed) :
