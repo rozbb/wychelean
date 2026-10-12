@@ -7,20 +7,75 @@ abbrev Bit := Bool
 abbrev Byte := UInt8
 abbrev ByteVec (n : Nat) := Vector Byte n
 
+/-- A fixed layout of `n` bytes: `pack` writes the parts in order, `unpack` reads them back. -/
+class ByteLayout (α : Type) (n : outParam Nat) where
+  pack : α → ByteVec n
+  unpack : ByteVec n → α
+
+export ByteLayout (pack unpack)
+
 end Wychelean
 
 namespace BitVec
 open Wychelean
 
+/-- The number whose binary digits are bits `lo, …, lo + len - 1` of `v`, least significant
+first, computed by halving the range so that the intermediate numbers stay small until the final
+joins; packing bit by bit costs a bignum operation per bit. -/
+def ofBitsLE.go (v : Vector Bit n) (lo len : Nat) (h : lo + len ≤ n) : Nat :=
+  if hl : len ≤ 1 then
+    if h0 : 0 < len then v[lo].toNat else 0
+  else
+    let m := len / 2
+    go v (lo + m) (len - m) (by omega) <<< m ||| go v lo m (by omega)
+termination_by len
+
 /-- Pack a Boolean vector with index zero as the least significant bit. -/
-def ofBitsLE (v : Vector Bit n) : BitVec n :=
-  (ofBoolListLE v.toList).cast (by simp)
+def ofBitsLE (v : Vector Bit n) : BitVec n := BitVec.ofNat n (ofBitsLE.go v 0 n (by omega))
+
 /-- Unpack a word, least significant bit first. -/
 def toBitsLE (v : BitVec n) : Vector Bit n := Vector.ofFn fun i => v.getLsbD i
 
+theorem ofBitsLE.go_lt (v : Vector Bit n) (lo len : Nat) (h : lo + len ≤ n) :
+    ofBitsLE.go v lo len h < 2 ^ len := by
+  unfold ofBitsLE.go
+  split
+  · split
+    · obtain rfl : len = 1 := by omega
+      cases v[lo] <;> decide
+    · exact Nat.two_pow_pos _
+  · rename_i hl
+    have ha := ofBitsLE.go_lt v (lo + len / 2) (len - len / 2) (by omega)
+    have hb := ofBitsLE.go_lt v lo (len / 2) (by omega)
+    apply Nat.or_lt_two_pow
+    · rw [Nat.shiftLeft_eq]
+      calc _ < 2 ^ (len - len / 2) * 2 ^ (len / 2) := (Nat.mul_lt_mul_right (Nat.two_pow_pos _)).2 ha
+        _ = 2 ^ len := by rw [← Nat.pow_add]; congr 1; omega
+    · exact Nat.lt_of_lt_of_le hb (Nat.pow_le_pow_right (by decide) (by omega))
+termination_by len
+
+theorem ofBitsLE.testBit_go (v : Vector Bit n) (lo len : Nat) (h : lo + len ≤ n) (i : Nat)
+    (hi : i < len) : (ofBitsLE.go v lo len h).testBit i = v[lo + i] := by
+  unfold ofBitsLE.go
+  split
+  · obtain rfl : len = 1 := by omega
+    obtain rfl : i = 0 := by omega
+    cases hb : v[lo] <;> simp [hb]
+  · rw [Nat.testBit_or, Nat.testBit_shiftLeft]
+    by_cases him : i < len / 2
+    · rw [ofBitsLE.testBit_go _ _ _ _ _ him]
+      simp [Nat.not_le.2 him]
+    · rw [ofBitsLE.testBit_go _ _ _ _ _ (by omega),
+        Nat.testBit_lt_two_pow (Nat.lt_of_lt_of_le (ofBitsLE.go_lt _ _ _ _)
+          (Nat.pow_le_pow_right (by decide) (Nat.le_of_not_lt him)))]
+      simp only [Nat.le_of_not_lt him, decide_true, Bool.true_and, Bool.or_false]
+      congr 1
+      omega
+termination_by len
+
 @[simp] theorem getLsbD_ofBitsLE (v : Vector Bit n) (i : Nat) (hi : i < n) :
     (ofBitsLE v).getLsbD i = v[i] := by
-  simp only [ofBitsLE, getLsbD_cast, getLsbD_ofBoolListLE, List.getD_eq_getElem?_getD]
+  rw [ofBitsLE, getLsbD_ofNat, ofBitsLE.testBit_go _ _ _ _ _ hi]
   simp [hi]
 
 @[simp] theorem getElem_ofBitsLE (v : Vector Bit n) (i : Nat) (hi : i < n) :
