@@ -2,11 +2,11 @@ import Wychelean.Hashes.SHA3.XOF.Properties
 import Wychelean.Hashes.TurboSHAKE.XOF.Basic
 
 /-!
-# Chunking properties of incremental TurboSHAKE
+# Properties of incremental TurboSHAKE
 
 Splitting the input across `absorb` calls, or the output across `squeeze` calls, does not change
-the result. These are the SHAKE properties of `Wychelean.Hashes.SHA3.XOF.Properties`, with KP in
-place of Keccak-f.
+the result, and the incremental API agrees with the one-shot functions. These are the SHAKE
+properties of `Wychelean.Hashes.SHA3.XOF.Properties`, with KP in place of Keccak-f.
 -/
 
 namespace Wychelean.Hashes.TurboSHAKE
@@ -123,5 +123,41 @@ theorem TurboSHAKE256.chunking (chunks : List (Array Byte)) (D : Byte) (hD : 0 <
           (TurboSHAKE256.absorb TurboSHAKE256.init (chunks.foldr (· ++ ·) #[]).toVector) D hD)
         sizes.sum).1 := by
   rw [TurboSHAKE256.absorb_chunks, TurboSHAKE256.squeeze_chunks]
+
+/-- Incremental TurboSHAKE128 agrees with one-shot `turboShake128` (RFC 9861 §2). -/
+theorem TurboSHAKE128.squeeze_finalize_absorb {n} (M : ByteVec n) (D : Byte)
+    (hD : 0 < D ∧ D < 0x80) (L : Nat) :
+    (TurboSHAKE128.squeeze (TurboSHAKE128.finalize (TurboSHAKE128.absorb TurboSHAKE128.init M) D hD)
+      L).2 = turboShake128 M D L hD := by
+  simp only [TurboSHAKE128.squeeze, TurboSHAKE128.finalize, TurboSHAKE128.absorb,
+    TurboSHAKE128.init, bytesToBits_eq_toBitsLE, Incremental.sponge.squeeze_finalize_absorb,
+    bitsToBytes_eq_toBytesLE, BitVec.ofBitsLE_toBitsLE, turboShake128, turboShake]
+
+/-- Chunked absorption into TurboSHAKE128 agrees with one-shot `turboShake128` on the
+concatenation. -/
+theorem TurboSHAKE128.absorb_chunks_squeeze (chunks : List (Array Byte)) (D : Byte)
+    (hD : 0 < D ∧ D < 0x80) (L : Nat) :
+    (TurboSHAKE128.squeeze (TurboSHAKE128.finalize
+      (chunks.foldl (fun s c => TurboSHAKE128.absorb s c.toVector) TurboSHAKE128.init) D hD) L).2 =
+      turboShake128 (chunks.foldr (· ++ ·) #[]).toVector D L hD := by
+  rw [TurboSHAKE128.absorb_chunks, TurboSHAKE128.squeeze_finalize_absorb]
+
+/-- Incremental TurboSHAKE256 agrees with one-shot `turboShake256` (RFC 9861 §2). -/
+theorem TurboSHAKE256.squeeze_finalize_absorb {n} (M : ByteVec n) (D : Byte)
+    (hD : 0 < D ∧ D < 0x80) (L : Nat) :
+    (TurboSHAKE256.squeeze (TurboSHAKE256.finalize (TurboSHAKE256.absorb TurboSHAKE256.init M) D hD)
+      L).2 = turboShake256 M D L hD := by
+  simp only [TurboSHAKE256.squeeze, TurboSHAKE256.finalize, TurboSHAKE256.absorb,
+    TurboSHAKE256.init, bytesToBits_eq_toBitsLE, Incremental.sponge.squeeze_finalize_absorb,
+    bitsToBytes_eq_toBytesLE, BitVec.ofBitsLE_toBitsLE, turboShake256, turboShake]
+
+/-- Chunked absorption into TurboSHAKE256 agrees with one-shot `turboShake256` on the
+concatenation. -/
+theorem TurboSHAKE256.absorb_chunks_squeeze (chunks : List (Array Byte)) (D : Byte)
+    (hD : 0 < D ∧ D < 0x80) (L : Nat) :
+    (TurboSHAKE256.squeeze (TurboSHAKE256.finalize
+      (chunks.foldl (fun s c => TurboSHAKE256.absorb s c.toVector) TurboSHAKE256.init) D hD) L).2 =
+      turboShake256 (chunks.foldr (· ++ ·) #[]).toVector D L hD := by
+  rw [TurboSHAKE256.absorb_chunks, TurboSHAKE256.squeeze_finalize_absorb]
 
 end Wychelean.Hashes.TurboSHAKE

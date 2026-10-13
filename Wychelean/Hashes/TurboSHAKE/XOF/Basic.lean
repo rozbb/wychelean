@@ -6,7 +6,8 @@ import Wychelean.Hashes.TurboSHAKE.Basic
 
 RFC 9861 §2.1's incremental output interface, over the generic sponge of
 `Wychelean.Hashes.SHA3.XOF`: `init`, any number of `absorb`s, `finalize` with the domain
-separation byte, then repeated `squeeze`s. Equivalence to one-shot TurboSHAKE is tested, not proved.
+separation byte, then repeated `squeeze`s. Agreement with one-shot TurboSHAKE is proved in
+`Wychelean.Hashes.TurboSHAKE.XOF.Properties`.
 
 Top-level functions operate on byte vectors; the internal state uses bits.
 -/
