@@ -91,6 +91,20 @@ termination_by len
   intro i hi
   simp [hi, toBitsLE]
 
+/-- `hi ++ lo` puts `lo` in the low bits, so its bits come first. -/
+theorem toList_toBitsLE_append {n m : Nat} (hi : BitVec m) (lo : BitVec n) :
+    (toBitsLE (hi ++ lo)).toList = (toBitsLE lo).toList ++ (toBitsLE hi).toList := by
+  apply List.ext_getElem
+  · simp; omega
+  · intro i h1 h2
+    simp only [toBitsLE, Vector.toList_ofFn, List.getElem_ofFn, List.getElem_append,
+      List.length_ofFn, getLsbD_append]
+    split <;> simp_all
+
+theorem toList_toBitsLE_cast {n m : Nat} (v : BitVec n) (h : n = m) :
+    (toBitsLE (v.cast h)).toList = (toBitsLE v).toList := by
+  subst h; rfl
+
 /-- Byte zero holds bits 0–7. This convention is used by FIPS 202, Appendix B.1. -/
 def ofBytesLE (v : ByteVec n) : BitVec (8 * n) :=
   ofBitsLE (Vector.ofFn fun (i : Fin (8 * n)) =>
@@ -255,4 +269,20 @@ def bitsToBytes (v : Vector Bit (8 * n)) : ByteVec n :=
   have hdiv : (8 * i + j) / 8 = i := by omega
   have hmod : (8 * i + j) % 8 = j := by omega
   simp [hdiv, hmod]
+
+theorem bytesToBits_eq_toBitsLE (v : ByteVec n) :
+    bytesToBits v = BitVec.toBitsLE (BitVec.ofBytesLE v) := by
+  apply Vector.ext
+  intro i hi
+  simp [bytesToBits, BitVec.toBitsLE, -BitVec.getLsbD_eq_getElem]
+
+theorem bitsToBytes_eq_toBytesLE (v : Vector Bit (8 * n)) :
+    bitsToBytes v = BitVec.toBytesLE (BitVec.ofBitsLE v) := by
+  apply Vector.ext
+  intro i hi
+  apply UInt8.toBitVec_inj.mp
+  apply BitVec.eq_of_getLsbD_eq
+  intro j hj
+  rw [bitsToBytes_getLsbD _ _ hi _ hj, BitVec.getLsbD_toBytesLE _ _ hi _ hj,
+    BitVec.getLsbD_ofBitsLE _ _ (by omega)]
 end Wychelean

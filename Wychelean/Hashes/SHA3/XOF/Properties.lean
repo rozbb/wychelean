@@ -211,6 +211,115 @@ theorem sponge.squeeze_chunks (s : sponge.squeezingState r) (sizes : List Nat) :
   | cons size sizes ih =>
     simp only [List.foldl_cons, List.sum_cons, ih, sponge.squeeze_state_add]
 
+/-! ### Agreement with the one-shot sponge -/
+
+private theorem sponge.absorb_block (S : BitVec b) (h : (#[] : Array Bit).size < r)
+    (L : List Bit) (hL : r ≤ L.length) :
+    sponge.absorb f r hr ⟨S, #[], h⟩ L =
+      sponge.absorb f r hr ⟨f (S ^^^ sponge.blockMask (L.take r).toArray), #[], h⟩
+        (L.drop r) := by
+  rw [sponge.absorb]
+  simp only [List.length_take, Array.size_empty, Nat.sub_zero, Array.empty_append]
+  rw [dite_eq_right (by omega)]
+
+private theorem sponge.blockMask_eq (A : Array Bit) (v : BitVec r)
+    (hA : A.toList = (BitVec.toBitsLE v).toList) : sponge.blockMask A = v.zeroExtend b := by
+  have hs : A.size = r := by simpa using congrArg List.length hA
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp only [sponge.blockMask, BitVec.getLsbD_setWidth]
+  by_cases hir : i < r
+  · rw [BitVec.getLsbD_ofBitsLE _ _ (by omega)]
+    have := List.getElem_of_eq hA (i := i) (by simp; omega)
+    simp only [Array.getElem_toList, BitVec.toBitsLE, Vector.getElem_toList,
+      Vector.getElem_ofFn] at this
+    simp [this, hi]
+  · rw [BitVec.getLsbD_of_ge _ _ (by omega), BitVec.getLsbD_of_ge _ _ (by omega)]
+
+private theorem take_drop_toBitsLE {w : Nat} (P : BitVec w) (j : Nat) (hw : j * r + r ≤ w) :
+    ((BitVec.toBitsLE P).toList.drop (j * r)).take r =
+      (BitVec.toBitsLE (P.extractLsb' (j * r) r)).toList := by
+  apply List.ext_getElem
+  · simp; omega
+  · intro i h1 h2
+    simp only [List.length_take, List.length_drop, Vector.length_toList] at h1
+    simp [BitVec.toBitsLE, BitVec.getLsbD_eq_getElem (show j * r + i < w by omega)]
+
+/-- With nothing pending, absorbing whole rate blocks of `P` is FIPS 202 Algorithm 8, step 6. -/
+theorem sponge.absorb_blocks {w : Nat} (P : BitVec w) (S : BitVec b)
+    (h : (#[] : Array Bit).size < r) (k j : Nat) (hw : (j + k) * r = w) :
+    sponge.absorb f r hr ⟨S, #[], h⟩ ((BitVec.toBitsLE P).toList.drop (j * r)) =
+      ⟨Fin.foldl k (fun S (i : Fin k) =>
+        f (S ^^^ (P.extractLsb' ((j + i) * r) r).zeroExtend b)) S, #[], h⟩ := by
+  induction k generalizing j S with
+  | zero =>
+    simp only [Nat.add_zero] at hw
+    subst hw
+    rw [List.drop_eq_nil_of_le (by simp), sponge.absorb_nil, Fin.foldl_zero]
+  | succ k ih =>
+    have hw' : w = j * r + k * r + r := by rw [← hw, Nat.add_mul, Nat.succ_mul]; omega
+    subst hw'
+    rw [sponge.absorb_block f r hr _ _ _ (by simp; omega), List.drop_drop, Fin.foldl_succ,
+      sponge.blockMask_eq r _ _ (by rw [take_drop_toBitsLE r P j (by omega)]),
+      show j * r + r = (j + 1) * r by rw [Nat.succ_mul],
+      ih _ (j + 1) (by rw [Nat.add_mul, Nat.add_mul, Nat.one_mul]; omega)]
+    simp only [Fin.val_succ, Fin.val_zero, Nat.add_zero,
+      show ∀ i : Nat, j + 1 + i = j + (i + 1) from fun i => by omega]
+
+/-- Finalizing a fresh sponge on `N` gives the one-shot absorbed state, ready to squeeze. -/
+theorem sponge.finalize_init {n : Nat} (N : BitVec n) :
+    sponge.finalize f r hr (sponge.init r hr) (BitVec.toBitsLE N).toList =
+      ⟨Internal.absorb f r N, 0, Nat.zero_le r⟩ := by
+  simp only [sponge.finalize, sponge.squeezingState.mk.injEq, and_true]
+  rw [sponge.absorb_append, toList_toBitsLE_pad (m' := n) (by
+      simp only [sponge.absorb_pending_size, sponge.init, Array.size_empty, Nat.zero_add,
+        Vector.length_toList, padLen.j_mod]),
+    ← BitVec.toList_toBitsLE_append]
+  have hk : (0 + (n + padLen r n) / r) * r = padLen r n + n := by
+    rw [Nat.zero_add, Nat.div_mul_cancel (Nat.dvd_of_mod_eq_zero (padLen_dvd r n hr.1))]
+    omega
+  have := sponge.absorb_blocks f r hr («pad10*1» r n ++ N) 0 (by simpa using hr.1) _ 0 hk
+  simp only [Nat.zero_mul, List.drop_zero, Nat.zero_add] at this
+  simp only [sponge.init, this, Internal.absorb]
+
+/-- Squeezing from the start of a block is FIPS 202 Algorithm 8, steps 8–10. -/
+theorem sponge.squeezeList_eq (S : BitVec b) (hx : 0 ≤ r) (d : Nat) :
+    (sponge.squeezeList f r hr ⟨S, 0, hx⟩ d).2 =
+      (BitVec.toBitsLE (Internal.squeeze f r S d hr)).toList := by
+  fun_induction Internal.squeeze f r S d hr with
+  | case1 S d h =>
+    rw [sponge.squeezeList]
+    by_cases hd : d = 0
+    · subst hd
+      simp [BitVec.toBitsLE]
+    · simp only [dite_eq_right hd, dite_eq_right (show (0 : Nat) ≠ r by omega), Nat.sub_zero,
+        dite_eq_left h, sponge.outputBits]
+  | case2 S d h Z rem ih =>
+    rw [sponge.squeezeList]
+    simp only [dite_eq_right (show d ≠ 0 by omega), dite_eq_right (show (0 : Nat) ≠ r by omega),
+      Nat.sub_zero, dite_eq_right h]
+    rw [sponge.squeezeList]
+    simp only [dite_eq_right (show d - r ≠ 0 by omega), ↓reduceDIte]
+    rw [ih, BitVec.toList_toBitsLE_cast, BitVec.toList_toBitsLE_append]
+    rfl
+
+/-- The incremental sponge agrees with SPONGE[f, pad10*1, r] (FIPS 202 Algorithm 8) on the
+message `M` followed by `suffix`. -/
+theorem sponge.squeeze_finalize_absorb {n m : Nat} (M : BitVec n) (suffix : BitVec m) (d : Nat) :
+    (sponge.squeeze f r hr (sponge.finalize f r hr
+      (sponge.absorb f r hr (sponge.init r hr) (BitVec.toBitsLE M).toList)
+      (BitVec.toBitsLE suffix).toList) d).2 =
+      BitVec.toBitsLE (Internal.sponge f r (suffix ++ M) d hr) := by
+  have hfin : ∀ A B, sponge.finalize f r hr (sponge.absorb f r hr (sponge.init r hr) A) B =
+      sponge.finalize f r hr (sponge.init r hr) (A ++ B) := by
+    intro A B
+    simp only [sponge.finalize]
+    rw [sponge.absorb_append f r hr _ A B]
+  rw [hfin, ← BitVec.toList_toBitsLE_append, sponge.finalize_init]
+  apply Vector.toList_inj.mp
+  simp only [sponge.squeeze, Vector.toList_mk, Internal.sponge]
+  exact sponge.squeezeList_eq f r hr _ _ d
+
 end Incremental
 
 theorem bytesToBits_append {n m : Nat} (a : ByteVec n) (c : ByteVec m) :
@@ -368,5 +477,35 @@ theorem SHAKE256.chunking (chunks : List (Array Byte)) (sizes : List Nat) :
         (SHAKE256.finalize (SHAKE256.absorb SHAKE256.init (chunks.foldr (· ++ ·) #[]).toVector))
         sizes.sum).1 := by
   rw [SHAKE256.absorb_chunks, SHAKE256.squeeze_chunks]
+
+/-- Incremental SHAKE128 agrees with one-shot `shake128` (FIPS 202 §6.2). -/
+theorem SHAKE128.squeeze_finalize_absorb {n} (msg : ByteVec n) (len : Nat) :
+    (SHAKE128.squeeze (SHAKE128.finalize (SHAKE128.absorb SHAKE128.init msg)) len).2 =
+      shake128 msg len := by
+  simp only [SHAKE128.squeeze, SHAKE128.finalize, SHAKE128.absorb, SHAKE128.init,
+    bytesToBits_eq_toBitsLE, Incremental.sponge.squeeze_finalize_absorb, bitsToBytes_eq_toBytesLE,
+    BitVec.ofBitsLE_toBitsLE, shake128, shake128_bits, keccak]
+
+/-- Incremental SHAKE256 agrees with one-shot `shake256` (FIPS 202 §6.2). -/
+theorem SHAKE256.squeeze_finalize_absorb {n} (msg : ByteVec n) (len : Nat) :
+    (SHAKE256.squeeze (SHAKE256.finalize (SHAKE256.absorb SHAKE256.init msg)) len).2 =
+      shake256 msg len := by
+  simp only [SHAKE256.squeeze, SHAKE256.finalize, SHAKE256.absorb, SHAKE256.init,
+    bytesToBits_eq_toBitsLE, Incremental.sponge.squeeze_finalize_absorb, bitsToBytes_eq_toBytesLE,
+    BitVec.ofBitsLE_toBitsLE, shake256, shake256_bits, keccak]
+
+/-- Chunked absorption into SHAKE128 agrees with one-shot `shake128` on the concatenation. -/
+theorem SHAKE128.absorb_chunks_squeeze (chunks : List (Array Byte)) (len : Nat) :
+    (SHAKE128.squeeze (SHAKE128.finalize
+      (chunks.foldl (fun s c => SHAKE128.absorb s c.toVector) SHAKE128.init)) len).2 =
+      shake128 (chunks.foldr (· ++ ·) #[]).toVector len := by
+  rw [SHAKE128.absorb_chunks, SHAKE128.squeeze_finalize_absorb]
+
+/-- Chunked absorption into SHAKE256 agrees with one-shot `shake256` on the concatenation. -/
+theorem SHAKE256.absorb_chunks_squeeze (chunks : List (Array Byte)) (len : Nat) :
+    (SHAKE256.squeeze (SHAKE256.finalize
+      (chunks.foldl (fun s c => SHAKE256.absorb s c.toVector) SHAKE256.init)) len).2 =
+      shake256 (chunks.foldr (· ++ ·) #[]).toVector len := by
+  rw [SHAKE256.absorb_chunks, SHAKE256.squeeze_finalize_absorb]
 
 end Wychelean.Hashes.SHA3
