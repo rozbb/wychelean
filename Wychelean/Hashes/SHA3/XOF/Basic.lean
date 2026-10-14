@@ -130,28 +130,34 @@ end Incremental
 /-! ## SHAKE128 and SHAKE256 -/
 
 /-- FIPS 202 §§5.2, 6.2: initialize SHAKE128 at rate 1344 bits. -/
-def SHAKE128.init := Incremental.sponge.init (r := b - 256) (hr := by decide)
+def SHAKE128.init : Incremental.sponge.absorbingState (b - 256) :=
+  Incremental.sponge.init (r := b - 256) (hr := by decide)
 
 /-- FIPS 202 §§5.2, 6.2: initialize SHAKE256 at rate 1088 bits. -/
-def SHAKE256.init := Incremental.sponge.init (r := b - 512) (hr := by decide)
+def SHAKE256.init : Incremental.sponge.absorbingState (b - 512) :=
+  Incremental.sponge.init (r := b - 512) (hr := by decide)
 
 /-- FIPS 203 §4.1, Algorithm 2, step 3; Keccak-f: FIPS 202 §3.4; byte order: Appendix B.1. -/
-def SHAKE128.absorb {n} (s : Incremental.sponge.absorbingState (b - 256)) (msg : ByteVec n) :=
+def SHAKE128.absorb {n} (s : Incremental.sponge.absorbingState (b - 256)) (msg : ByteVec n) :
+    Incremental.sponge.absorbingState (b - 256) :=
   Incremental.sponge.absorb (Permutations.Keccak.keccak_f .w1600) (b - 256) (by decide)
     s (bytesToBits msg).toList
 
 /-- SHAKE256 incremental analogue (FIPS 202 §§3.4, 6.2); byte order: Appendix B.1. -/
-def SHAKE256.absorb {n} (s : Incremental.sponge.absorbingState (b - 512)) (msg : ByteVec n) :=
+def SHAKE256.absorb {n} (s : Incremental.sponge.absorbingState (b - 512)) (msg : ByteVec n) :
+    Incremental.sponge.absorbingState (b - 512) :=
   Incremental.sponge.absorb (Permutations.Keccak.keccak_f .w1600) (b - 512) (by decide)
     s (bytesToBits msg).toList
 
 /-- FIPS 202 §6.2: append the SHAKE suffix `1111` before padding. -/
-def SHAKE128.finalize (s : Incremental.sponge.absorbingState (b - 256)) :=
+def SHAKE128.finalize (s : Incremental.sponge.absorbingState (b - 256)) :
+    Incremental.sponge.squeezingState (b - 256) :=
   Incremental.sponge.finalize (Permutations.Keccak.keccak_f .w1600) (b - 256) (by decide)
     s xofSuffix.toBitsLE.toList
 
 /-- FIPS 202 §6.2: append the SHAKE suffix `1111` before padding. -/
-def SHAKE256.finalize (s : Incremental.sponge.absorbingState (b - 512)) :=
+def SHAKE256.finalize (s : Incremental.sponge.absorbingState (b - 512)) :
+    Incremental.sponge.squeezingState (b - 512) :=
   Incremental.sponge.finalize (Permutations.Keccak.keccak_f .w1600) (b - 512) (by decide)
     s xofSuffix.toBitsLE.toList
 

@@ -25,6 +25,21 @@ theorem padLen_ge_two (r n : Nat) : 2 ≤ padLen r n := by simp [padLen]
 theorem pad_last (r n : Nat) : («pad10*1» r n)[padLen r n - 1]'(by simp [padLen]) = true := by
   simp [«pad10*1», padLen, BitVec.getElem_append]
 
+/-- The padding length depends on the message length only modulo the rate. -/
+theorem padLen.j_mod (r n : Nat) : padLen.j r (n % r) = padLen.j r n := by
+  simp only [padLen.j, Int.natCast_emod, Int.emod_def (n : Int) r]
+  generalize (n : Int) / r = q
+  rw [show -((n : Int) - r * q) - 2 = (-(n : Int) - 2) + r * q by omega, Int.add_mul_emod_self_left]
+
+/-- Padding with the same number of zeros gives the same bits. -/
+theorem toList_toBitsLE_pad {r m m' : Nat} (h : padLen.j r m = padLen.j r m') :
+    (BitVec.toBitsLE («pad10*1» r m)).toList = (BitVec.toBitsLE («pad10*1» r m')).toList := by
+  have : ∀ J J' : Nat, J = J' →
+      (BitVec.toBitsLE ((1 : BitVec 1) ++ (0 : BitVec J) ++ (1 : BitVec 1))).toList =
+        (BitVec.toBitsLE ((1 : BitVec 1) ++ (0 : BitVec J') ++ (1 : BitVec 1))).toList := by
+    intros; subst_vars; rfl
+  exact this _ _ h
+
 end Internal
 
 end Wychelean.Hashes.SHA3
