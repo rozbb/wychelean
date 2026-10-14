@@ -387,6 +387,18 @@ theorem SHAKE256.squeeze_state_add (s : Incremental.sponge.squeezingState (b - 5
   rw [show 8 * m + 8 * n = 8 * (m + n) by omega] at h
   exact h
 
+/-- Squeezing `sizes` in turn and concatenating the outputs gives one squeeze of the total length,
+for any byte-level squeeze whose outputs concatenate. -/
+theorem squeeze_foldl_output {σ : Type} (squeeze : σ → (n : Nat) → σ × ByteVec n)
+    (hadd : ∀ s m n, (squeeze s m).2.toList ++ (squeeze (squeeze s m).1 n).2.toList =
+      (squeeze s (m + n)).2.toList)
+    (s : σ) (acc : List Byte) (sizes : List Nat) :
+    (sizes.foldl (fun p n => ((squeeze p.1 n).1, p.2 ++ (squeeze p.1 n).2.toList)) (s, acc)).2 =
+      acc ++ (squeeze s sizes.sum).2.toList := by
+  induction sizes generalizing s acc with
+  | nil => simp [List.eq_nil_of_length_eq_zero (Vector.length_toList (xs := (squeeze s 0).2))]
+  | cons size sizes ih => simp only [List.foldl_cons, List.sum_cons, ih, List.append_assoc, hadd]
+
 theorem SHAKE128.squeeze_output_add (s : Incremental.sponge.squeezingState (b - 256)) (m n : Nat) :
     (SHAKE128.squeeze s m).2.toList ++ (SHAKE128.squeeze (SHAKE128.squeeze s m).1 n).2.toList =
       (SHAKE128.squeeze s (m + n)).2.toList :=
@@ -507,5 +519,41 @@ theorem SHAKE256.absorb_chunks_squeeze (chunks : List (Array Byte)) (len : Nat) 
       (chunks.foldl (fun s c => SHAKE256.absorb s c.toVector) SHAKE256.init)) len).2 =
       shake256 (chunks.foldr (· ++ ·) #[]).toVector len := by
   rw [SHAKE256.absorb_chunks, SHAKE256.squeeze_finalize_absorb]
+
+/-- Any sequence of squeezes from incremental SHAKE128 outputs a prefix of one-shot `shake128`. -/
+theorem SHAKE128.squeezes_finalize_absorb {n} (msg : ByteVec n) (sizes : List Nat) :
+    (sizes.foldl
+      (fun p len => ((SHAKE128.squeeze p.1 len).1, p.2 ++ (SHAKE128.squeeze p.1 len).2.toList))
+      (SHAKE128.finalize (SHAKE128.absorb SHAKE128.init msg), [])).2 =
+      (shake128 msg sizes.sum).toList := by
+  rw [squeeze_foldl_output _ SHAKE128.squeeze_output_add, SHAKE128.squeeze_finalize_absorb,
+    List.nil_append]
+
+/-- Chunked absorption and any sequence of squeezes from SHAKE128 agree with one-shot `shake128`. -/
+theorem SHAKE128.absorb_chunks_squeezes (chunks : List (Array Byte)) (sizes : List Nat) :
+    (sizes.foldl
+      (fun p len => ((SHAKE128.squeeze p.1 len).1, p.2 ++ (SHAKE128.squeeze p.1 len).2.toList))
+      (SHAKE128.finalize (chunks.foldl (fun s c => SHAKE128.absorb s c.toVector) SHAKE128.init),
+        [])).2 =
+      (shake128 (chunks.foldr (· ++ ·) #[]).toVector sizes.sum).toList := by
+  rw [SHAKE128.absorb_chunks, SHAKE128.squeezes_finalize_absorb]
+
+/-- Any sequence of squeezes from incremental SHAKE256 outputs a prefix of one-shot `shake256`. -/
+theorem SHAKE256.squeezes_finalize_absorb {n} (msg : ByteVec n) (sizes : List Nat) :
+    (sizes.foldl
+      (fun p len => ((SHAKE256.squeeze p.1 len).1, p.2 ++ (SHAKE256.squeeze p.1 len).2.toList))
+      (SHAKE256.finalize (SHAKE256.absorb SHAKE256.init msg), [])).2 =
+      (shake256 msg sizes.sum).toList := by
+  rw [squeeze_foldl_output _ SHAKE256.squeeze_output_add, SHAKE256.squeeze_finalize_absorb,
+    List.nil_append]
+
+/-- Chunked absorption and any sequence of squeezes from SHAKE256 agree with one-shot `shake256`. -/
+theorem SHAKE256.absorb_chunks_squeezes (chunks : List (Array Byte)) (sizes : List Nat) :
+    (sizes.foldl
+      (fun p len => ((SHAKE256.squeeze p.1 len).1, p.2 ++ (SHAKE256.squeeze p.1 len).2.toList))
+      (SHAKE256.finalize (chunks.foldl (fun s c => SHAKE256.absorb s c.toVector) SHAKE256.init),
+        [])).2 =
+      (shake256 (chunks.foldr (· ++ ·) #[]).toVector sizes.sum).toList := by
+  rw [SHAKE256.absorb_chunks, SHAKE256.squeezes_finalize_absorb]
 
 end Wychelean.Hashes.SHA3

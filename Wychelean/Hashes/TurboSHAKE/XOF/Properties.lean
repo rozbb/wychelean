@@ -160,4 +160,50 @@ theorem TurboSHAKE256.absorb_chunks_squeeze (chunks : List (Array Byte)) (D : By
       turboShake256 (chunks.foldr (· ++ ·) #[]).toVector D L hD := by
   rw [TurboSHAKE256.absorb_chunks, TurboSHAKE256.squeeze_finalize_absorb]
 
+/-- Any sequence of squeezes from incremental TurboSHAKE128 outputs a prefix of one-shot
+`turboShake128`. -/
+theorem TurboSHAKE128.squeezes_finalize_absorb {n} (M : ByteVec n) (D : Byte)
+    (hD : 0 < D ∧ D < 0x80) (sizes : List Nat) :
+    (sizes.foldl
+      (fun p L => ((TurboSHAKE128.squeeze p.1 L).1, p.2 ++ (TurboSHAKE128.squeeze p.1 L).2.toList))
+      (TurboSHAKE128.finalize (TurboSHAKE128.absorb TurboSHAKE128.init M) D hD, [])).2 =
+      (turboShake128 M D sizes.sum hD).toList := by
+  rw [squeeze_foldl_output _ TurboSHAKE128.squeeze_output_add,
+    TurboSHAKE128.squeeze_finalize_absorb, List.nil_append]
+
+/-- Chunked absorption and any sequence of squeezes from TurboSHAKE128 agree with one-shot
+`turboShake128`. -/
+theorem TurboSHAKE128.absorb_chunks_squeezes (chunks : List (Array Byte)) (D : Byte)
+    (hD : 0 < D ∧ D < 0x80) (sizes : List Nat) :
+    (sizes.foldl
+      (fun p L => ((TurboSHAKE128.squeeze p.1 L).1, p.2 ++ (TurboSHAKE128.squeeze p.1 L).2.toList))
+      (TurboSHAKE128.finalize
+        (chunks.foldl (fun s c => TurboSHAKE128.absorb s c.toVector) TurboSHAKE128.init) D hD,
+        [])).2 =
+      (turboShake128 (chunks.foldr (· ++ ·) #[]).toVector D sizes.sum hD).toList := by
+  rw [TurboSHAKE128.absorb_chunks, TurboSHAKE128.squeezes_finalize_absorb]
+
+/-- Any sequence of squeezes from incremental TurboSHAKE256 outputs a prefix of one-shot
+`turboShake256`. -/
+theorem TurboSHAKE256.squeezes_finalize_absorb {n} (M : ByteVec n) (D : Byte)
+    (hD : 0 < D ∧ D < 0x80) (sizes : List Nat) :
+    (sizes.foldl
+      (fun p L => ((TurboSHAKE256.squeeze p.1 L).1, p.2 ++ (TurboSHAKE256.squeeze p.1 L).2.toList))
+      (TurboSHAKE256.finalize (TurboSHAKE256.absorb TurboSHAKE256.init M) D hD, [])).2 =
+      (turboShake256 M D sizes.sum hD).toList := by
+  rw [squeeze_foldl_output _ TurboSHAKE256.squeeze_output_add,
+    TurboSHAKE256.squeeze_finalize_absorb, List.nil_append]
+
+/-- Chunked absorption and any sequence of squeezes from TurboSHAKE256 agree with one-shot
+`turboShake256`. -/
+theorem TurboSHAKE256.absorb_chunks_squeezes (chunks : List (Array Byte)) (D : Byte)
+    (hD : 0 < D ∧ D < 0x80) (sizes : List Nat) :
+    (sizes.foldl
+      (fun p L => ((TurboSHAKE256.squeeze p.1 L).1, p.2 ++ (TurboSHAKE256.squeeze p.1 L).2.toList))
+      (TurboSHAKE256.finalize
+        (chunks.foldl (fun s c => TurboSHAKE256.absorb s c.toVector) TurboSHAKE256.init) D hD,
+        [])).2 =
+      (turboShake256 (chunks.foldr (· ++ ·) #[]).toVector D sizes.sum hD).toList := by
+  rw [TurboSHAKE256.absorb_chunks, TurboSHAKE256.squeezes_finalize_absorb]
+
 end Wychelean.Hashes.TurboSHAKE
