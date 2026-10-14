@@ -16,29 +16,35 @@ namespace Wychelean.Hashes.TurboSHAKE
 open Wychelean Hashes.SHA3 Hashes.SHA3.Internal Internal
 
 /-- RFC 9861 §2.2: initialize TurboSHAKE128 at rate 1344 bits (Table 1: capacity 32 bytes). -/
-def TurboSHAKE128.init := Incremental.sponge.init (r := b - 256) (hr := by decide)
+def TurboSHAKE128.init : Incremental.sponge.absorbingState (b - 256) :=
+  Incremental.sponge.init (r := b - 256) (hr := by decide)
 
 /-- RFC 9861 §2.2: initialize TurboSHAKE256 at rate 1088 bits (Table 1: capacity 64 bytes). -/
-def TurboSHAKE256.init := Incremental.sponge.init (r := b - 512) (hr := by decide)
+def TurboSHAKE256.init : Incremental.sponge.absorbingState (b - 512) :=
+  Incremental.sponge.init (r := b - 512) (hr := by decide)
 
 /-- Absorb more of the message `M` into a TurboSHAKE128 state. -/
-def TurboSHAKE128.absorb {n} (s : Incremental.sponge.absorbingState (b - 256)) (M : ByteVec n) :=
+def TurboSHAKE128.absorb {n} (s : Incremental.sponge.absorbingState (b - 256)) (M : ByteVec n) :
+    Incremental.sponge.absorbingState (b - 256) :=
   Incremental.sponge.absorb KP (b - 256) (by decide) s (bytesToBits M).toList
 
 /-- Absorb more of the message `M` into a TurboSHAKE256 state. -/
-def TurboSHAKE256.absorb {n} (s : Incremental.sponge.absorbingState (b - 512)) (M : ByteVec n) :=
+def TurboSHAKE256.absorb {n} (s : Incremental.sponge.absorbingState (b - 512)) (M : ByteVec n) :
+    Incremental.sponge.absorbingState (b - 512) :=
   Incremental.sponge.absorb KP (b - 512) (by decide) s (bytesToBits M).toList
 
 /-- RFC 9861 §2.2: append `D` to the message and pad. As in the one-shot API, pad10*1 contributes
 the top bit of `D`. -/
 def TurboSHAKE128.finalize (s : Incremental.sponge.absorbingState (b - 256)) (D : Byte)
-    (_ : 0 < D ∧ D < 0x80 := by decide) :=
+    (_ : 0 < D ∧ D < 0x80 := by decide) :
+    Incremental.sponge.squeezingState (b - 256) :=
   Incremental.sponge.finalize KP (b - 256) (by decide) s (domainSuffix D).toBitsLE.toList
 
 /-- RFC 9861 §2.2: append `D` to the message and pad. As in the one-shot API, pad10*1 contributes
 the top bit of `D`. -/
 def TurboSHAKE256.finalize (s : Incremental.sponge.absorbingState (b - 512)) (D : Byte)
-    (_ : 0 < D ∧ D < 0x80 := by decide) :=
+    (_ : 0 < D ∧ D < 0x80 := by decide) :
+    Incremental.sponge.squeezingState (b - 512) :=
   Incremental.sponge.finalize KP (b - 512) (by decide) s (domainSuffix D).toBitsLE.toList
 
 /-- Squeeze `L` bytes out of a TurboSHAKE128 state. Returns the new state and the bytes. -/
