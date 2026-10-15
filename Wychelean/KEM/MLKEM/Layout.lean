@@ -1,4 +1,8 @@
-import Wychelean.KEM.MLKEM.Encode
+module
+
+public import Wychelean.KEM.MLKEM.Encode
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

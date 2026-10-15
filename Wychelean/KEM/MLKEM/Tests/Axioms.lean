@@ -1,6 +1,10 @@
-import Wychelean.KEM.MLKEM.Properties
+module
+
+public import Wychelean.KEM.MLKEM.Properties
 
 /-! The public arithmetic bridges must depend only on standard Lean axioms. -/
+
+public section
 
 /-- info: 'Wychelean.KEM.MLKEM.Tq.abstractRingEquiv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

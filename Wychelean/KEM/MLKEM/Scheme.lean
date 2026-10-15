@@ -1,6 +1,10 @@
-import Wychelean.KEM.MLKEM.Layout
+module
+
+public import Wychelean.KEM.MLKEM.Layout
 
 /-! FIPS 203 §5–§7: K-PKE, the internal algorithms, and ML-KEM. -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

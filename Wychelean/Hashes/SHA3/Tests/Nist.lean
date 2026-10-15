@@ -1,5 +1,9 @@
-import Wychelean.Hashes.SHA3.Tests.Rsp
-import RunTests.Basic
+module
+
+public import Wychelean.Hashes.SHA3.Tests.Rsp
+public import RunTests.Basic
+
+public section
 
 namespace Wychelean.Hashes.SHA3.Tests
 open RunTests Rsp

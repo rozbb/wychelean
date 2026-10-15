@@ -1,6 +1,8 @@
-import Wychelean.Permutations.Keccak
-import RunTests.Basic
-import RunTests.Parser.Basic
+module
+
+public import Wychelean.Permutations.Keccak
+public import RunTests.Basic
+public import RunTests.Parser.Basic
 
 /-!
 The test vector files are unchanged Keccak-author traces from XKCP:
@@ -10,6 +12,8 @@ Each file contains two full permutations. For Keccak-p[800,12], the input and ex
 output are the published states after rounds 9 and 21, respectively (rounds 10–21).
 The byte dumps use little-endian lane order; intermediate states print lane words in hex.
 -/
+
+public section
 
 namespace Wychelean.Permutations.Keccak.Tests
 open RunTests RunTests.Parser

@@ -1,7 +1,11 @@
-import Wychelean.KEM.MLKEM.NTT
+module
+
+public import Wychelean.KEM.MLKEM.NTT
 
 /-! Algorithms 9–11 restated as folds over stages and blocks, the form used in the proofs;
 `Properties/Loops.lean` proves them equal to the FIPS loops. -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

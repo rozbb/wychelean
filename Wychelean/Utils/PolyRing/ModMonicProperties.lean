@@ -1,5 +1,9 @@
-import Wychelean.Utils.PolyRing.ModMonic
-import Wychelean.Utils.PolyRing.ModBinomialProperties
+module
+
+public import Wychelean.Utils.PolyRing.ModMonic
+public import Wychelean.Utils.PolyRing.ModBinomialProperties
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing.Poly
 

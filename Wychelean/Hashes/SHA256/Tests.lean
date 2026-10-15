@@ -1,8 +1,12 @@
-import Wychelean.Hashes.SHA256.Rsp
-import RunTests.Basic
-import RunTests.Parser.Basic
+module
+
+public import Wychelean.Hashes.SHA256.Rsp
+public import RunTests.Basic
+public import RunTests.Parser.Hex
 
 /-! SHA256 FIPS examples and NIST CAVP suites. -/
+
+public section
 
 namespace Wychelean.Hashes.SHA256.Tests
 
@@ -18,9 +22,9 @@ def basic : Suite where
     let multiBlock := hex! "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
     let millionA := hex! "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0"
     return [
-      check "FIPS abc" abc (sha256 "abc".toUTF8.data.toVector (by decide)),
+      check "FIPS abc" abc (sha256 "abc".toUTF8.data.toVector (by simp; decide)),
       check "FIPS 56-byte message" multiBlock
-        (sha256 "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".toUTF8.data.toVector (by decide)),
+        (sha256 "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".toUTF8.data.toVector (by simp; decide)),
       check "FIPS million-a message" millionA
         (sha256 (Vector.replicate 1000000 (0x61 : UInt8)) (by decide))
     ]

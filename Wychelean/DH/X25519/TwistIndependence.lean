@@ -1,5 +1,9 @@
-import Wychelean.DH.X25519.Basic
-import Wychelean.DH.X25519.WeierstrassScaling
+module
+
+public import Wychelean.DH.X25519.Basic
+public import Wychelean.DH.X25519.WeierstrassScaling
+
+@[expose] public section
 
 open WeierstrassCurve
 

@@ -1,4 +1,8 @@
-import Wychelean.KEM.MLKEM
+module
+
+public import Wychelean.KEM.MLKEM
+-- `#guard` evaluates its checks at elaboration time.
+meta import Wychelean.KEM.MLKEM
 
 /-!
 # ML-KEM elaboration-time checks
@@ -6,6 +10,8 @@ import Wychelean.KEM.MLKEM
 The `#guard` micro tests of the SymCrypt specification, evaluated when this module is built:
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/SpecTests/MLKEM/TestVectors.lean
 -/
+
+public section
 
 namespace Wychelean.KEM.MLKEM.Tests
 

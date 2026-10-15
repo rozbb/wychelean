@@ -1,13 +1,15 @@
-import RunTests.Basic
-import Wychelean.DH.X25519.Tests
-import Wychelean.Hashes.SHA256.Tests
-import Wychelean.Hashes.SHA512.Tests
-import Wychelean.Hashes.SHA3.Tests
-import Wychelean.Hashes.TurboSHAKE.Tests
-import Wychelean.KEM.MLKEM.Tests
-import Wychelean.Utils.PolyRing.Tests
-import Wychelean.Permutations.Keccak.Tests
-import Wychelean.Utils.Tests
+module
+
+public import RunTests.Basic
+public import Wychelean.DH.X25519.Tests
+public import Wychelean.Hashes.SHA256.Tests
+public import Wychelean.Hashes.SHA512.Tests
+public import Wychelean.Hashes.SHA3.Tests
+public import Wychelean.Hashes.TurboSHAKE.Tests
+public import Wychelean.KEM.MLKEM.Tests
+public import Wychelean.Utils.PolyRing.Tests
+public import Wychelean.Permutations.Keccak.Tests
+public import Wychelean.Utils.Tests
 
 /-!
 # Test driver
@@ -18,6 +20,8 @@ Use `lake test -- --full` to add the SHA3 and SHAKE long-message and Monte Carlo
 TurboSHAKE vectors with 1.4 MB messages and the SHA-2 Monte Carlo suites, and to run every ML-KEM
 Wycheproof case rather than a sample of each group.
 -/
+
+public section
 
 namespace RunTests
 

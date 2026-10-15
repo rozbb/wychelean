@@ -1,11 +1,17 @@
-import Wychelean.Hashes.TurboSHAKE
-import RunTests.Parser.Basic
+module
+
+public import Wychelean.Hashes.TurboSHAKE
+-- `#guard` evaluates its checks at elaboration time.
+meta import Wychelean.Hashes.TurboSHAKE
+public import RunTests.Parser.Hex
 
 /-!
 # TurboSHAKE elaboration-time checks
 
 Evaluated when this module is built.
 -/
+
+public section
 
 namespace Wychelean.Hashes.TurboSHAKE.Tests
 open RunTests.Parser Permutations.Keccak

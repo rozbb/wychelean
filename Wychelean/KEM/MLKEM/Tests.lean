@@ -1,9 +1,13 @@
-import Wychelean.KEM.MLKEM.Tests.Axioms
-import Wychelean.KEM.MLKEM.Tests.Arithmetic
-import Wychelean.KEM.MLKEM.Tests.Guards
-import Wychelean.KEM.MLKEM.Tests.Standalone
-import Wychelean.KEM.MLKEM.Tests.Cavp
-import Wychelean.KEM.MLKEM.Tests.Wycheproof
+module
+
+public import Wychelean.KEM.MLKEM.Tests.Axioms
+public import Wychelean.KEM.MLKEM.Tests.Arithmetic
+public import Wychelean.KEM.MLKEM.Tests.Guards
+public import Wychelean.KEM.MLKEM.Tests.Standalone
+public import Wychelean.KEM.MLKEM.Tests.Cavp
+public import Wychelean.KEM.MLKEM.Tests.Wycheproof
+
+public section
 
 namespace Wychelean.KEM.MLKEM.Tests
 

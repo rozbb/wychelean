@@ -1,9 +1,13 @@
-import Wychelean.Utils.Bytes
-import Wychelean.Utils.Bitwise
-import Wychelean.Utils.Vector
-import RunTests.Basic
+module
+
+public import Wychelean.Utils.Bytes
+public import Wychelean.Utils.Bitwise
+public import Wychelean.Utils.Vector
+public import RunTests.Basic
 
 /-! Utility regression tests. -/
+
+public section
 
 namespace Wychelean.Utils.Tests
 

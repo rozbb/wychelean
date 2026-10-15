@@ -1,5 +1,9 @@
-import Wychelean.KEM.MLKEM.Properties.NTTStages
-import Wychelean.Utils.PolyRing.NTTProperties
+module
+
+public import Wychelean.KEM.MLKEM.Properties.NTTStages
+public import Wychelean.Utils.PolyRing.NTTProperties
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM.NTT
 

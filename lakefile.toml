@@ -20,7 +20,7 @@ name = "AxiomCheck"
 # `lake test` but not by `lake build`.
 [[lean_lib]]
 name = "RunTests"
-roots = ["RunTests.Basic", "RunTests.Parser.Basic", "RunTests.Parser.Rsp", "RunTests.Parser.Wycheproof"]
+roots = ["RunTests.Basic", "RunTests.Parser.Basic", "RunTests.Parser.Hex", "RunTests.Parser.Rsp", "RunTests.Parser.Wycheproof"]
 
 [[lean_exe]]
 name = "runTests"

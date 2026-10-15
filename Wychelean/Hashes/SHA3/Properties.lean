@@ -1,4 +1,8 @@
-import Wychelean.Hashes.SHA3.Basic
+module
+
+public import Wychelean.Hashes.SHA3.Basic
+
+@[expose] public section
 
 namespace Wychelean.Hashes.SHA3
 open Wychelean

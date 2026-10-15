@@ -1,7 +1,11 @@
-import Wychelean.Utils.PolyRing.CRT
-import Wychelean.Utils.PolyRing.SplitProperties
-import Mathlib.Algebra.Polynomial.Expand
-import Mathlib.FieldTheory.KummerExtension
+module
+
+public import Wychelean.Utils.PolyRing.CRT
+public import Wychelean.Utils.PolyRing.SplitProperties
+public import Mathlib.Algebra.Polynomial.Expand
+public import Mathlib.FieldTheory.KummerExtension
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing.Residues.Binomial
 

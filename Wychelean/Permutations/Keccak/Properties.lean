@@ -1,9 +1,16 @@
-import Wychelean.Permutations.Keccak.Basic
+module
+
+public import Wychelean.Permutations.Keccak.Basic
+-- `decide +kernel` below runs `for` loops over `[a : b]`, which needs the body of the unexposed
+-- `Std.Legacy.Range.forIn'`.
+import all Init.Data.Range.Basic
 
 /-!
 Properties of the Keccak permutation. Literal tables below are reference values for
 checking the generated constants; the specification is defined entirely in `Basic`.
 -/
+
+@[expose] public section
 
 namespace Wychelean.Permutations.Keccak
 

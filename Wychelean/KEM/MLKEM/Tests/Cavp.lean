@@ -1,6 +1,8 @@
-import Wychelean.KEM.MLKEM
-import RunTests.Basic
-import RunTests.Parser.Rsp
+module
+
+public import Wychelean.KEM.MLKEM
+public import RunTests.Basic
+public import RunTests.Parser.Rsp
 
 /-!
 # ML-KEM known-answer tests from the SymCrypt specification
@@ -8,6 +10,8 @@ import RunTests.Parser.Rsp
 NIST ACVP vectors and round-trip checks from SymCrypt:
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/SpecTests/MLKEM/TestVectors.lean
 -/
+
+public section
 
 namespace Wychelean.KEM.MLKEM.Tests
 

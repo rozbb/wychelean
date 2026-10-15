@@ -1,4 +1,8 @@
-import Wychelean.Hashes.SHA3.Basic
+module
+
+public import Wychelean.Hashes.SHA3.Basic
+
+@[expose] public section
 
 namespace Wychelean.Hashes.SHA3
 open Wychelean Internal
@@ -8,7 +12,7 @@ namespace Incremental
 section
 
 -- FIPS 202 §4: an underlying function on b-bit strings and a rate satisfying 0 < r < b.
-variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b := by decide)
+variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b)
 
 /-- Absorbing state (FIPS 202 Algorithm 8, steps 4–6). -/
 structure sponge.absorbingState (rate : Nat) where
@@ -108,7 +112,7 @@ termination_by (d, s.x)
 decreasing_by
   all_goals have := s.hx; have := hr.1; omega
 
-variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b := by decide)
+variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b)
 
 /-- FIPS 202 Algorithm 8's output-length requirement: exactly `d` bits. -/
 @[simp] theorem sponge.squeezeList_length (s : sponge.squeezingState r) (d : Nat) :

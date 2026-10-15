@@ -1,4 +1,6 @@
-import Wychelean.Hashes.SHA3.Basic
+module
+
+public import Wychelean.Hashes.SHA3.Basic
 
 /-!
 # TurboSHAKE
@@ -6,6 +8,8 @@ RFC 9861 §2: https://www.rfc-editor.org/rfc/rfc9861.html#section-2
 
 The FIPS 202 sponge of `Wychelean.Hashes.SHA3`, with the permutation reduced to 12 rounds.
 -/
+
+@[expose] public section
 namespace Wychelean.Hashes.TurboSHAKE
 open Wychelean Hashes.SHA3.Internal
 
