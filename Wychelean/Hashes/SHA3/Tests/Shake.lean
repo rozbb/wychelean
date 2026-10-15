@@ -1,6 +1,10 @@
-import Wychelean.Hashes.SHA3.Tests.Rsp
-import Wychelean.Hashes.SHA3.XOF
-import RunTests.Basic
+module
+
+public import Wychelean.Hashes.SHA3.Tests.Rsp
+public import Wychelean.Hashes.SHA3.XOF
+public import RunTests.Basic
+
+public section
 
 namespace Wychelean.Hashes.SHA3.Tests
 open RunTests Rsp Std.Internal.Parsec.String

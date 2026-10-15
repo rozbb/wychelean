@@ -1,7 +1,11 @@
-import Wychelean.Utils.PolyRing
-import RunTests.Basic
-import Mathlib.Algebra.Field.ZMod
-import Mathlib.Tactic.NormNum.Prime
+module
+
+public import Wychelean.Utils.PolyRing
+public import RunTests.Basic
+public import Mathlib.Algebra.Field.ZMod
+public import Mathlib.Tactic.NormNum.Prime
+
+public section
 
 namespace Wychelean.Utils.PolyRing.Tests
 
@@ -11,11 +15,11 @@ private instance : Fact (Nat.Prime 3329) := ⟨by norm_num⟩
 private instance : Fact (Nat.Prime 8380417) := ⟨by norm_num⟩
 
 /-- `ζ = 17` is a primitive 256-th root of unity in `ℤ_3329` (FIPS 203 §4.3). -/
-private def ζKem : PrimitiveRoot (ZMod 3329) (2 ^ 8) :=
+def ζKem : PrimitiveRoot (ZMod 3329) (2 ^ 8) :=
   PrimitiveRoot.ofPowEqNegOne 17 (by decide +kernel) (by decide)
 
 /-- `ζ = 1753` is a primitive 512-th root of unity in `ℤ_8380417` (FIPS 204 §7.5). -/
-private def ζDsa : PrimitiveRoot (ZMod 8380417) (2 ^ 9) :=
+def ζDsa : PrimitiveRoot (ZMod 8380417) (2 ^ 9) :=
   PrimitiveRoot.ofPowEqNegOne 1753 (by decide +kernel) (by decide)
 
 private instance : Fact (2 ^ 7 ∣ 256) := ⟨by decide⟩
@@ -30,9 +34,9 @@ private instance {q d m : ℕ} {μ : Fin m → Poly (ZMod q) d} : ToString (Resi
 
 section Kem
 
-private abbrev q := 3329
-private abbrev P := PolyMod (ZMod q) 256 (-1)
-private abbrev Tq := NTTDomain 7 ζKem 256
+abbrev q := 3329
+abbrev P := PolyMod (ZMod q) 256 (-1)
+abbrev Tq := NTTDomain 7 ζKem 256
 
 private def monomial (i : Fin 256) : P := PolyMod.ofFn fun j => if j = i then 1 else 0
 
@@ -70,9 +74,9 @@ end Kem
 
 section Dsa
 
-private abbrev q' := 8380417
-private abbrev P' := PolyMod (ZMod q') 256 (-1)
-private abbrev Tq' := NTTDomain 8 ζDsa 256
+abbrev q' := 8380417
+abbrev P' := PolyMod (ZMod q') 256 (-1)
+abbrev Tq' := NTTDomain 8 ζDsa 256
 
 private def dense' (a b c : ℕ) : P' :=
   PolyMod.ofFn fun i => ((a * i.val * i.val + b * i.val + c : ℕ) : ZMod q')
@@ -92,7 +96,7 @@ end Dsa
 
 section Cyclic
 
-private abbrev C := PolyMod (ZMod 3329) 256 1
+abbrev C := PolyMod (ZMod 3329) 256 1
 
 private def denseC (a b c : ℕ) : C :=
   PolyMod.ofFn fun i => ((a * i.val * i.val + b * i.val + c : ℕ) : ZMod 3329)

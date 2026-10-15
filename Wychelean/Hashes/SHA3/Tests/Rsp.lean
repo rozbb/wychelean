@@ -1,9 +1,13 @@
-import Wychelean.Hashes.SHA3
-import RunTests.Parser.Rsp
+module
+
+public import Wychelean.Hashes.SHA3
+public import RunTests.Parser.Rsp
 
 /-! NIST SHA3VS response files, including non-byte-aligned messages.
 https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/sha3/sha3vs.pdf
 -/
+
+public section
 namespace Wychelean.Hashes.SHA3.Tests.Rsp
 open Std.Internal.Parsec Std.Internal.Parsec.String
 open RunTests.Parser RunTests.Parser.Rsp

@@ -1,4 +1,8 @@
-import Wychelean.KEM.MLKEM.Properties.Tq
+module
+
+public import Wychelean.KEM.MLKEM.Properties.Tq
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM.NTT
 

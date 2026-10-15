@@ -1,10 +1,14 @@
-import Mathlib.Tactic.TypeStar
-import Mathlib.Data.Nat.Notation
+module
+
+public import Mathlib.Tactic.TypeStar
+public import Mathlib.Data.Nat.Notation
 
 /-!
 Vectors and matrices over any ring of entries (FIPS 203 §2.4.7–§2.4.8, FIPS 204 §2.3).
 Coordinate-wise `+`, `-` and `•` on vectors are core Lean's `Vector` instances.
 -/
+
+@[expose] public section
 
 namespace Wychelean.Utils.Linear
 

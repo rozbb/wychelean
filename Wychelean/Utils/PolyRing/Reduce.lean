@@ -1,5 +1,9 @@
-import Wychelean.Utils.PolyRing.Poly
-import Mathlib.Data.ZMod.ValMinAbs
+module
+
+public import Wychelean.Utils.PolyRing.Poly
+public import Mathlib.Data.ZMod.ValMinAbs
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing.Poly
 

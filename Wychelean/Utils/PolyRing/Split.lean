@@ -1,6 +1,10 @@
-import Wychelean.Utils.PolyRing.Residues
-import Wychelean.Utils.PolyRing.ModBinomial
-import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
+module
+
+public import Wychelean.Utils.PolyRing.Residues
+public import Wychelean.Utils.PolyRing.ModBinomial
+public import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing.Residues
 

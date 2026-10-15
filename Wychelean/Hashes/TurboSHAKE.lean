@@ -1,2 +1,6 @@
-import Wychelean.Hashes.TurboSHAKE.Basic
-import Wychelean.Hashes.TurboSHAKE.XOF
+module
+
+public import Wychelean.Hashes.TurboSHAKE.Basic
+public import Wychelean.Hashes.TurboSHAKE.XOF
+
+@[expose] public section

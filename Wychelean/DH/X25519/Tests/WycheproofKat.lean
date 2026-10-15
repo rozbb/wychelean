@@ -1,6 +1,8 @@
-import Wychelean.DH.X25519
-import RunTests.Basic
-import RunTests.Parser.Wycheproof
+module
+
+public import Wychelean.DH.X25519
+public import RunTests.Basic
+public import RunTests.Parser.Wycheproof
 
 /-!
 # X25519 Wycheproof known-answer tests
@@ -17,6 +19,8 @@ u-coordinate, as RFC 7748 §5 permits, so both kinds are checked the same way. T
 `invalid` cases; if a later revision adds one, the case fails rather than being skipped silently,
 since rejection is an outcome `x25519` has no way to express.
 -/
+
+public section
 
 namespace X25519.Tests
 

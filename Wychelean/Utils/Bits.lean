@@ -1,5 +1,9 @@
-import Wychelean.Utils.Bytes
-import Wychelean.Utils.Vector
+module
+
+public import Wychelean.Utils.Bytes
+public import Wychelean.Utils.Vector
+
+@[expose] public section
 
 namespace Wychelean
 
@@ -16,7 +20,8 @@ def _root_.BitVec.setBit (v : BitVec n) (i : Nat) (bit : Bit) : BitVec n :=
       cases bit <;> simp [hj]
     · cases bit <;> simp [BitVec.getLsbD_shiftLeft, hji, Nat.sub_eq_zero_iff_le]
       <;> omega
-  · cases bit <;> simp [BitVec.getLsbD_of_ge _ _ (Nat.le_of_not_lt hj)] <;> omega
+  · cases bit <;> simp [BitVec.getLsbD_of_ge _ _ (Nat.le_of_not_lt hj)]
+    omega
 
 /-- Rotate a vector at the index level: output[i] = input[(i + n - (k % n)) % n].
     Used by FIPS 202 (SHA3), where index zero is the least significant bit. -/

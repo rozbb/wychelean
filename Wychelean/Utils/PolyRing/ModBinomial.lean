@@ -1,4 +1,8 @@
-import Wychelean.Utils.PolyRing.Poly
+module
+
+public import Wychelean.Utils.PolyRing.Poly
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing.Poly
 

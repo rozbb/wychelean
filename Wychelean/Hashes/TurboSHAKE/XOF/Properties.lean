@@ -1,5 +1,7 @@
-import Wychelean.Hashes.SHA3.XOF.Properties
-import Wychelean.Hashes.TurboSHAKE.XOF.Basic
+module
+
+public import Wychelean.Hashes.SHA3.XOF.Properties
+public import Wychelean.Hashes.TurboSHAKE.XOF.Basic
 
 /-!
 # Properties of incremental TurboSHAKE
@@ -8,6 +10,8 @@ Splitting the input across `absorb` calls, or the output across `squeeze` calls,
 the result, and the incremental API agrees with the one-shot functions. These are the SHAKE
 properties of `Wychelean.Hashes.SHA3.XOF.Properties`, with KP in place of Keccak-f.
 -/
+
+@[expose] public section
 
 namespace Wychelean.Hashes.TurboSHAKE
 open Wychelean Hashes.SHA3 Hashes.SHA3.Internal Internal

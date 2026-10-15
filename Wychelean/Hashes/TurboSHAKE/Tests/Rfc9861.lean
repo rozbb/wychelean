@@ -1,6 +1,8 @@
-import Wychelean.Hashes.TurboSHAKE
-import RunTests.Basic
-import RunTests.Parser.Basic
+module
+
+public import Wychelean.Hashes.TurboSHAKE
+public import RunTests.Basic
+public import RunTests.Parser.Hex
 
 /-!
 # TurboSHAKE RFC 9861 known-answer tests
@@ -11,6 +13,8 @@ squeeze schedules.
 The `ptn(17**5 bytes)` vectors run only in the full suite. We don't do the `ptn(17**6 bytes)` ones:
 absorbing is quadratic in the message length, so each would take over an hour.
 -/
+
+public section
 
 namespace Wychelean.Hashes.TurboSHAKE.Tests
 open RunTests RunTests.Parser Hashes.SHA3

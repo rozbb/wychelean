@@ -1,4 +1,6 @@
-import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Point
+module
+
+public import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Point
 
 /-!
 # Scaling isomorphisms between Weierstrass curves
@@ -21,6 +23,8 @@ The lemmas here mirror the ones Mathlib proves for the map induced by a ring hom
 (`WeierstrassCurve.Affine.map_negY` and friends): each of `negY`, `slope`, `addX`, `negAddY` and
 `addY` is homogeneous of the evident weight, and the group homomorphism is read off from that.
 -/
+
+@[expose] public section
 
 namespace X25519
 

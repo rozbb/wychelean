@@ -1,6 +1,10 @@
-import Wychelean.KEM.MLKEM.Parameters
+module
+
+public import Wychelean.KEM.MLKEM.Parameters
 
 /-! FIPS 203 §4.3: the number-theoretic transform and multiplication in `T_q`. -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

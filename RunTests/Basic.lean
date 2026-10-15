@@ -1,4 +1,6 @@
-import RunTests.Parser.Basic
+module
+
+public import RunTests.Parser.Basic
 
 /-!
 # Test harness
@@ -9,6 +11,8 @@ A small harness for the tests that live next to each specification, e.g.
 Byte strings are written as the hex the source documents print, so a reader can check a test
 vector against its specification by eye rather than by transcribing bytes.
 -/
+
+public section
 
 namespace RunTests
 

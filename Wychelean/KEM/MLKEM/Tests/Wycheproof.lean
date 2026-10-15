@@ -1,6 +1,10 @@
-import Wychelean.KEM.MLKEM
-import RunTests.Basic
-import RunTests.Parser.Wycheproof
+module
+
+public import Wychelean.KEM.MLKEM
+public import RunTests.Basic
+public import RunTests.Parser.Wycheproof
+
+public section
 
 namespace Wychelean.KEM.MLKEM.Tests
 

@@ -1,3 +1,7 @@
+module
+
+@[expose] public section
+
 /-!
 Bitwise helpers on fixed-width integers not provided by core Lean.
 -/

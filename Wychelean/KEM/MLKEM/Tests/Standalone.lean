@@ -1,6 +1,10 @@
-import Wychelean.KEM.MLKEM.Scheme
+module
+
+public import Wychelean.KEM.MLKEM.Scheme
 
 /-! The specification stands alone: it imports neither the ring library nor its own proofs. -/
+
+public section
 
 open Lean in
 run_meta do

@@ -1,5 +1,9 @@
-import Wychelean.Utils.PolyRing.Poly
-import Mathlib.RingTheory.AdjoinRoot
+module
+
+public import Wychelean.Utils.PolyRing.Poly
+public import Mathlib.RingTheory.AdjoinRoot
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing
 

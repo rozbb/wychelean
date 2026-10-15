@@ -1,4 +1,6 @@
-import Wychelean.Utils.Bits
+module
+
+public import Wychelean.Utils.Bits
 
 /-!
 Keccak-p, FIPS 202 §§3–3.4:
@@ -9,6 +11,8 @@ https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b
 
 MIT notice: Wychelean/Hashes/SHA3/LICENSE.SymCrypt.
 -/
+
+@[expose] public section
 namespace Wychelean.Permutations.Keccak
 open Wychelean
 open scoped Wychelean.Notations

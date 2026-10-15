@@ -1,4 +1,8 @@
-import Wychelean.Utils.PolyRing.Refine
+module
+
+public import Wychelean.Utils.PolyRing.Refine
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing.Residues
 
