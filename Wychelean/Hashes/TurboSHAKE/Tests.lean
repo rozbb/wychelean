@@ -1,5 +1,9 @@
-import Wychelean.Hashes.TurboSHAKE.Tests.Guards
-import Wychelean.Hashes.TurboSHAKE.Tests.Rfc9861
+module
+
+public import Wychelean.Hashes.TurboSHAKE.Tests.Guards
+public import Wychelean.Hashes.TurboSHAKE.Tests.Rfc9861
+
+public section
 
 namespace Wychelean.Hashes.TurboSHAKE.Tests
 

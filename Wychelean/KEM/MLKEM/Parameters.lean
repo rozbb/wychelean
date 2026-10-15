@@ -1,7 +1,11 @@
-import Mathlib.Tactic.NormNum.Prime
-import Mathlib.Algebra.Field.ZMod
-import Wychelean.Utils.Matrix
-import Wychelean.Utils.Bits
+module
+
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.Algebra.Field.ZMod
+public import Wychelean.Utils.Matrix
+public import Wychelean.Utils.Bits
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

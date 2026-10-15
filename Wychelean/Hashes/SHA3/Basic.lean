@@ -1,4 +1,6 @@
-import Wychelean.Permutations.Keccak.Basic
+module
+
+public import Wychelean.Permutations.Keccak.Basic
 
 /-!
 # SHA3 and SHAKE
@@ -6,6 +8,8 @@ FIPS 202 §§3–6: https://doi.org/10.6028/NIST.FIPS.202
 Adapted from Microsoft SymCrypt (MIT; see LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/SHA3/Spec.lean
 -/
+
+@[expose] public section
 namespace Wychelean.Hashes.SHA3
 open Wychelean
 

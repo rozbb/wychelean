@@ -1,4 +1,8 @@
-import Wychelean.Hashes.SHA3.Basic
+module
+
+public import Wychelean.Hashes.SHA3.Basic
+
+@[expose] public section
 
 namespace Wychelean.Hashes.SHA3
 open Wychelean Internal
@@ -8,7 +12,9 @@ namespace Incremental
 section
 
 -- FIPS 202 §4: an underlying function on b-bit strings and a rate satisfying 0 < r < b.
-variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b := by decide)
+-- Under the module system, an autoParam on a `variable` breaks the declarations that use it, so
+-- each declaration below takes `hr` as its own binder instead.
+variable (f : BitVec b → BitVec b) (r : Nat)
 
 /-- Absorbing state (FIPS 202 Algorithm 8, steps 4–6). -/
 structure sponge.absorbingState (rate : Nat) where
@@ -23,7 +29,7 @@ structure sponge.squeezingState (rate : Nat) where
   hx : x ≤ rate
 
 /-- FIPS 202 Algorithm 8, step 5: initialize the permutation state to zero. -/
-def sponge.init : sponge.absorbingState r :=
+def sponge.init (hr : 0 < r ∧ r < b := by decide) : sponge.absorbingState r :=
   { S := 0, pending := #[], h_pending := by simpa using hr.1 }
 
 /-- FIPS 202 Algorithm 8, step 6: encode the rate block followed by zero capacity bits. -/
@@ -31,7 +37,8 @@ def sponge.blockMask (P : Array Bit) : BitVec b :=
   (BitVec.ofBitsLE P.toVector).zeroExtend b
 
 /-- FIPS 202 Algorithm 8, step 6: absorb a complete block; otherwise buffer the bit. -/
-def sponge.absorbBit (s : sponge.absorbingState r) (bit : Bit) : sponge.absorbingState r :=
+def sponge.absorbBit (hr : 0 < r ∧ r < b := by decide)
+    (s : sponge.absorbingState r) (bit : Bit) : sponge.absorbingState r :=
   let input := s.pending.push bit
   if h : input.size = r then
     { S := f (s.S ^^^ sponge.blockMask input),
@@ -44,7 +51,8 @@ def sponge.absorbBit (s : sponge.absorbingState r) (bit : Bit) : sponge.absorbin
     { s with pending := input, h_pending }
 
 /-- Incremental form of FIPS 202 Algorithm 8, steps 4–6; padding is deferred. -/
-def sponge.absorb (s : sponge.absorbingState r) (N : List Bit) : sponge.absorbingState r :=
+def sponge.absorb (hr : 0 < r ∧ r < b := by decide)
+    (s : sponge.absorbingState r) (N : List Bit) : sponge.absorbingState r :=
   let k := r - s.pending.size
   let chunk := N.take k
   if h : chunk.length < k then
@@ -58,7 +66,7 @@ def sponge.absorb (s : sponge.absorbingState r) (N : List Bit) : sponge.absorbin
   else
     let P := s.pending ++ chunk.toArray
     let S := f (s.S ^^^ sponge.blockMask P)
-    sponge.absorb { S, pending := #[], h_pending := by simpa using hr.1 } (N.drop k)
+    sponge.absorb hr { S, pending := #[], h_pending := by simpa using hr.1 } (N.drop k)
 termination_by N.length
 decreasing_by
   have := s.h_pending
@@ -67,13 +75,15 @@ decreasing_by
   omega
 
 /-- Append the suffix and padding (FIPS 202 Algorithm 8, step 1; §5.1, Algorithm 9). -/
-def sponge.finalize (s : sponge.absorbingState r) (suffix : List Bit) : sponge.squeezingState r :=
+def sponge.finalize (hr : 0 < r ∧ r < b := by decide)
+    (s : sponge.absorbingState r) (suffix : List Bit) : sponge.squeezingState r :=
   let s := sponge.absorb f r hr s suffix
   let s := sponge.absorb f r hr s («pad10*1» r s.pending.size).toBitsLE.toList
   { S := s.S, x := 0, hx := Nat.zero_le r }
 
 /-- Bitwise FIPS 202 Algorithm 8, steps 8–10; permute when more output needs a new block. -/
-def sponge.squeezeBit (s : sponge.squeezingState r) : sponge.squeezingState r × Bit :=
+def sponge.squeezeBit (hr : 0 < r ∧ r < b := by decide)
+    (s : sponge.squeezingState r) : sponge.squeezingState r × Bit :=
   if h : s.x = r then
     ({ S := f s.S, x := 1, hx := hr.1 }, (f s.S).getLsbD 0)
   else
@@ -108,10 +118,11 @@ termination_by (d, s.x)
 decreasing_by
   all_goals have := s.hx; have := hr.1; omega
 
-variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b := by decide)
+variable (f : BitVec b → BitVec b) (r : Nat)
 
 /-- FIPS 202 Algorithm 8's output-length requirement: exactly `d` bits. -/
-@[simp] theorem sponge.squeezeList_length (s : sponge.squeezingState r) (d : Nat) :
+@[simp] theorem sponge.squeezeList_length (hr : 0 < r ∧ r < b := by decide)
+    (s : sponge.squeezingState r) (d : Nat) :
     (sponge.squeezeList f r hr s d).2.length = d := by
   fun_induction sponge.squeezeList f r hr s d <;>
     simp_all [List.length_append, sponge.outputBits_length]
@@ -120,7 +131,7 @@ variable (f : BitVec b → BitVec b) (r : Nat) (hr : 0 < r ∧ r < b := by decid
   omega
 
 /-- Stateful form of FIPS 202 Algorithm 8, steps 8–10: output `d` bits and retain the context. -/
-def sponge.squeeze (s : sponge.squeezingState r) (d : Nat) :
+def sponge.squeeze (hr : 0 < r ∧ r < b := by decide) (s : sponge.squeezingState r) (d : Nat) :
     sponge.squeezingState r × Vector Bit d :=
   let result := sponge.squeezeList f r hr s d
   (result.1, ⟨result.2.toArray, by simp [result]⟩)

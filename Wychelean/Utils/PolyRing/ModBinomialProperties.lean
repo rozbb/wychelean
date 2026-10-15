@@ -1,5 +1,9 @@
-import Wychelean.Utils.PolyRing.ModBinomial
-import Wychelean.Utils.PolyRing.Quotient
+module
+
+public import Wychelean.Utils.PolyRing.ModBinomial
+public import Wychelean.Utils.PolyRing.Quotient
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing
 

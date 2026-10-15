@@ -1,5 +1,7 @@
-import Lean.Data.Json
-import RunTests.Parser.Basic
+module
+
+public import Lean.Data.Json
+public import RunTests.Parser.Basic
 
 /-!
 # Project Wycheproof test-vector files
@@ -11,6 +13,8 @@ part of a group header and of a case to the caller.
 
 <https://github.com/C2SP/wycheproof/blob/main/doc/files.md>
 -/
+
+public section
 
 namespace RunTests.Parser.Wycheproof
 

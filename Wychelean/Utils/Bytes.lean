@@ -1,5 +1,9 @@
-import Mathlib.Data.List.Defs
-import Mathlib.Tactic.GCongr
+module
+
+public import Mathlib.Data.List.Defs
+public import Mathlib.Tactic.GCongr
+
+@[expose] public section
 
 namespace Wychelean
 

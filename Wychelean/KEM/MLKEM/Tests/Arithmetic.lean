@@ -1,5 +1,9 @@
-import Wychelean.KEM.MLKEM
-import RunTests.Basic
+module
+
+public import Wychelean.KEM.MLKEM
+public import RunTests.Basic
+
+public section
 
 namespace Wychelean.KEM.MLKEM.Tests
 

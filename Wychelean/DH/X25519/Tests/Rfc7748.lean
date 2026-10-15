@@ -1,6 +1,8 @@
-import Wychelean.DH.X25519
-import RunTests.Basic
-import RunTests.Parser.Basic
+module
+
+public import Wychelean.DH.X25519
+public import RunTests.Basic
+public import RunTests.Parser.Hex
 
 /-!
 # X25519 RFC 7748 known-answer tests
@@ -9,6 +11,8 @@ Test vectors for the scalar/u-coordinate codec and for X25519 itself, taken from
 * <https://www.rfc-editor.org/rfc/rfc7748.html#section-5.2> (X25519 test vectors), and
 * <https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1> (a Diffie-Hellman exchange).
 -/
+
+public section
 
 namespace X25519.Tests
 

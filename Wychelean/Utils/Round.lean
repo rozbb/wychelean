@@ -1,4 +1,6 @@
-import Mathlib.Data.Rat.Floor
+module
+
+public import Mathlib.Data.Rat.Floor
 
 /-!
 # Rounding to nearest integer
@@ -8,6 +10,8 @@ Used by ML-KEM (Compress/Decompress, FIPS 203 Eq. 4.7–4.8).
 Adapted from Microsoft SymCrypt (MIT; see Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/Round.lean
 -/
+
+@[expose] public section
 
 namespace Wychelean
 

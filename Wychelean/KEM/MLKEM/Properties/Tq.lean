@@ -1,5 +1,7 @@
-import Wychelean.KEM.MLKEM.Properties.Loops
-import Wychelean.KEM.MLKEM.Properties.Ring
+module
+
+public import Wychelean.KEM.MLKEM.Properties.Loops
+public import Wychelean.KEM.MLKEM.Properties.Ring
 
 /-!
 # `T_q` as a ring
@@ -7,6 +9,8 @@ import Wychelean.KEM.MLKEM.Properties.Ring
 The coefficient array of `f̂ ∈ T_q` read as its 128 residues modulo `X² - ζ^(2·BitRev₇(i)+1)`
 (FIPS 203 Eq. 4.12–4.13), and the ring structure of `T_q` transported from that product ring.
 -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

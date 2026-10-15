@@ -1,5 +1,9 @@
-import Wychelean.Hashes.SHA3.XOF.Basic
-import Wychelean.Hashes.SHA3.Properties
+module
+
+public import Wychelean.Hashes.SHA3.XOF.Basic
+public import Wychelean.Hashes.SHA3.Properties
+
+@[expose] public section
 
 namespace Wychelean.Hashes.SHA3
 open Wychelean Internal

@@ -1,10 +1,14 @@
-import Wychelean
+module
+
+public import Wychelean
 
 /-!
 # Axiom checker
 
 This model checks that all the axioms used in Wychelean are in a small allowlist.
 -/
+
+@[expose] public section
 
 open Lean
 

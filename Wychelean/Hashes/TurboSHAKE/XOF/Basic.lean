@@ -1,5 +1,7 @@
-import Wychelean.Hashes.SHA3.XOF.Basic
-import Wychelean.Hashes.TurboSHAKE.Basic
+module
+
+public import Wychelean.Hashes.SHA3.XOF.Basic
+public import Wychelean.Hashes.TurboSHAKE.Basic
 
 /-!
 # Incremental API for TurboSHAKE128 and TurboSHAKE256
@@ -11,6 +13,8 @@ separation byte, then repeated `squeeze`s. Agreement with one-shot TurboSHAKE is
 
 Top-level functions operate on byte vectors; the internal state uses bits.
 -/
+
+@[expose] public section
 
 namespace Wychelean.Hashes.TurboSHAKE
 open Wychelean Hashes.SHA3 Hashes.SHA3.Internal Internal

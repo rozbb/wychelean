@@ -1,9 +1,13 @@
-import Wychelean.Hashes.SHA256
-import RunTests.Parser.Rsp
+module
+
+public import Wychelean.Hashes.SHA256
+public import RunTests.Parser.Rsp
 
 /-! SHA256 response-file parsing and Monte Carlo support (SHAVS).
 https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/SHAVS.pdf
 -/
+
+public section
 
 namespace Wychelean.Hashes.SHA256.Rsp
 

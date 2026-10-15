@@ -1,7 +1,11 @@
-import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Point
-import Mathlib.Data.ZMod.Basic
-import Mathlib.NumberTheory.LegendreSymbol.Basic
-import Wychelean.DH.X25519.Prime25519
+module
+
+public import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Point
+public import Mathlib.Data.ZMod.Basic
+public import Mathlib.NumberTheory.LegendreSymbol.Basic
+public import Wychelean.DH.X25519.Prime25519
+
+@[expose] public section
 
 open WeierstrassCurve
 

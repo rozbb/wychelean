@@ -1,5 +1,7 @@
-import Wychelean.DH.X25519.Tests.Rfc7748
-import Wychelean.DH.X25519.Tests.WycheproofKat
+module
+
+public import Wychelean.DH.X25519.Tests.Rfc7748
+public import Wychelean.DH.X25519.Tests.WycheproofKat
 
 /-!
 # X25519 known-answer tests
@@ -7,6 +9,8 @@ import Wychelean.DH.X25519.Tests.WycheproofKat
 RFC 7748 KATs are checked in `Wychelean.DH.X25519.Tests.Rfc7748`. Wycheproof's
 KATs are checked in `Wychelean.DH.X25519.Tests.WycheproofKat`.
 -/
+
+public section
 
 namespace X25519.Tests
 
