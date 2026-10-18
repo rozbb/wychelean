@@ -39,8 +39,6 @@ def suites (full := false): List Suite :=
 
 end RunTests
 
--- Must stay public: a private `main` is renamed, and the executable then silently links some
--- dependency's `main` instead, running no tests and exiting 0.
 public def main (args : List String): IO UInt32 := do
   let full := args.contains "--full"
   let only := match args with
