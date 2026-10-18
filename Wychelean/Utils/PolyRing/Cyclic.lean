@@ -1,4 +1,8 @@
-import Wychelean.Utils.PolyRing.NTTProperties
+module
+
+public import Wychelean.Utils.PolyRing.NTTProperties
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing.NTT.Cyclic
 

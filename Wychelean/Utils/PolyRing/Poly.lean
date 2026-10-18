@@ -1,12 +1,16 @@
-import Mathlib.Data.ZMod.Basic
-import Mathlib.Algebra.BigOperators.Fin
-import Mathlib.Tactic.IntervalCases
-import Mathlib.Tactic.Ring
+module
+
+public import Mathlib.Data.ZMod.Basic
+public import Mathlib.Algebra.BigOperators.Fin
+public import Mathlib.Tactic.IntervalCases
+public import Mathlib.Tactic.Ring
 
 /-!
 Adapted from Microsoft SymCrypt (MIT; see Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/MLKEM/Spec.lean
 -/
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing
 

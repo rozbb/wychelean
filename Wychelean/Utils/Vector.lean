@@ -1,3 +1,7 @@
+module
+
+@[expose] public section
+
 /-!
 `Vector` helpers not provided by core Lean.
 -/

@@ -1,6 +1,8 @@
-import Wychelean.DH.X25519
-import RunTests.Basic
-import RunTests.Parser.Basic
+module
+
+public import Wychelean.DH.X25519
+public import RunTests.Basic
+public import RunTests.Parser.Hex
 
 /-!
 # X25519 RFC 7748 known-answer tests
@@ -85,7 +87,7 @@ private def products: List (String × Vector UInt8 32 × Vector UInt8 32 × Vect
 /-! ## Suite -/
 
 /-- Every vector above, checked against the codec and against X25519. -/
-def rfc7748: Suite where
+public def rfc7748: Suite where
   name := "X25519 (RFC 7748 known-answer tests)"
   tests := do
     let mut tests: Array Test := #[]

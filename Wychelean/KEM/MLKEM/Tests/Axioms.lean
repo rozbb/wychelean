@@ -1,4 +1,6 @@
-import Wychelean.KEM.MLKEM.Properties
+module
+
+public import Wychelean.KEM.MLKEM.Properties
 
 /-! The public arithmetic bridges must depend only on standard Lean axioms. -/
 

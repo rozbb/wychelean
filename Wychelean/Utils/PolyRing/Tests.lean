@@ -1,7 +1,9 @@
-import Wychelean.Utils.PolyRing
-import RunTests.Basic
-import Mathlib.Algebra.Field.ZMod
-import Mathlib.Tactic.NormNum.Prime
+module
+
+public import Wychelean.Utils.PolyRing
+public import RunTests.Basic
+public import Mathlib.Algebra.Field.ZMod
+public import Mathlib.Tactic.NormNum.Prime
 
 namespace Wychelean.Utils.PolyRing.Tests
 
@@ -30,7 +32,9 @@ private instance {q d m : ℕ} {μ : Fin m → Poly (ZMod q) d} : ToString (Resi
 
 section Kem
 
-private abbrev q := 3329
+-- Public only because the compiler works out the runtime representation of `ZMod q` from the
+-- module's public view, where a private `q` does not unfold.
+public abbrev q := 3329
 private abbrev P := PolyMod (ZMod q) 256 (-1)
 private abbrev Tq := NTTDomain 7 ζKem 256
 
@@ -70,7 +74,8 @@ end Kem
 
 section Dsa
 
-private abbrev q' := 8380417
+-- Public for the same reason as `q`.
+public abbrev q' := 8380417
 private abbrev P' := PolyMod (ZMod q') 256 (-1)
 private abbrev Tq' := NTTDomain 8 ζDsa 256
 
@@ -157,6 +162,6 @@ def refineSuite : Suite where
 
 end Refine
 
-def suites : List Suite := [kemSuite, dsaSuite, cyclicSuite, monicSuite, refineSuite]
+public def suites : List Suite := [kemSuite, dsaSuite, cyclicSuite, monicSuite, refineSuite]
 
 end Wychelean.Utils.PolyRing.Tests

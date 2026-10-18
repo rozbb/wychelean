@@ -1,5 +1,9 @@
-import Wychelean.Utils.PolyRing.NTT
-import Wychelean.Utils.PolyRing.SplitProperties
+module
+
+public import Wychelean.Utils.PolyRing.NTT
+public import Wychelean.Utils.PolyRing.SplitProperties
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing.NTT
 

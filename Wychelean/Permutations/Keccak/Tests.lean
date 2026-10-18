@@ -1,6 +1,8 @@
-import Wychelean.Permutations.Keccak
-import RunTests.Basic
-import RunTests.Parser.Basic
+module
+
+public import Wychelean.Permutations.Keccak
+public import RunTests.Basic
+public import RunTests.Parser.Basic
 
 /-!
 The test vector files are unchanged Keccak-author traces from XKCP:
@@ -50,6 +52,6 @@ private def permutations (width : Width) : Suite where
         tests := tests ++ [check s!"trace {i + 1}, rounds 10–21" expected (keccak_p width 12 input)]
     return tests
 
-def suites : List Suite := [.w200, .w400, .w800, .w1600].map permutations
+public def suites : List Suite := [.w200, .w400, .w800, .w1600].map permutations
 
 end Wychelean.Permutations.Keccak.Tests

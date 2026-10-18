@@ -1,13 +1,15 @@
-import Wychelean.Hashes.SHA512.Rsp
-import RunTests.Basic
-import RunTests.Parser.Basic
+module
+
+public import Wychelean.Hashes.SHA512.Tests.Rsp
+public import RunTests.Basic
+public import RunTests.Parser.Hex
 
 /-! SHA512 FIPS examples and NIST CAVP suites. -/
 
 namespace Wychelean.Hashes.SHA512.Tests
 
 open RunTests RunTests.Parser
-open Wychelean.Hashes.SHA512.Rsp
+open Wychelean.Hashes.SHA512.Tests.Rsp
 
 /-- SHA512 examples from FIPS 180-2, Appendix C. -/
 def basic : Suite where
@@ -18,9 +20,9 @@ def basic : Suite where
     let multiBlock := hex! "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909"
     let millionA := hex! "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b"
     return [
-      check "FIPS abc" abc (sha512 "abc".toUTF8.data.toVector (by decide)),
+      check "FIPS abc" abc (sha512 "abc".toUTF8.data.toVector (by simp; decide)),
       check "FIPS 112-byte message" multiBlock
-        (sha512 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu".toUTF8.data.toVector (by decide)),
+        (sha512 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu".toUTF8.data.toVector (by simp; decide)),
       check "FIPS million-a message" millionA
         (sha512 (Vector.replicate 1000000 (0x61 : UInt8)) (by decide))
     ]
@@ -92,7 +94,7 @@ private def parserChecks : Suite where
 
 /-- All SHA512 suites. The byte-oriented Monte Carlo suite (100,000 hashes) always runs;
 `full` adds the bit-oriented one, which repeats it from a different seed. -/
-def suites (full := false) : List Suite :=
+public def suites (full := false) : List Suite :=
   let default := [basic,
     knownAnswers byteDir "SHA512ShortMsg.rsp" 129,
     knownAnswers byteDir "SHA512LongMsg.rsp" 128,

@@ -1,5 +1,7 @@
-import Wychelean.DH.X25519.Tests.Rfc7748
-import Wychelean.DH.X25519.Tests.WycheproofKat
+module
+
+public import Wychelean.DH.X25519.Tests.Rfc7748
+public import Wychelean.DH.X25519.Tests.WycheproofKat
 
 /-!
 # X25519 known-answer tests
@@ -10,6 +12,6 @@ KATs are checked in `Wychelean.DH.X25519.Tests.WycheproofKat`.
 
 namespace X25519.Tests
 
-def suites: List RunTests.Suite := [rfc7748, wycheproof]
+public def suites: List RunTests.Suite := [rfc7748, wycheproof]
 
 end X25519.Tests

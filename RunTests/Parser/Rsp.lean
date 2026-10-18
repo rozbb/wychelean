@@ -1,6 +1,10 @@
-import RunTests.Parser.Basic
+module
+
+public import RunTests.Parser.Basic
 
 /-! Combinators for NIST CAVP response files. -/
+
+public section
 
 namespace RunTests.Parser.Rsp
 

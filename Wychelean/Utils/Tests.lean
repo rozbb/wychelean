@@ -1,7 +1,9 @@
-import Wychelean.Utils.Bytes
-import Wychelean.Utils.Bitwise
-import Wychelean.Utils.Vector
-import RunTests.Basic
+module
+
+public import Wychelean.Utils.Bytes
+public import Wychelean.Utils.Bitwise
+public import Wychelean.Utils.Vector
+public import RunTests.Basic
 
 /-! Utility regression tests. -/
 
@@ -77,6 +79,6 @@ def bytes : Suite where
     check "BE prefix, 9 of 16" (0b010000110 : BitVec 9) (BitVec.ofBytesBEPrefix 9 #v[0x43, 0x00])
   ]
 
-def suites : List Suite := [bitwise, vector, bytes]
+public def suites : List Suite := [bitwise, vector, bytes]
 
 end Wychelean.Utils.Tests

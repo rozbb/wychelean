@@ -1,6 +1,8 @@
-import Wychelean.DH.X25519
-import RunTests.Basic
-import RunTests.Parser.Wycheproof
+module
+
+public import Wychelean.DH.X25519
+public import RunTests.Basic
+public import RunTests.Parser.Wycheproof
 
 /-!
 # X25519 Wycheproof known-answer tests
@@ -47,7 +49,7 @@ private def checkCase (c: Case Xdh): Test :=
       failure := some "expects the public key to be rejected, which `x25519` cannot express" }
 
 /-- Every Wycheproof vector, checked against X25519. -/
-def wycheproof: Suite where
+public def wycheproof: Suite where
   name := "X25519 (Wycheproof known-answer tests)"
   tests := do
     let file ← parseFile Xdh.ofJson vectorFile

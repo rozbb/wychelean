@@ -1,5 +1,7 @@
-import Wychelean.KEM.MLKEM.NTT
-import Wychelean.Utils.PolyRing.NTT
+module
+
+public import Wychelean.KEM.MLKEM.NTT
+public import Wychelean.Utils.PolyRing.NTT
 
 /-!
 # `R_q` as a ring
@@ -9,6 +11,8 @@ The specification represents `f ∈ R_q` by its coefficient array and never mult
 `Wychelean.Utils.PolyRing`, whose product is the negacyclic convolution, and `ζ` with a
 primitive 256-th root of unity.
 -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

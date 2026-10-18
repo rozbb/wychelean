@@ -1,4 +1,8 @@
-import Wychelean.Utils.PolyRing.Split
+module
+
+public import Wychelean.Utils.PolyRing.Split
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing
 

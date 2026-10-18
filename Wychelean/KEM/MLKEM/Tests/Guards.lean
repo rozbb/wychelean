@@ -1,4 +1,8 @@
-import Wychelean.KEM.MLKEM
+module
+
+public import Wychelean.KEM.MLKEM
+-- `#guard` evaluates its checks at elaboration time.
+meta import Wychelean.KEM.MLKEM
 
 /-!
 # ML-KEM elaboration-time checks

@@ -1,6 +1,10 @@
-import Wychelean.Utils.PolyRing.Split
-import Wychelean.Utils.PolyRing.ModBinomialProperties
-import Mathlib.Algebra.Ring.GeomSum
+module
+
+public import Wychelean.Utils.PolyRing.Split
+public import Wychelean.Utils.PolyRing.ModBinomialProperties
+public import Mathlib.Algebra.Ring.GeomSum
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing
 

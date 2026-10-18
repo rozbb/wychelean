@@ -1,6 +1,8 @@
-import Wychelean.KEM.MLKEM
-import RunTests.Basic
-import RunTests.Parser.Rsp
+module
+
+public import Wychelean.KEM.MLKEM
+public import RunTests.Basic
+public import RunTests.Parser.Rsp
 
 /-!
 # ML-KEM known-answer tests from the SymCrypt specification
@@ -104,7 +106,7 @@ private def cavp (name : String) (p : ParameterSet) (pick : Kat × Kat × Kat �
     let kats ← RunTests.Parser.parseFile parseAll vectorFile
     run p (pick kats)
 
-def cavpSuites : List Suite :=
+public def cavpSuites : List Suite :=
   [ appendixAAndRoundTrips,
     cavp "ML-KEM-512" .ML_KEM_512 (·.1),
     cavp "ML-KEM-768" .ML_KEM_768 (·.2.1),

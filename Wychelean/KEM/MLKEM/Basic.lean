@@ -1,12 +1,14 @@
-import Mathlib.Data.ZMod.Basic
-import Mathlib.Data.Bool.Basic
-import Mathlib.Algebra.BigOperators.Fin
-import Mathlib.Tactic.IntervalCases
-import Mathlib.Tactic.NormNum.Prime
-import Mathlib.Algebra.Field.ZMod
-import Wychelean.Utils.Round
-import Wychelean.KEM.MLKEM.NTT
-import Wychelean.Hashes.SHA3.XOF
+module
+
+public import Mathlib.Data.ZMod.Basic
+public import Mathlib.Data.Bool.Basic
+public import Mathlib.Algebra.BigOperators.Fin
+public import Mathlib.Tactic.IntervalCases
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.Algebra.Field.ZMod
+public import Wychelean.Utils.Round
+public import Wychelean.KEM.MLKEM.NTT
+public import Wychelean.Hashes.SHA3.XOF
 
 /-!
 # ML-KEM
@@ -14,6 +16,8 @@ FIPS 203: https://doi.org/10.6028/NIST.FIPS.203
 Adapted from Microsoft SymCrypt (MIT; see Wychelean/Hashes/SHA3/LICENSE.SymCrypt):
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/Spec/MLKEM/Spec.lean
 -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

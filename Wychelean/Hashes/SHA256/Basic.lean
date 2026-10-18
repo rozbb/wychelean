@@ -1,11 +1,15 @@
-import Wychelean.Utils.Bitwise
-import Wychelean.Utils.Bytes
+module
+
+public import Wychelean.Utils.Bitwise
+public import Wychelean.Utils.Bytes
 
 /-!
 # SHA-256
 Specification of SHA-256 as defined in FIPS 180-4.
 https://doi.org/10.6028/NIST.FIPS.180-4
 -/
+
+@[expose] public section
 
 namespace Wychelean.Hashes.SHA256
 

@@ -1,6 +1,10 @@
-import Wychelean.KEM.MLKEM.Properties.NTTEquivalence
+module
+
+public import Wychelean.KEM.MLKEM.Properties.NTTEquivalence
 
 /-! FIPS 203 §4.3: the NTT is a ring isomorphism `R_q ≃ T_q` computing the residues (4.12). -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

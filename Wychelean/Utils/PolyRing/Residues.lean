@@ -1,4 +1,8 @@
-import Wychelean.Utils.PolyRing.ModMonicProperties
+module
+
+public import Wychelean.Utils.PolyRing.ModMonicProperties
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing
 

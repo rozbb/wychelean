@@ -1,6 +1,10 @@
-import Wychelean.Utils.PolyRing.Split
-import Wychelean.Utils.Bits
-import Mathlib.GroupTheory.OrderOfElement
+module
+
+public import Wychelean.Utils.PolyRing.Split
+public import Wychelean.Utils.Bits
+public import Mathlib.GroupTheory.OrderOfElement
+
+@[expose] public section
 
 namespace Wychelean.Utils.PolyRing
 

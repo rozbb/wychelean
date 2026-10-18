@@ -1,6 +1,10 @@
-import Wychelean.KEM.MLKEM.Basic
+module
+
+public import Wychelean.KEM.MLKEM.Basic
 
 /-! FIPS 203 §4.2.1: encoding and decoding of integer arrays as bytes. -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

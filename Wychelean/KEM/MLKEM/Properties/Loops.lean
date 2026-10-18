@@ -1,7 +1,11 @@
-import Wychelean.KEM.MLKEM.Properties.Stages
-import Mathlib.Tactic.Ring
+module
+
+public import Wychelean.KEM.MLKEM.Properties.Stages
+public import Mathlib.Tactic.Ring
 
 /-! The FIPS loops of Algorithms 9–11 compute the stage folds of `Properties/Stages.lean`. -/
+
+@[expose] public section
 
 namespace Wychelean.KEM.MLKEM
 

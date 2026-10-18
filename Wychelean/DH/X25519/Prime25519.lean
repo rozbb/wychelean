@@ -1,6 +1,8 @@
-import Mathlib.NumberTheory.LucasPrimality
-import Mathlib.Tactic.NormNum.Prime
-import Mathlib.Data.ZMod.Basic
+module
+
+public import Mathlib.NumberTheory.LucasPrimality
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.Data.ZMod.Basic
 
 /-!
 # Proves the primality of the Curve25519 modulus and basepoint order
@@ -18,6 +20,8 @@ The one obstacle is that `ZMod`'s `Monoid.npow` is `npowRecAuto`, i.e. *unary* r
 `pow_eq_binRec` rewrites to Mathlib's repeated-squaring `npowBinRec`, which the kernel reduces
 in ~256 steps of GMP-accelerated `Fin` arithmetic.
 -/
+
+@[expose] public section
 
 namespace X25519
 

@@ -1,6 +1,8 @@
-import Wychelean.Hashes.SHA3.Tests.Rsp
-import Wychelean.Hashes.SHA3.XOF
-import RunTests.Basic
+module
+
+public import Wychelean.Hashes.SHA3.Tests.Rsp
+public import Wychelean.Hashes.SHA3.XOF
+public import RunTests.Basic
 
 namespace Wychelean.Hashes.SHA3.Tests
 open RunTests Rsp Std.Internal.Parsec.String
@@ -150,7 +152,7 @@ private def monte (dir file : String) (xof : Xof) : Suite where
     return tests.toList
 
 /-- Short-message and variable-output vectors; `full` adds long messages and Monte Carlo. -/
-def shakeSuites (full := false) : List Suite := Id.run do
+public def shakeSuites (full := false) : List Suite := Id.run do
   let mut short := [incrementalSuite]
   let mut long := []
   for (xof, bits) in [(Xof.shake128, 128), (Xof.shake256, 256)] do

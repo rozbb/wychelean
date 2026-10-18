@@ -1,13 +1,15 @@
-import RunTests.Basic
-import Wychelean.DH.X25519.Tests
-import Wychelean.Hashes.SHA256.Tests
-import Wychelean.Hashes.SHA512.Tests
-import Wychelean.Hashes.SHA3.Tests
-import Wychelean.Hashes.TurboSHAKE.Tests
-import Wychelean.KEM.MLKEM.Tests
-import Wychelean.Utils.PolyRing.Tests
-import Wychelean.Permutations.Keccak.Tests
-import Wychelean.Utils.Tests
+module
+
+public import RunTests.Basic
+public import Wychelean.DH.X25519.Tests
+public import Wychelean.Hashes.SHA256.Tests
+public import Wychelean.Hashes.SHA512.Tests
+public import Wychelean.Hashes.SHA3.Tests
+public import Wychelean.Hashes.TurboSHAKE.Tests
+public import Wychelean.KEM.MLKEM.Tests
+public import Wychelean.Utils.PolyRing.Tests
+public import Wychelean.Permutations.Keccak.Tests
+public import Wychelean.Utils.Tests
 
 /-!
 # Test driver
@@ -37,7 +39,7 @@ def suites (full := false): List Suite :=
 
 end RunTests
 
-def main (args : List String): IO UInt32 := do
+public def main (args : List String): IO UInt32 := do
   let full := args.contains "--full"
   let only := match args with
     | ["--only", pat] | ["--full", "--only", pat] | ["--only", pat, "--full"] => some pat
