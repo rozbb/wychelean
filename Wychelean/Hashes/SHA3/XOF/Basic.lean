@@ -13,7 +13,10 @@ section
 
 -- FIPS 202 §4: an underlying function on b-bit strings and a rate satisfying 0 < r < b.
 -- Under the module system, an autoParam on a `variable` breaks the declarations that use it, so
--- each declaration below takes `hr` as its own binder instead.
+-- each declaration below takes `hr` as its own binder instead. Once
+-- https://github.com/leanprover/lean4/issues/14718 is fixed, move `hr` (with its `by decide`
+-- default) back onto this `variable` and the one after `sponge.squeezeList`, and drop the explicit
+-- `hr` from the recursive call in `sponge.absorb`.
 variable (f : BitVec b → BitVec b) (r : Nat)
 
 /-- Absorbing state (FIPS 202 Algorithm 8, steps 4–6). -/
