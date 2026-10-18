@@ -1,6 +1,6 @@
 module
 
-public import Wychelean.Hashes.SHA512.Rsp
+public import Wychelean.Hashes.SHA512.Tests.Rsp
 public import RunTests.Basic
 public import RunTests.Parser.Hex
 
@@ -9,7 +9,7 @@ public import RunTests.Parser.Hex
 namespace Wychelean.Hashes.SHA512.Tests
 
 open RunTests RunTests.Parser
-open Wychelean.Hashes.SHA512.Rsp
+open Wychelean.Hashes.SHA512.Tests.Rsp
 
 /-- SHA512 examples from FIPS 180-2, Appendix C. -/
 def basic : Suite where

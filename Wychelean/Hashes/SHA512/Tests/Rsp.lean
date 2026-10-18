@@ -9,7 +9,7 @@ https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Pro
 
 public section
 
-namespace Wychelean.Hashes.SHA512.Rsp
+namespace Wychelean.Hashes.SHA512.Tests.Rsp
 
 open Std.Internal.Parsec Std.Internal.Parsec.String
 open RunTests.Parser RunTests.Parser.Rsp
@@ -53,4 +53,4 @@ def checkpoint (seed : Digest) : Digest := Id.run do
 def loadRsp {α : Type} (dir file : String) (parser : Parser α) : IO α := do
   parseFile parser (vectorDir / dir / file)
 
-end Wychelean.Hashes.SHA512.Rsp
+end Wychelean.Hashes.SHA512.Tests.Rsp

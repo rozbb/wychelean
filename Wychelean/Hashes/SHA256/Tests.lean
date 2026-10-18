@@ -1,6 +1,6 @@
 module
 
-public import Wychelean.Hashes.SHA256.Rsp
+public import Wychelean.Hashes.SHA256.Tests.Rsp
 public import RunTests.Basic
 public import RunTests.Parser.Hex
 
@@ -9,7 +9,7 @@ public import RunTests.Parser.Hex
 namespace Wychelean.Hashes.SHA256.Tests
 
 open RunTests RunTests.Parser
-open Wychelean.Hashes.SHA256.Rsp
+open Wychelean.Hashes.SHA256.Tests.Rsp
 
 /-- SHA256 examples from FIPS 180-2, Appendix B. -/
 def basic : Suite where
