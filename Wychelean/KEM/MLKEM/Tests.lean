@@ -7,11 +7,10 @@ public import Wychelean.KEM.MLKEM.Tests.Standalone
 public import Wychelean.KEM.MLKEM.Tests.Cavp
 public import Wychelean.KEM.MLKEM.Tests.Wycheproof
 
-public section
-
 namespace Wychelean.KEM.MLKEM.Tests
 
 /-- Known-answer tests; `full` runs every Wycheproof case instead of a sample per group. -/
-def suites (full := false) : List RunTests.Suite := arithmeticSuite :: cavpSuites ++ wycheproofSuites full
+public def suites (full := false) : List RunTests.Suite :=
+  arithmeticSuite :: cavpSuites ++ wycheproofSuites full
 
 end Wychelean.KEM.MLKEM.Tests

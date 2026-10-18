@@ -4,8 +4,6 @@ public import Wychelean.KEM.MLKEM
 public import RunTests.Basic
 public import RunTests.Parser.Wycheproof
 
-public section
-
 namespace Wychelean.KEM.MLKEM.Tests
 
 open RunTests RunTests.Parser RunTests.Parser.Wycheproof
@@ -169,7 +167,7 @@ private def suite (file : String) (type : String) (ofJson : Lean.Json → Except
 /-- All twelve files for the three parameter sets. A Keccak permutation costs milliseconds in this
 specification and each accepted case runs hundreds of them, so by default each group contributes
 its `invalid` and flagged cases and its first eight others; `full` runs every case. -/
-def wycheproofSuites (full := false) : List Suite := Id.run do
+public def wycheproofSuites (full := false) : List Suite := Id.run do
   let limit := if full then none else some 8
   let mut suites := []
   for size in ["512", "768", "1024"] do

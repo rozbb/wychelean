@@ -13,8 +13,6 @@ output are the published states after rounds 9 and 21, respectively (rounds 10â€
 The byte dumps use little-endian lane order; intermediate states print lane words in hex.
 -/
 
-public section
-
 namespace Wychelean.Permutations.Keccak.Tests
 open RunTests RunTests.Parser
 open Std.Internal.Parsec Std.Internal.Parsec.String
@@ -54,6 +52,6 @@ private def permutations (width : Width) : Suite where
         tests := tests ++ [check s!"trace {i + 1}, rounds 10â€“21" expected (keccak_p width 12 input)]
     return tests
 
-def suites : List Suite := [.w200, .w400, .w800, .w1600].map permutations
+public def suites : List Suite := [.w200, .w400, .w800, .w1600].map permutations
 
 end Wychelean.Permutations.Keccak.Tests

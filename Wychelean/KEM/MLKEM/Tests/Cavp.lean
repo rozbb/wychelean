@@ -11,8 +11,6 @@ NIST ACVP vectors and round-trip checks from SymCrypt:
 https://github.com/microsoft/SymCrypt/blob/c2e575ace0ea4b6b7a4184c1f19b81d1d5b2b5be/SymCRust/lean/SpecTests/MLKEM/TestVectors.lean
 -/
 
-public section
-
 namespace Wychelean.KEM.MLKEM.Tests
 
 open _root_.Wychelean.KEM.MLKEM.Polynomial (NTT)
@@ -108,7 +106,7 @@ private def cavp (name : String) (p : ParameterSet) (pick : Kat × Kat × Kat �
     let kats ← RunTests.Parser.parseFile parseAll vectorFile
     run p (pick kats)
 
-def cavpSuites : List Suite :=
+public def cavpSuites : List Suite :=
   [ appendixAAndRoundTrips,
     cavp "ML-KEM-512" .ML_KEM_512 (·.1),
     cavp "ML-KEM-768" .ML_KEM_768 (·.2.1),

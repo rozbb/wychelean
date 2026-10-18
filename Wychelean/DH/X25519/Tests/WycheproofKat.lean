@@ -20,8 +20,6 @@ u-coordinate, as RFC 7748 §5 permits, so both kinds are checked the same way. T
 since rejection is an outcome `x25519` has no way to express.
 -/
 
-public section
-
 namespace X25519.Tests
 
 open RunTests
@@ -51,7 +49,7 @@ private def checkCase (c: Case Xdh): Test :=
       failure := some "expects the public key to be rejected, which `x25519` cannot express" }
 
 /-- Every Wycheproof vector, checked against X25519. -/
-def wycheproof: Suite where
+public def wycheproof: Suite where
   name := "X25519 (Wycheproof known-answer tests)"
   tests := do
     let file ← parseFile Xdh.ofJson vectorFile

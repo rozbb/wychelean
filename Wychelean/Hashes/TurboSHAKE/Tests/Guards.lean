@@ -11,8 +11,6 @@ public import RunTests.Parser.Hex
 Evaluated when this module is built.
 -/
 
-public section
-
 namespace Wychelean.Hashes.TurboSHAKE.Tests
 open RunTests.Parser Permutations.Keccak
 

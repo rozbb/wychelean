@@ -14,8 +14,6 @@ The `ptn(17**5 bytes)` vectors run only in the full suite. We don't do the `ptn(
 absorbing is quadratic in the message length, so each would take over an hour.
 -/
 
-public section
-
 namespace Wychelean.Hashes.TurboSHAKE.Tests
 open RunTests RunTests.Parser Hashes.SHA3
 
@@ -188,7 +186,7 @@ private def turboShake256Instance : Instance where
   squeeze := TurboSHAKE256.squeeze
 
 /-- Every vector above; `full` adds the 1.4 MB messages. -/
-def rfc9861 (full := false) : List Suite :=
+public def rfc9861 (full := false) : List Suite :=
   [knownAnswers turboShake128Instance full, knownAnswers turboShake256Instance full]
 
 end Wychelean.Hashes.TurboSHAKE.Tests

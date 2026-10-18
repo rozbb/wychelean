@@ -6,8 +6,6 @@ public import RunTests.Parser.Hex
 
 /-! SHA256 FIPS examples and NIST CAVP suites. -/
 
-public section
-
 namespace Wychelean.Hashes.SHA256.Tests
 
 open RunTests RunTests.Parser
@@ -95,7 +93,7 @@ private def parserChecks : Suite where
   ]
 
 /-- All SHA256 suites. `full` adds the Monte Carlo suites (100,000 hashes each). -/
-def suites (full := false) : List Suite :=
+public def suites (full := false) : List Suite :=
   let default := [basic,
     knownAnswers byteDir "SHA256ShortMsg.rsp" 65,
     knownAnswers byteDir "SHA256LongMsg.rsp" 64,

@@ -3,8 +3,6 @@ module
 public import Wychelean.KEM.MLKEM
 public import RunTests.Basic
 
-public section
-
 namespace Wychelean.KEM.MLKEM.Tests
 
 open _root_.Wychelean.KEM.MLKEM.Polynomial (NTT)
@@ -35,7 +33,7 @@ private def domains : List (String × Tq) :=
    ("odd coefficients", ⟨Vector.ofFn fun i => if i.val % 2 = 1 then 1 else 0⟩)]
 
 /-- Agreement with the recursive algebraic operations on structurally different inputs. -/
-def arithmeticSuite : Suite where
+public def arithmeticSuite : Suite where
   name := "ML-KEM FIPS arithmetic agreement"
   tests := IO.lazyPure fun _ =>
     (polynomials.flatMap fun (name, f) => [

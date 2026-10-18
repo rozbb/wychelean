@@ -3,8 +3,6 @@ module
 public import Wychelean.Hashes.SHA3.Tests.Rsp
 public import RunTests.Basic
 
-public section
-
 namespace Wychelean.Hashes.SHA3.Tests
 open RunTests Rsp
 
@@ -59,7 +57,7 @@ private def knownAnswers (dir file : String) (variant : Variant)
         (toHex v.output.bytes.toVector) (toHex actual.toVector)
 
 /-- All short-message test vectors; `full` also includes the long-message ones. -/
-def suites (full := false) : List Suite :=
+public def suites (full := false) : List Suite :=
   let byte (file : String) (variant : Variant) :=
     knownAnswers "sha-3bytetestvectors" file variant
   let bit (file : String) (variant : Variant) :=

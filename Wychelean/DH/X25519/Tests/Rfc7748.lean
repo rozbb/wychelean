@@ -12,8 +12,6 @@ Test vectors for the scalar/u-coordinate codec and for X25519 itself, taken from
 * <https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1> (a Diffie-Hellman exchange).
 -/
 
-public section
-
 namespace X25519.Tests
 
 open RunTests RunTests.Parser
@@ -89,7 +87,7 @@ private def products: List (String × Vector UInt8 32 × Vector UInt8 32 × Vect
 /-! ## Suite -/
 
 /-- Every vector above, checked against the codec and against X25519. -/
-def rfc7748: Suite where
+public def rfc7748: Suite where
   name := "X25519 (RFC 7748 known-answer tests)"
   tests := do
     let mut tests: Array Test := #[]

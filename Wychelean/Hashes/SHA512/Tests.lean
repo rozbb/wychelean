@@ -6,8 +6,6 @@ public import RunTests.Parser.Hex
 
 /-! SHA512 FIPS examples and NIST CAVP suites. -/
 
-public section
-
 namespace Wychelean.Hashes.SHA512.Tests
 
 open RunTests RunTests.Parser
@@ -96,7 +94,7 @@ private def parserChecks : Suite where
 
 /-- All SHA512 suites. The byte-oriented Monte Carlo suite (100,000 hashes) always runs;
 `full` adds the bit-oriented one, which repeats it from a different seed. -/
-def suites (full := false) : List Suite :=
+public def suites (full := false) : List Suite :=
   let default := [basic,
     knownAnswers byteDir "SHA512ShortMsg.rsp" 129,
     knownAnswers byteDir "SHA512LongMsg.rsp" 128,
