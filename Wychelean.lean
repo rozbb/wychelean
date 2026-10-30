@@ -1,5 +1,6 @@
 module
 
+public import Wychelean.BlockCiphers.Rijndael
 public import Wychelean.Hashes.SHA256
 public import Wychelean.Hashes.SHA512
 public import Wychelean.DH.X25519
