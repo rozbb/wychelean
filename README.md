@@ -26,8 +26,8 @@ Every primitive contains its own tests in `Tests.lean`. Suites are registered in
 The ordinary `lake build` target does not import the test suites.
 
 `lake test -- --full` adds the slow suites: SHA3 and SHAKE long-message and Monte Carlo vectors,
-the TurboSHAKE vectors with 1.4 MB messages, and every ML-KEM Wycheproof case rather than a sample
-of each group.
+the TurboSHAKE vectors with 1.4 MB messages, the AES Monte Carlo vectors, and every ML-KEM
+Wycheproof case rather than a sample of each group.
 
 # Docs
 

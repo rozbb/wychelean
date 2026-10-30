@@ -41,7 +41,10 @@ def bitwise : Suite where
     check "(1 : UInt64).rotl 63" 0x8000000000000000 ((1 : UInt64).rotl 63),
     check "(0x123456789abcdef0 : UInt64).rotl 4" 0x23456789abcdef01 ((0x123456789abcdef0 : UInt64).rotl 4),
     check "((0xdeadbeefcafebabe : UInt64).rotr 13).rotl 13" 0xdeadbeefcafebabe
-      (((0xdeadbeefcafebabe : UInt64).rotr 13).rotl 13)
+      (((0xdeadbeefcafebabe : UInt64).rotr 13).rotl 13),
+    check "(1 : UInt8).rotr 1" 0x80 ((1 : UInt8).rotr 1),
+    check "(0x12 : UInt8).rotr 4" 0x21 ((0x12 : UInt8).rotr 4),
+    check "(0x12 : UInt8).rotr 12" 0x21 ((0x12 : UInt8).rotr 12)
   ]
 
 def vector : Suite where
