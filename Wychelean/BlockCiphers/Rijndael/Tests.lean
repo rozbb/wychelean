@@ -5,7 +5,7 @@ public import RunTests.Basic
 public import RunTests.Parser.Hex
 public import RunTests.Parser.Rsp
 
-/-! Rijndael FIPS 197 examples, NIST CAVP suites, and Rijndael with 192- and 256-bit blocks. -/
+/-! Rijndael FIPS 197 examples, NIST CAVP suites, and Rijndael with other block and key lengths. -/
 
 namespace Wychelean.BlockCiphers.Rijndael.Tests
 
@@ -14,15 +14,22 @@ open Std.Internal.Parsec Std.Internal.Parsec.String
 
 private def hexOf (bytes : Array UInt8) : String := toHex bytes.toVector
 
+private def keyLength? : Nat → Option KeyLength
+  | 16 => some .k128 | 20 => some .k160 | 24 => some .k192 | 28 => some .k224 | 32 => some .k256
+  | _ => none
+
+private def blockLength? : Nat → Option BlockLength
+  | 16 => some .b128 | 20 => some .b160 | 24 => some .b192 | 28 => some .b224 | 32 => some .b256
+  | _ => none
+
 /-- Rijndael, or its inverse, with the key and block lengths of `key` and `inp`. -/
 private def run (inverse : Bool) (key inp : Array UInt8) : IO (Array UInt8) := do
-  let Nk := key.size / 4
-  let Nb := inp.size / 4
-  let key ← IO.ofExcept (toFixed (4 * Nk) key)
-  let inp ← IO.ofExcept (toFixed (4 * Nb) inp)
-  if h : Nk ∈ [4, 6, 8] ∧ Nb ∈ [4, 6, 8] then
-    return (if inverse then rijndaelInv Nk Nb inp key h else rijndael Nk Nb inp key h).toArray
-  else throw (IO.userError s!"no Rijndael with a {key.size}-byte key and a {inp.size}-byte block")
+  let some k := keyLength? key.size | throw (IO.userError s!"no Rijndael with a {key.size}-byte key")
+  let some b := blockLength? inp.size
+    | throw (IO.userError s!"no Rijndael with a {inp.size}-byte block")
+  let key ← IO.ofExcept (toFixed (4 * k.Nk) key)
+  let inp ← IO.ofExcept (toFixed (4 * b.Nb) inp)
+  return (if inverse then rijndaelInv k b inp key else rijndael k b inp key).toArray
 
 /-- Checks `f` against each record, forward on `(plaintext, ciphertext)` and inverse on
 `(ciphertext, plaintext)`. -/
@@ -99,12 +106,19 @@ def fips : Suite where
     return [
       check "Table 4" (← decode 256 table4) sboxTable,
       check "Table 6" (← decode 256 table6) invSboxTable,
+      check "Eq. 4.6" (hex! "57ae478e070e1c38")
+        (Vector.ofFn fun i : Fin 8 => Nat.repeat GF.xtimes i.val 0x57),
+      check "Eq. 4.6: {57} • {80}" 0x38 (GF.mul 0x57 0x80),
       check "Eq. 4.7: {57} • {13}" 0xfe (GF.mul 0x57 0x13),
+      check "Eq. 4.5: XTIMES(b) = b • {02} for all b" true
+        ((List.range 256).all fun b => GF.xtimes b.toUInt8 == GF.mul b.toUInt8 0x02),
+      check "Eq. 4.10: b • b̃ = {01} for all b ≠ {00}" true
+        ((List.range' 1 255).all fun b => GF.mul b.toUInt8 (tilde b.toUInt8) == 0x01),
       check "Table 5" (hex! "01020408102040801b36")
         (Vector.ofFn fun j : Fin 10 => (rcon (j.val + 1))[0]),
-      check "Appendix A.1" a1 (flatten (keyExpansion 4 4 (a1.take 16))),
-      check "Appendix A.2" a2 (flatten (keyExpansion 6 4 (a2.take 24))),
-      check "Appendix A.3" a3 (flatten (keyExpansion 8 4 (a3.take 32))),
+      check "Appendix A.1" a1 (flatten (keyExpansion .k128 .b128 (a1.take 16))),
+      check "Appendix A.2" a2 (flatten (keyExpansion .k192 .b128 (a2.take 24))),
+      check "Appendix A.3" a3 (flatten (keyExpansion .k256 .b128 (a3.take 32))),
       check "Appendix B, AES-128" outB (aes128 inB keyB),
       check "Appendix B, AES-128⁻¹" inB (aes128Inv outB keyB)
     ]
@@ -164,25 +178,47 @@ private def monteCarlo (bits : Nat) : Suite where
   verbose := false
   tests := do checkBoth chain (← load "aesmct" s!"ECBMCT{bits}.rsp" 100)
 
-/-! ## Rijndael with 192- and 256-bit blocks -/
+/-! ## Rijndael with other block and key lengths -/
 
-/-- The example vectors of Brian Gladman's Rijndael vector set, as listed in Bouncy Castle:
-https://github.com/bcgit/bc-java/blob/fbf45880df47a47e157dd6b17fbfbce980854e29/core/src/test/java/org/bouncycastle/crypto/test/RijndaelTest.java -/
+/-- The 25 example vectors of Brian Gladman's `dev_vec.txt`, one for each pair of key and block
+lengths, as listed in cryptopy: the key and plaintext are prefixes of `key` and `pt`.
+https://github.com/dustcloud/smartmeshsdk/blob/a95f3e4d9e2254d59d326428fef8c77319cd4373/external_libs/cryptopy/crypto/cipher/rijndael_test.py -/
 def gladman : Suite where
   name := "Rijndael Gladman examples"
   tests := do
     let key := (hex! "2b7e151628aed2a6abf7158809cf4f3c762e7160f38b4da56a784d9045190cfe").toArray
     let pt := (hex! "3243f6a8885a308d313198a2e03707344a4093822299f31d0082efa98ec4e6c8").toArray
-    checkBoth run <|
-      [(16, 24, (hex! "b24d275489e82bb8f7375e0d5fcdb1f481757c538b65148a").toArray),
-       (24, 24, (hex! "725ae43b5f3161de806a7c93e0bca93c967ec1ae1b71e1cf").toArray),
-       (32, 24, (hex! "0ebacf199e3315c2e34b24fcc7c46ef4388aa475d66c194c").toArray),
-       (16, 32, (hex! "7d15479076b69a46ffb3b3beae97ad8313f622f67fedb487de9f06b9ed9c8f19").toArray),
-       (24, 32, (hex! "5d7101727bb25781bf6715b0e6955282b9610e23a43c2eb062699f0ebf5887b2").toArray),
-       (32, 32, (hex! "a49406115dfb30a40418aafa4869b7c6a886ff31602a7dd19c889dc64f7e4e7a").toArray)
-      ].map fun (keyBytes, blockBytes, ct) =>
-        (s!"{8 * keyBytes}-bit key, {8 * blockBytes}-bit block",
-          key.extract 0 keyBytes, pt.extract 0 blockBytes, ct)
+    let vectors := [
+      (16, 16, "3925841d02dc09fbdc118597196a0b32"),
+      (20, 16, "231d844639b31b412211cfe93712b880"),
+      (24, 16, "f9fb29aefc384a250340d833b87ebc00"),
+      (28, 16, "8faa8fe4dee9eb17caa4797502fc9d3f"),
+      (32, 16, "1a6e6c2c662e7da6501ffb62bc9e93f3"),
+      (16, 20, "16e73aec921314c29df905432bc8968ab64b1f51"),
+      (20, 20, "0553eb691670dd8a5a5b5addf1aa7450f7a0e587"),
+      (24, 20, "73cd6f3423036790463aa9e19cfcde894ea16623"),
+      (28, 20, "601b5dcd1cf4ece954c740445340bf0afdc048df"),
+      (32, 20, "579e930b36c1529aa3e86628bacfe146942882cf"),
+      (16, 24, "b24d275489e82bb8f7375e0d5fcdb1f481757c538b65148a"),
+      (20, 24, "738dae25620d3d3beff4a037a04290d73eb33521a63ea568"),
+      (24, 24, "725ae43b5f3161de806a7c93e0bca93c967ec1ae1b71e1cf"),
+      (28, 24, "bbfc14180afbf6a36382a061843f0b63e769acdc98769130"),
+      (32, 24, "0ebacf199e3315c2e34b24fcc7c46ef4388aa475d66c194c"),
+      (16, 28, "b0a8f78f6b3c66213f792ffd2a61631f79331407a5e5c8d3793aceb1"),
+      (20, 28, "08b99944edfce33a2acb131183ab0168446b2d15e958480010f545e3"),
+      (24, 28, "be4c597d8f7efe22a2f7e5b1938e2564d452a5bfe72399c7af1101e2"),
+      (28, 28, "ef529598ecbce297811b49bbed2c33bbe1241d6e1a833dbe119569e8"),
+      (32, 28, "02fafc200176ed05deb8edb82a3555b0b10d47a388dfd59cab2f6c11"),
+      (16, 32, "7d15479076b69a46ffb3b3beae97ad8313f622f67fedb487de9f06b9ed9c8f19"),
+      (20, 32, "514f93fb296b5ad16aa7df8b577abcbd484decacccc7fb1f18dc567309ceeffd"),
+      (24, 32, "5d7101727bb25781bf6715b0e6955282b9610e23a43c2eb062699f0ebf5887b2"),
+      (28, 32, "d56c5a63627432579e1dd308b2c8f157b40a4bfb56fea1377b25d3ed3d6dbf80"),
+      (32, 32, "a49406115dfb30a40418aafa4869b7c6a886ff31602a7dd19c889dc64f7e4e7a")]
+    let records ← vectors.mapM fun (keyBytes, blockBytes, ct) => do
+      let ct ← IO.ofExcept (fromHex (n := blockBytes) ct)
+      return (s!"{8 * keyBytes}-bit key, {8 * blockBytes}-bit block",
+        key.extract 0 keyBytes, pt.extract 0 blockBytes, ct.toArray)
+    checkBoth run records
 
 /-- faest-ref's Rijndael tests (MIT):
 https://github.com/faest-sign/faest-ref/blob/4fb6b71143b37764546b7c7729440d9cd8898a5e/tests/aes.cpp -/
