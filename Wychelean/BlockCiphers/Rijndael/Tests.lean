@@ -128,20 +128,23 @@ def fips : Suite where
 private def vectorDir : System.FilePath := "Wychelean/BlockCiphers/Rijndael/TestVectors"
 
 /-- `COUNT`, `KEY`, then `PLAINTEXT` and `CIPHERTEXT` in the order of the section; returns
-`(key, plaintext, ciphertext)`. -/
-private def record (decrypt : Bool) : Parser (Array UInt8 × Array UInt8 × Array UInt8) := do
-  let _ ← field "COUNT" digits
+`(count, key, plaintext, ciphertext)`. -/
+private def record (decrypt : Bool) :
+    Parser (Nat × Array UInt8 × Array UInt8 × Array UInt8) := do
+  let count ← field "COUNT" digits
   let key ← field "KEY" readHex
   if decrypt then
     let ct ← field "CIPHERTEXT" readHex
-    return (key, ← field "PLAINTEXT" readHex, ct)
+    return (count, key, ← field "PLAINTEXT" readHex, ct)
   else
     let pt ← field "PLAINTEXT" readHex
-    return (key, pt, ← field "CIPHERTEXT" readHex)
+    return (count, key, pt, ← field "CIPHERTEXT" readHex)
 
-private def named (sec : String) (records : Array (Array UInt8 × Array UInt8 × Array UInt8)) :
+/-- Labels each record with its section and its own `COUNT`. -/
+private def named (sec : String)
+    (records : Array (Nat × Array UInt8 × Array UInt8 × Array UInt8)) :
     List (String × Array UInt8 × Array UInt8 × Array UInt8) :=
-  records.toList.zipIdx.map fun (r, i) => (s!"{sec} COUNT = {i}", r)
+  records.toList.map fun (count, r) => (s!"{sec} COUNT = {count}", r)
 
 /-- The `[ENCRYPT]` and `[DECRYPT]` sections of a response file, each with `count` records. -/
 private def load (dir file : String) (count : Nat) :
@@ -237,7 +240,8 @@ private def katCounts : List (String × Nat) :=
    ("VarKey128", 128), ("VarKey192", 192), ("VarKey256", 256),
    ("VarTxt128", 128), ("VarTxt192", 128), ("VarTxt256", 128)]
 
-/-- All Rijndael suites. `full` adds the Monte Carlo suites (100,000 blocks per direction each). -/
+/-- All Rijndael suites. `full` adds the Monte Carlo suites (200,000 blocks per direction each:
+both sections, each checked in both directions). -/
 public def suites (full := false) : List Suite :=
   let default := [fips] ++
     katCounts.map (fun (name, count) => knownAnswers "KAT_AES" s!"ECB{name}.rsp" count) ++
