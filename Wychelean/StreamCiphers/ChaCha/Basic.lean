@@ -8,10 +8,7 @@ public import Wychelean.Utils.Bytes
 Specification of the ChaCha20 stream cipher as defined in RFC 8439 §2.1–§2.4.
 https://www.rfc-editor.org/rfc/rfc8439.html#section-2
 
-The core of the cipher, the block function on a 16-word state, is exposed with the number of rounds
-as a parameter (`block`), so that other constructions built from it (ChaCha8 and ChaCha12, the
-original 64-bit-nonce layout, RNGs, BLAKE2-style hashes) can reuse it. The RFC 8439 state layout
-and ChaCha20 cipher are built on top.
+The RFC 8439 state layout and ChaCha20 cipher are built on top.
 -/
 
 @[expose] public section
@@ -74,22 +71,22 @@ def diagonalRound (s : State) : State :=
 /-- `inner_block` from §2.3.1: a column round followed by a diagonal round. -/
 def doubleRound (s : State) : State := diagonalRound (columnRound s)
 
-/-- Apply `r` rounds to the state, alternating column and diagonal rounds, starting with a column
-round (§2.3). ChaCha20 is `r = 20`, i.e., 10 double rounds. -/
-def rounds (r : Nat) (s : State) : State :=
-  Fin.foldl r (fun s i => if i.val % 2 = 0 then columnRound s else diagonalRound s) s
+/-- Apply `numRound` rounds to the state, alternating column and diagonal rounds, starting with a
+column round (§2.3). ChaCha20 is `numRound = 20`, i.e., 10 double rounds. -/
+def rounds (numRound : Nat) (s : State) : State :=
+  Fin.foldl numRound (fun s i => if i.val % 2 = 0 then columnRound s else diagonalRound s) s
 
-/-- The ChaCha block function with `r` rounds on an arbitrary input state: run the rounds, then
-add the input state word-wise modulo `2 ^ 32` (§2.3). The result is a state; see `blockBytesOf` for
-the serialized form. This is the reusable core: it fixes no layout of constants, key, counter or
-nonce. -/
-def block (r : Nat) (s : State) : State :=
-  Vector.zipWith (· + ·) (rounds r s) s
+/-- The ChaCha block function with `numRound` rounds on an arbitrary input state: run the rounds,
+then add the input state word-wise modulo `2 ^ 32` (§2.3). The result is a state; see
+`blockBytesOf` for the serialized form. This is the reusable core: it fixes no layout of constants,
+key, counter or nonce. -/
+def block (numRound : Nat) (s : State) : State :=
+  Vector.zipWith (· + ·) (rounds numRound s) s
 
-/-- The ChaCha block function with `r` rounds, serialized as 64 bytes, each word little-endian
-(§2.3). -/
-def blockBytesOf (r : Nat) (s : State) : ByteVec blockBytes :=
-  wordsToBytesLE (block r s)
+/-- The ChaCha block function with `numRound` rounds, serialized as 64 bytes, each word
+little-endian (§2.3). -/
+def blockBytesOf (numRound : Nat) (s : State) : ByteVec blockBytes :=
+  wordsToBytesLE (block numRound s)
 
 /-! ## RFC 8439 layout -/
 
@@ -102,11 +99,11 @@ def initState (key : ByteVec keyBytes) (counter : UInt32) (nonce : ByteVec nonce
   (constants ++ wordsOfBytesLE (n := 8) key ++ #v[counter] ++ wordsOfBytesLE (n := 3) nonce).cast
     (by decide)
 
-/-- The RFC 8439 ChaCha block function with `r` rounds: 64 keystream bytes for the given key,
-block counter and nonce (§2.3). -/
-def chachaBlock (r : Nat) (key : ByteVec keyBytes) (counter : UInt32) (nonce : ByteVec nonceBytes) :
-    ByteVec blockBytes :=
-  blockBytesOf r (initState key counter nonce)
+/-- The RFC 8439 ChaCha block function with `numRound` rounds: 64 keystream bytes for the given
+key, block counter and nonce (§2.3). -/
+def chachaBlock (numRound : Nat) (key : ByteVec keyBytes) (counter : UInt32)
+    (nonce : ByteVec nonceBytes) : ByteVec blockBytes :=
+  blockBytesOf numRound (initState key counter nonce)
 
 /-- `chacha20_block(key, counter, nonce)` (§2.3.1). -/
 def chacha20Block (key : ByteVec keyBytes) (counter : UInt32) (nonce : ByteVec nonceBytes) :
@@ -120,18 +117,19 @@ abbrev numBlocks (n : Nat) : Nat := (n + blockBytes - 1) / blockBytes
 
 /-- The keystream for `m` blocks: the serialized blocks for counters `counter, …, counter + m - 1`,
 concatenated (§2.4). Requires that the counter does not wrap. -/
-def keystream (r : Nat) (key : ByteVec keyBytes) (counter : UInt32) (nonce : ByteVec nonceBytes)
-    (m : Nat) (_ : counter.toNat + m ≤ 2 ^ 32) : ByteVec (m * blockBytes) :=
-  (Vector.ofFn fun (j : Fin m) => chachaBlock r key (counter + j.val.toUInt32) nonce).flatten
+def keystream (numRound : Nat) (key : ByteVec keyBytes) (counter : UInt32)
+    (nonce : ByteVec nonceBytes) (m : Nat) (_ : counter.toNat + m ≤ 2 ^ 32) :
+    ByteVec (m * blockBytes) :=
+  (Vector.ofFn fun (j : Fin m) => chachaBlock numRound key (counter + j.val.toUInt32) nonce).flatten
 
-/-- RFC 8439 ChaCha encryption with `r` rounds: XOR the message with the keystream starting at
-block `counter`, discarding any keystream left over after the last byte (§2.4). Decryption is the
-same operation. The block counter must not wrap: a single (key, nonce) pair covers at most `2 ^ 32`
-blocks (§2.3). -/
-def chachaEncrypt (r : Nat) {n : Nat} (key : ByteVec keyBytes) (counter : UInt32)
+/-- RFC 8439 ChaCha encryption with `numRound` rounds: XOR the message with the keystream
+starting at block `counter`, discarding any keystream left over after the last byte (§2.4).
+Decryption is the same operation. The block counter must not wrap: a single (key, nonce) pair
+covers at most `2 ^ 32` blocks (§2.3). -/
+def chachaEncrypt (numRound : Nat) {n : Nat} (key : ByteVec keyBytes) (counter : UInt32)
     (nonce : ByteVec nonceBytes) (msg : ByteVec n)
     (h : counter.toNat + numBlocks n ≤ 2 ^ 32) : ByteVec n :=
-  let ks := keystream r key counter nonce (numBlocks n) h
+  let ks := keystream numRound key counter nonce (numBlocks n) h
   Vector.ofFn fun i => msg[i] ^^^ ks[i.val]'(by
     have := i.isLt; simp only [numBlocks, blockBytes, stateWords] at *; omega)
 
