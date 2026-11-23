@@ -33,6 +33,20 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+
+      # doc-gen4 runs one process per module, each loading that module's imports (much of
+      # Mathlib), so peak memory can exceed the runner's 16 GB. Without swap, spawning `git` for
+      # the source links then fails with ENOMEM ("resource exhausted (error code: 12)").
+      - name: Add swap
+        run: |
+          free -h
+          df -h /
+          sudo fallocate -l 8G /docs-swapfile
+          sudo chmod 600 /docs-swapfile
+          sudo mkswap /docs-swapfile
+          sudo swapon /docs-swapfile
+          free -h
+
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: docbuild
