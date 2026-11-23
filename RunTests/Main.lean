@@ -10,6 +10,7 @@ public import Wychelean.Hashes.TurboSHAKE.Tests
 public import Wychelean.KEM.MLKEM.Tests
 public import Wychelean.Utils.PolyRing.Tests
 public import Wychelean.Permutations.Keccak.Tests
+public import Wychelean.StreamCiphers.ChaCha.Tests
 public import Wychelean.Utils.Tests
 
 /-!
@@ -37,7 +38,8 @@ def suites (full := false): List Suite :=
     KEM.MLKEM.Tests.suites full,
     Utils.PolyRing.Tests.suites,
     Permutations.Keccak.Tests.suites,
-    BlockCiphers.Rijndael.Tests.suites full ].flatten
+    BlockCiphers.Rijndael.Tests.suites full,
+    StreamCiphers.ChaCha.Tests.suites ].flatten
 
 end RunTests
 
