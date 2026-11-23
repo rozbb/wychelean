@@ -11,6 +11,7 @@ public import Wychelean.KEM.MLKEM.Tests
 public import Wychelean.Utils.PolyRing.Tests
 public import Wychelean.Permutations.Keccak.Tests
 public import Wychelean.StreamCiphers.ChaCha.Tests
+public import Wychelean.RNGs.ChaCha8Rand.Tests
 public import Wychelean.Utils.Tests
 
 /-!
@@ -39,7 +40,8 @@ def suites (full := false): List Suite :=
     Utils.PolyRing.Tests.suites,
     Permutations.Keccak.Tests.suites,
     BlockCiphers.Rijndael.Tests.suites full,
-    StreamCiphers.ChaCha.Tests.suites ].flatten
+    StreamCiphers.ChaCha.Tests.suites,
+    RNGs.ChaCha8Rand.Tests.suites ].flatten
 
 end RunTests
 

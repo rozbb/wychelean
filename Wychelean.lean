@@ -9,6 +9,7 @@ public import Wychelean.Hashes.TurboSHAKE
 public import Wychelean.Permutations.Keccak
 public import Wychelean.KEM.MLKEM
 public import Wychelean.StreamCiphers.ChaCha
+public import Wychelean.RNGs.ChaCha8Rand
 public import Wychelean.Utils.PolyRing
 
 @[expose] public section
