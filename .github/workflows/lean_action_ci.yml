@@ -33,6 +33,15 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+
+      # During the docs build `lake` reserves far more virtual memory than it uses (up to 111 GB
+      # reserved against about 1 GB resident, observed). Under the default heuristic overcommit
+      # mode the kernel then refuses to create the `git` processes for the source links, failing
+      # with ENOMEM ("resource exhausted (error code: 12)") although real memory use stays around
+      # 3 GB.
+      - name: Allow memory overcommit
+        run: sudo sysctl -w vm.overcommit_memory=1
+
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: docbuild
