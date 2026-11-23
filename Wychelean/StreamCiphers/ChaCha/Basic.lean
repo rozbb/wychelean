@@ -77,16 +77,10 @@ def rounds (numRound : Nat) (s : State) : State :=
   Fin.foldl numRound (fun s i => if i.val % 2 = 0 then columnRound s else diagonalRound s) s
 
 /-- The ChaCha block function with `numRound` rounds on an arbitrary input state: run the rounds,
-then add the input state word-wise modulo `2 ^ 32` (§2.3). The result is a state; see
-`blockBytesOf` for the serialized form. This is the reusable core: it fixes no layout of constants,
-key, counter or nonce. -/
+then add the input state word-wise modulo `2 ^ 32` (§2.3). The result is a state, before
+serialization. This is the reusable core: it fixes no layout of constants, key, counter or nonce. -/
 def block (numRound : Nat) (s : State) : State :=
   Vector.zipWith (· + ·) (rounds numRound s) s
-
-/-- The ChaCha block function with `numRound` rounds, serialized as 64 bytes, each word
-little-endian (§2.3). -/
-def blockBytesOf (numRound : Nat) (s : State) : ByteVec blockBytes :=
-  wordsToBytesLE (block numRound s)
 
 /-! ## RFC 8439 layout -/
 
@@ -100,10 +94,10 @@ def initState (key : ByteVec keyBytes) (counter : UInt32) (nonce : ByteVec nonce
     (by decide)
 
 /-- The RFC 8439 ChaCha block function with `numRound` rounds: 64 keystream bytes for the given
-key, block counter and nonce (§2.3). -/
+key, block counter and nonce, serialized with each word little-endian (§2.3). -/
 def chachaBlock (numRound : Nat) (key : ByteVec keyBytes) (counter : UInt32)
     (nonce : ByteVec nonceBytes) : ByteVec blockBytes :=
-  blockBytesOf numRound (initState key counter nonce)
+  wordsToBytesLE (block numRound (initState key counter nonce))
 
 /-- `chacha20_block(key, counter, nonce)` (§2.3.1). -/
 def chacha20Block (key : ByteVec keyBytes) (counter : UInt32) (nonce : ByteVec nonceBytes) :
