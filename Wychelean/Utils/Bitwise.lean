@@ -6,6 +6,9 @@ module
 Bitwise helpers on fixed-width integers not provided by core Lean.
 -/
 
+/-- `x.rotr n` rotates `x` right by `n` bits: bit `i` of the result is bit `(i + n) mod 8` of `x`. -/
+def UInt8.rotr (x : UInt8) (n : Nat) : UInt8 := ⟨x.toBitVec.rotateRight n⟩
+
 /-- `x.rotr n` rotates `x` right by `n` bits, `ROTRⁿ(x)` in FIPS 180-4. The amount is taken modulo 32. -/
 def UInt32.rotr (x : UInt32) (n : Nat) : UInt32 := ⟨x.toBitVec.rotateRight n⟩
 

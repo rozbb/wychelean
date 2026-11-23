@@ -1,6 +1,7 @@
 module
 
 public import RunTests.Basic
+public import Wychelean.BlockCiphers.Rijndael.Tests
 public import Wychelean.DH.X25519.Tests
 public import Wychelean.Hashes.SHA256.Tests
 public import Wychelean.Hashes.SHA512.Tests
@@ -17,8 +18,8 @@ public import Wychelean.Utils.Tests
 Runs every specification's test suites. Each suite lives next to the specification it tests; adding
 one means importing its module and listing it here.
 Use `lake test -- --full` to add the SHA3 and SHAKE long-message and Monte Carlo vectors, the
-TurboSHAKE vectors with 1.4 MB messages and the SHA-2 Monte Carlo suites, and to run every ML-KEM
-Wycheproof case rather than a sample of each group.
+TurboSHAKE vectors with 1.4 MB messages and the SHA-2 and AES Monte Carlo suites, and to run every
+ML-KEM Wycheproof case rather than a sample of each group.
 -/
 
 namespace RunTests
@@ -35,7 +36,8 @@ def suites (full := false): List Suite :=
     Hashes.TurboSHAKE.Tests.suites full,
     KEM.MLKEM.Tests.suites full,
     Utils.PolyRing.Tests.suites,
-    Permutations.Keccak.Tests.suites ].flatten
+    Permutations.Keccak.Tests.suites,
+    BlockCiphers.Rijndael.Tests.suites full ].flatten
 
 end RunTests
 
