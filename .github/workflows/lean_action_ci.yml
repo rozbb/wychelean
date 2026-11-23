@@ -34,32 +34,13 @@ jobs:
         with:
           persist-credentials: false
 
-      # During the docs build `lake` reserves far more virtual memory than it uses (94 GB reserved
-      # against under 1 GB resident, observed). Under the default heuristic overcommit mode the
-      # kernel then refuses to create the `git` processes for the source links, failing with
-      # ENOMEM ("resource exhausted (error code: 12)") although real memory use stays around 3 GB.
+      # During the docs build `lake` reserves far more virtual memory than it uses (up to 111 GB
+      # reserved against about 1 GB resident, observed). Under the default heuristic overcommit
+      # mode the kernel then refuses to create the `git` processes for the source links, failing
+      # with ENOMEM ("resource exhausted (error code: 12)") although real memory use stays around
+      # 3 GB.
       - name: Allow memory overcommit
         run: sudo sysctl -w vm.overcommit_memory=1
-
-      # Diagnostics for the ENOMEM failures: limits that can make process creation fail, then a
-      # background log of memory and the largest processes, printed by the last step.
-      - name: Log memory in background
-        run: |
-          echo "overcommit_memory=$(cat /proc/sys/vm/overcommit_memory)" \
-            "overcommit_ratio=$(cat /proc/sys/vm/overcommit_ratio)" \
-            "max_map_count=$(cat /proc/sys/vm/max_map_count)" \
-            "pid_max=$(cat /proc/sys/kernel/pid_max)" \
-            "threads-max=$(cat /proc/sys/kernel/threads-max)"
-          ulimit -a
-          nohup bash -c 'while true; do
-            date -u +%T
-            free -m
-            grep -E "^(Committed_AS|CommitLimit):" /proc/meminfo
-            echo "processes: $(ps -e --no-headers | wc -l), threads: $(ps -eL --no-headers | wc -l)"
-            ps -eo rss,vsz,nlwp,comm --sort=-rss | head -8
-            echo
-            sleep 15
-          done' > /tmp/mem.log 2>&1 &
 
       - uses: leanprover/lean-action@v1
         with:
@@ -68,7 +49,3 @@ jobs:
           build: "true"
           build-args: "Wychelean:docs"
           test: "false"
-
-      - name: Print memory log
-        if: ${{ always() }}
-        run: cat /tmp/mem.log
