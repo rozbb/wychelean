@@ -71,16 +71,16 @@ def diagonalRound (s : State) : State :=
 /-- `inner_block` from §2.3.1: a column round followed by a diagonal round. -/
 def doubleRound (s : State) : State := diagonalRound (columnRound s)
 
-/-- Apply `numRound` rounds to the state, alternating column and diagonal rounds, starting with a
-column round (§2.3). ChaCha20 is `numRound = 20`, i.e., 10 double rounds. -/
-def rounds (numRound : Nat) (s : State) : State :=
-  Fin.foldl numRound (fun s i => if i.val % 2 = 0 then columnRound s else diagonalRound s) s
+/-- Apply `numRounds` rounds to the state, alternating column and diagonal rounds, starting with a
+column round (§2.3). ChaCha20 is `numRounds = 20`, i.e., 10 double rounds. -/
+def rounds (numRounds : Nat) (s : State) : State :=
+  Fin.foldl numRounds (fun s i => if i.val % 2 = 0 then columnRound s else diagonalRound s) s
 
-/-- The ChaCha block function with `numRound` rounds on an arbitrary input state: run the rounds,
+/-- The ChaCha block function with `numRounds` rounds on an arbitrary input state: run the rounds,
 then add the input state word-wise modulo `2 ^ 32` (§2.3). The result is a state, before
 serialization. This is the reusable core: it fixes no layout of constants, key, counter or nonce. -/
-def block (numRound : Nat) (s : State) : State :=
-  Vector.zipWith (· + ·) (rounds numRound s) s
+def block (numRounds : Nat) (s : State) : State :=
+  Vector.zipWith (· + ·) (rounds numRounds s) s
 
 /-! ## RFC 8439 layout -/
 
@@ -93,11 +93,11 @@ def initState (key : ByteVec keyBytes) (counter : UInt32) (nonce : ByteVec nonce
   (constants ++ wordsOfBytesLE (n := 8) key ++ #v[counter] ++ wordsOfBytesLE (n := 3) nonce).cast
     (by decide)
 
-/-- The RFC 8439 ChaCha block function with `numRound` rounds: 64 keystream bytes for the given
+/-- The RFC 8439 ChaCha block function with `numRounds` rounds: 64 keystream bytes for the given
 key, block counter and nonce, serialized with each word little-endian (§2.3). -/
-def chachaBlock (numRound : Nat) (key : ByteVec keyBytes) (counter : UInt32)
+def chachaBlock (numRounds : Nat) (key : ByteVec keyBytes) (counter : UInt32)
     (nonce : ByteVec nonceBytes) : ByteVec blockBytes :=
-  wordsToBytesLE (block numRound (initState key counter nonce))
+  wordsToBytesLE (block numRounds (initState key counter nonce))
 
 /-- `chacha20_block(key, counter, nonce)` (§2.3.1). -/
 def chacha20Block (key : ByteVec keyBytes) (counter : UInt32) (nonce : ByteVec nonceBytes) :
@@ -111,19 +111,20 @@ abbrev numBlocks (n : Nat) : Nat := (n + blockBytes - 1) / blockBytes
 
 /-- The keystream for `m` blocks: the serialized blocks for counters `counter, …, counter + m - 1`,
 concatenated (§2.4). Requires that the counter does not wrap. -/
-def keystream (numRound : Nat) (key : ByteVec keyBytes) (counter : UInt32)
+def keystream (numRounds : Nat) (key : ByteVec keyBytes) (counter : UInt32)
     (nonce : ByteVec nonceBytes) (m : Nat) (_ : counter.toNat + m ≤ 2 ^ 32) :
     ByteVec (m * blockBytes) :=
-  (Vector.ofFn fun (j : Fin m) => chachaBlock numRound key (counter + j.val.toUInt32) nonce).flatten
+  (Vector.ofFn fun (j : Fin m) =>
+    chachaBlock numRounds key (counter + j.val.toUInt32) nonce).flatten
 
-/-- RFC 8439 ChaCha encryption with `numRound` rounds: XOR the message with the keystream
+/-- RFC 8439 ChaCha encryption with `numRounds` rounds: XOR the message with the keystream
 starting at block `counter`, discarding any keystream left over after the last byte (§2.4).
 Decryption is the same operation. The block counter must not wrap: a single (key, nonce) pair
 covers at most `2 ^ 32` blocks (§2.3). -/
-def chachaEncrypt (numRound : Nat) {n : Nat} (key : ByteVec keyBytes) (counter : UInt32)
+def chachaEncrypt (numRounds : Nat) {n : Nat} (key : ByteVec keyBytes) (counter : UInt32)
     (nonce : ByteVec nonceBytes) (msg : ByteVec n)
     (h : counter.toNat + numBlocks n ≤ 2 ^ 32) : ByteVec n :=
-  let ks := keystream numRound key counter nonce (numBlocks n) h
+  let ks := keystream numRounds key counter nonce (numBlocks n) h
   Vector.ofFn fun i => msg[i] ^^^ ks[i.val]'(by
     have := i.isLt; simp only [numBlocks, blockBytes, stateWords] at *; omega)
 
